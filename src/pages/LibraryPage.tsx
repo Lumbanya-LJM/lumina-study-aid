@@ -4,6 +4,7 @@ import { LMVLogo } from '@/components/ui/lmv-logo';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useNavigate } from 'react-router-dom';
+import { ZambiaLiiIntegration } from '@/components/library/ZambiaLiiIntegration';
 import { 
   Search, 
   Filter,
@@ -16,11 +17,12 @@ import {
   Folder,
   ExternalLink,
   Settings,
-  Globe
+  Scale,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type ContentType = 'all' | 'papers' | 'videos' | 'cases' | 'alerts' | 'summaries';
+type ContentType = 'all' | 'papers' | 'videos' | 'cases' | 'alerts' | 'summaries' | 'zambialii';
 
 interface ContentItem {
   id: string;
@@ -48,6 +50,7 @@ const LibraryPage: React.FC = () => {
 
   const tabs = [
     { id: 'all' as ContentType, label: 'All' },
+    { id: 'zambialii' as ContentType, label: 'ZambiaLII', icon: Scale },
     { id: 'cases' as ContentType, label: 'Cases' },
     { id: 'summaries' as ContentType, label: 'Summaries' },
     { id: 'papers' as ContentType, label: 'Past Papers' },
@@ -142,22 +145,22 @@ const LibraryPage: React.FC = () => {
           )}
         </div>
 
-        {/* ZambiaLii Quick Link */}
-        <a
-          href="https://zambialii.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-2xl p-4 mb-6"
-        >
-          <div className="p-2 rounded-xl bg-primary/20">
-            <Globe className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="font-medium text-foreground">ZambiaLii</p>
-            <p className="text-xs text-muted-foreground">Access Zambian Legal Information Institute</p>
-          </div>
-          <ExternalLink className="w-5 h-5 text-primary" />
-        </a>
+        {/* ZambiaLii Quick Link - only show when not on ZambiaLII tab */}
+        {activeTab !== 'zambialii' && (
+          <button
+            onClick={() => setActiveTab('zambialii')}
+            className="w-full flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-2xl p-4 mb-6 hover:bg-primary/15 transition-colors"
+          >
+            <div className="p-2 rounded-xl bg-primary/20">
+              <Scale className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-medium text-foreground">ZambiaLII</p>
+              <p className="text-xs text-muted-foreground">Browse 9,495+ Zambian court judgments</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-primary" />
+          </button>
+        )}
 
         {/* Search */}
         <div className="relative mb-6">
@@ -189,8 +192,10 @@ const LibraryPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Loading State */}
-        {loading ? (
+        {/* ZambiaLII Tab Content */}
+        {activeTab === 'zambialii' ? (
+          <ZambiaLiiIntegration />
+        ) : loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
           </div>
