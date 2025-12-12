@@ -1,1 +1,19 @@
 project_id = "ljvegutwzhamkkjrsipf"
+
+[functions.chat]
+verify_jwt = false
+
+[functions.journal-response]
+verify_jwt = false
+
+[functions.generate-quiz]
+verify_jwt = false
+
+[functions.generate-flashcards]
+verify_jwt = false
+
+[functions.process-payment]
+verify_jwt = false
+
+[functions.payment-webhook]
+verify_jwt = false
