@@ -11,9 +11,21 @@ import {
   Brain,
   BookOpen,
   Calendar,
-  Settings
+  Settings,
+  Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -95,6 +107,39 @@ const ChatPage: React.FC = () => {
       });
     } catch (error) {
       console.error('Error saving message:', error);
+    }
+  };
+
+  const clearChatHistory = async () => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Reset to welcome message
+      setMessages([{
+        id: 'welcome',
+        content: "Mwanasheli! I'm Lumina, your AI study companion. I'm here to help you excel in your law studies. You can ask me to summarise Zambian cases, create flashcards, quiz you on topics, or help manage your study schedule. How can I assist you today?",
+        sender: 'lumina',
+        timestamp: new Date(),
+      }]);
+
+      toast({
+        title: "Chat cleared",
+        description: "Your conversation history has been deleted.",
+      });
+    } catch (error) {
+      console.error('Error clearing chat:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to clear chat history.",
+      });
     }
   };
 
@@ -248,12 +293,38 @@ const ChatPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <button 
-              onClick={() => navigate('/customize-avatar')}
-              className="p-2 rounded-xl hover:bg-secondary transition-colors"
-            >
-              <Settings className="w-5 h-5 text-muted-foreground" />
-            </button>
+            <div className="flex items-center gap-1">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button className="p-2 rounded-xl hover:bg-secondary transition-colors">
+                    <Trash2 className="w-5 h-5 text-muted-foreground" />
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clear chat history?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all your conversation history with Lumina. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={clearChatHistory}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Clear History
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <button 
+                onClick={() => navigate('/customize-avatar')}
+                className="p-2 rounded-xl hover:bg-secondary transition-colors"
+              >
+                <Settings className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
           </div>
         </div>
 
