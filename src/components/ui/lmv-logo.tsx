@@ -25,7 +25,7 @@ export const LMVLogo: React.FC<LMVLogoProps> = ({
       <img 
         src={lmvLogo} 
         alt="Luminary Innovision Academy" 
-        className={cn("object-contain", sizes[size].icon)}
+        className={cn("object-contain rounded-xl", sizes[size].icon)}
       />
       {variant === 'full' && (
         <div className="flex flex-col">
