@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import { 
@@ -10,7 +11,8 @@ import {
   Brain,
   CheckCircle2,
   Circle,
-  Upload
+  Upload,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,23 +32,24 @@ interface Task {
 }
 
 const PlannerPage: React.FC = () => {
-  const [selectedDay, setSelectedDay] = useState(currentDate.getDate());
+  const navigate = useNavigate();
+  const [displayDate, setDisplayDate] = useState(new Date(currentDate));
+  const [selectedDate, setSelectedDate] = useState(currentDate.toISOString().split('T')[0]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) loadTasks();
-  }, [user, selectedDay]);
+  }, [user, selectedDate]);
 
   const loadTasks = async () => {
-    const selectedDate = new Date(currentDate);
-    selectedDate.setDate(selectedDay);
-    
     const { data } = await supabase
       .from('study_tasks')
       .select('*')
-      .eq('scheduled_date', selectedDate.toISOString().split('T')[0])
+      .eq('scheduled_date', selectedDate)
       .order('scheduled_time');
     
     if (data) setTasks(data);
@@ -55,6 +58,30 @@ const PlannerPage: React.FC = () => {
   const toggleTask = async (taskId: string, completed: boolean) => {
     await supabase.from('study_tasks').update({ completed: !completed }).eq('id', taskId);
     loadTasks();
+  };
+
+  const addTask = async () => {
+    if (!newTaskTitle.trim() || !user) return;
+    
+    const { error } = await supabase.from('study_tasks').insert({
+      user_id: user.id,
+      title: newTaskTitle,
+      scheduled_date: selectedDate,
+      task_type: 'study'
+    });
+
+    if (!error) {
+      setNewTaskTitle('');
+      setShowAddTask(false);
+      loadTasks();
+      toast({ title: "Task added successfully" });
+    }
+  };
+
+  const changeWeek = (direction: number) => {
+    const newDate = new Date(displayDate);
+    newDate.setDate(newDate.getDate() + (direction * 7));
+    setDisplayDate(newDate);
   };
 
   const getTaskIcon = (type: string) => {
@@ -75,13 +102,15 @@ const PlannerPage: React.FC = () => {
     }
   };
 
-  // Generate week days
+  // Generate week days based on displayDate
   const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(currentDate);
-    date.setDate(currentDate.getDate() - currentDate.getDay() + i);
+    const date = new Date(displayDate);
+    const dayOfWeek = displayDate.getDay();
+    date.setDate(displayDate.getDate() - dayOfWeek + i);
     return {
       day: days[i],
       date: date.getDate(),
+      fullDate: date.toISOString().split('T')[0],
       isToday: date.toDateString() === currentDate.toDateString(),
     };
   });
@@ -93,23 +122,32 @@ const PlannerPage: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <LMVLogo size="sm" variant="icon" />
           <h1 className="text-lg font-semibold text-foreground">Study Planner</h1>
-          <button className="p-2 rounded-xl bg-primary text-primary-foreground">
+          <button 
+            onClick={() => setShowAddTask(true)}
+            className="p-2 rounded-xl bg-primary text-primary-foreground"
+          >
             <Plus className="w-5 h-5" />
           </button>
         </div>
 
         {/* Month Navigation */}
         <div className="flex items-center justify-between mb-6">
-          <button className="p-2 rounded-xl hover:bg-secondary transition-colors">
+          <button 
+            onClick={() => changeWeek(-1)}
+            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+          >
             <ChevronLeft className="w-5 h-5 text-muted-foreground" />
           </button>
           <div className="text-center">
             <h2 className="text-xl font-bold text-foreground">
-              {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              {displayDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </h2>
-            <p className="text-sm text-muted-foreground">Week {Math.ceil(currentDate.getDate() / 7)}</p>
+            <p className="text-sm text-muted-foreground">Week {Math.ceil(displayDate.getDate() / 7)}</p>
           </div>
-          <button className="p-2 rounded-xl hover:bg-secondary transition-colors">
+          <button 
+            onClick={() => changeWeek(1)}
+            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+          >
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
@@ -118,11 +156,11 @@ const PlannerPage: React.FC = () => {
         <div className="flex justify-between mb-6">
           {weekDays.map((day) => (
             <button
-              key={day.date}
-              onClick={() => setSelectedDay(day.date)}
+              key={day.fullDate}
+              onClick={() => setSelectedDate(day.fullDate)}
               className={cn(
                 "flex flex-col items-center p-2 rounded-2xl transition-all min-w-[44px]",
-                selectedDay === day.date
+                selectedDate === day.fullDate
                   ? "gradient-primary shadow-glow"
                   : day.isToday
                   ? "bg-primary/10"
@@ -131,7 +169,7 @@ const PlannerPage: React.FC = () => {
             >
               <span className={cn(
                 "text-xs font-medium mb-1",
-                selectedDay === day.date
+                selectedDate === day.fullDate
                   ? "text-primary-foreground"
                   : "text-muted-foreground"
               )}>
@@ -139,7 +177,7 @@ const PlannerPage: React.FC = () => {
               </span>
               <span className={cn(
                 "text-lg font-bold",
-                selectedDay === day.date
+                selectedDate === day.fullDate
                   ? "text-primary-foreground"
                   : "text-foreground"
               )}>
@@ -150,17 +188,21 @@ const PlannerPage: React.FC = () => {
         </div>
 
         {/* Upload Timetable Card */}
-        <div className="bg-secondary rounded-2xl p-4 mb-6 border border-dashed border-primary/30">
+        <button 
+          onClick={() => navigate('/upload')}
+          className="w-full bg-secondary rounded-2xl p-4 mb-6 border border-dashed border-primary/30 hover:bg-primary/5 transition-colors"
+        >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
               <Upload className="w-5 h-5 text-primary-foreground" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 text-left">
               <p className="font-medium text-foreground text-sm">Upload Your Timetable</p>
               <p className="text-xs text-muted-foreground">Import ICS file or add manually</p>
             </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </div>
-        </div>
+        </button>
 
         {/* Today's Tasks */}
         <div>
@@ -216,8 +258,53 @@ const PlannerPage: React.FC = () => {
                     </div>
                   );
                 })}
+                
+            {tasks.length === 0 && (
+              <div className="text-center py-8">
+                <Clock className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">No tasks for this day</p>
+                <button 
+                  onClick={() => setShowAddTask(true)}
+                  className="mt-2 text-primary text-sm font-medium"
+                >
+                  Add a task
+                </button>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Add Task Modal */}
+        {showAddTask && (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end">
+            <div className="w-full bg-card rounded-t-3xl p-5 pb-8 shadow-premium">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-foreground">Add New Task</h3>
+                <button 
+                  onClick={() => setShowAddTask(false)}
+                  className="p-2 rounded-xl hover:bg-secondary"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+              <input
+                type="text"
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                placeholder="Task title..."
+                className="w-full px-4 py-3 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground text-sm mb-4"
+                autoFocus
+              />
+              <button
+                onClick={addTask}
+                disabled={!newTaskTitle.trim()}
+                className="w-full gradient-primary text-primary-foreground py-3 rounded-xl font-semibold text-sm disabled:opacity-50"
+              >
+                Add Task
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </MobileLayout>
   );

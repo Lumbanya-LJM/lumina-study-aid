@@ -9,7 +9,7 @@ interface MobileLayoutProps {
 }
 
 const navItems = [
-  { path: '/', icon: Home, label: 'Home' },
+  { path: '/home', icon: Home, label: 'Home' },
   { path: '/chat', icon: MessageCircle, label: 'Lumina' },
   { path: '/planner', icon: Calendar, label: 'Planner' },
   { path: '/library', icon: BookOpen, label: 'Library' },
