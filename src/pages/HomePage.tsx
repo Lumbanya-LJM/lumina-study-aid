@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MobileLayout } from '@/components/layout/MobileLayout';
-import { LMVLogo } from '@/components/ui/lmv-logo';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { StatCard } from '@/components/ui/stat-card';
 import { QuickAction } from '@/components/ui/quick-action';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import lmvLogo from '@/assets/lmv-logo.png';
 import { 
   Flame, 
   Clock, 
@@ -19,15 +21,76 @@ import {
   ChevronRight,
   Upload
 } from 'lucide-react';
+import { format } from 'date-fns';
+
+interface Profile {
+  full_name: string | null;
+  streak_days: number | null;
+  total_study_hours: number | null;
+  tasks_completed: number | null;
+  cases_read: number | null;
+}
+
+interface StudyTask {
+  id: string;
+  title: string;
+  scheduled_time: string | null;
+  task_type: string | null;
+  completed: boolean | null;
+}
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [todaysTasks, setTodaysTasks] = useState<StudyTask[]>([]);
+  const [greeting, setGreeting] = useState('Good morning');
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) setGreeting('Good morning');
+    else if (hour >= 12 && hour < 17) setGreeting('Good afternoon');
+    else setGreeting('Good evening');
+
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const fetchData = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name, streak_days, total_study_hours, tasks_completed, cases_read')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileData) setProfile(profileData);
+
+      // Fetch today's tasks
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const { data: tasksData } = await supabase
+        .from('study_tasks')
+        .select('id, title, scheduled_time, task_type, completed')
+        .eq('user_id', user.id)
+        .eq('scheduled_date', today)
+        .order('scheduled_time', { ascending: true })
+        .limit(3);
+
+      if (tasksData) setTodaysTasks(tasksData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
 
   const stats = [
-    { icon: Flame, label: 'Day Streak', value: 12, trend: { value: 8, positive: true } },
-    { icon: Clock, label: 'Study Hours', value: '24.5', trend: { value: 15, positive: true } },
-    { icon: Target, label: 'Tasks Done', value: 47, trend: { value: 12, positive: true } },
-    { icon: BookOpen, label: 'Cases Read', value: 28 },
+    { icon: Flame, label: 'Day Streak', value: profile?.streak_days || 0, trend: profile?.streak_days && profile.streak_days > 0 ? { value: 8, positive: true } : undefined },
+    { icon: Clock, label: 'Study Hours', value: (profile?.total_study_hours || 0).toFixed(1), trend: { value: 15, positive: true } },
+    { icon: Target, label: 'Tasks Done', value: profile?.tasks_completed || 0, trend: { value: 12, positive: true } },
+    { icon: BookOpen, label: 'Cases Read', value: profile?.cases_read || 0 },
   ];
 
   const quickActions = [
@@ -37,18 +100,48 @@ const HomePage: React.FC = () => {
     { icon: PenLine, label: 'Journal Entry', description: 'Reflect on your day', path: '/journal' },
   ];
 
-  const upcomingTasks = [
-    { title: 'Contract Law Revision', time: '2:00 PM', type: 'Active Recall' },
-    { title: 'R v Brown Case Summary', time: '4:30 PM', type: 'Reading' },
-    { title: 'Constitutional Law Quiz', time: '6:00 PM', type: 'Quiz' },
-  ];
+  const formatTime = (time: string | null) => {
+    if (!time) return 'Anytime';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const getTaskTypeLabel = (type: string | null) => {
+    const types: Record<string, string> = {
+      study: 'Study',
+      revision: 'Revision',
+      quiz: 'Quiz',
+      reading: 'Reading',
+      assignment: 'Assignment',
+    };
+    return types[type || 'study'] || 'Study';
+  };
+
+  const firstName = profile?.full_name?.split(' ')[0] || 'Student';
 
   return (
     <MobileLayout>
       <div className="px-5 py-6 safe-top">
-        {/* Header */}
+        {/* Header with Logo */}
         <div className="flex items-center justify-between mb-8">
-          <LMVLogo size="sm" />
+          <div className="flex items-center gap-3">
+            <img 
+              src={lmvLogo} 
+              alt="Luminary Study" 
+              className="w-10 h-10 object-contain rounded-xl"
+            />
+            <div className="flex flex-col">
+              <span className="font-display font-semibold text-foreground text-lg leading-tight">
+                Luminary
+              </span>
+              <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
+                Study
+              </span>
+            </div>
+          </div>
           <button className="relative p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
             <Bell className="w-5 h-5 text-foreground" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
@@ -61,7 +154,7 @@ const HomePage: React.FC = () => {
           <div className="flex items-center gap-4 relative z-10">
             <LuminaAvatar size="lg" isActive />
             <div className="flex-1">
-              <p className="text-primary-foreground/80 text-sm mb-1">Good morning!</p>
+              <p className="text-primary-foreground/80 text-sm mb-1">{greeting}, {firstName}!</p>
               <h1 className="text-primary-foreground text-xl font-bold mb-2">Ready to excel today?</h1>
               <button 
                 onClick={() => navigate('/chat')}
@@ -117,21 +210,36 @@ const HomePage: React.FC = () => {
             </button>
           </div>
           <div className="space-y-3">
-            {upcomingTasks.map((task, index) => (
-              <div
-                key={index}
-                className="bg-card rounded-2xl p-4 border border-border/50 shadow-card flex items-center gap-4"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-primary" />
+            {todaysTasks.length > 0 ? (
+              todaysTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="bg-card rounded-2xl p-4 border border-border/50 shadow-card flex items-center gap-4"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate">{task.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatTime(task.scheduled_time)} · {getTaskTypeLabel(task.task_type)}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">{task.title}</p>
-                  <p className="text-xs text-muted-foreground">{task.time} · {task.type}</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              ))
+            ) : (
+              <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-card text-center">
+                <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">No tasks scheduled for today</p>
+                <button 
+                  onClick={() => navigate('/planner')}
+                  className="mt-2 text-primary text-sm font-medium"
+                >
+                  Add a task
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
