@@ -19,7 +19,8 @@ import {
   PenLine,
   Bell,
   ChevronRight,
-  Upload
+  Upload,
+  BarChart3
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -95,8 +96,8 @@ const HomePage: React.FC = () => {
 
   const quickActions = [
     { icon: MessageCircle, label: 'Chat with Lumina', description: 'Get instant study help', path: '/chat' },
+    { icon: BarChart3, label: 'Analytics', description: 'Track your progress', path: '/analytics' },
     { icon: Focus, label: 'Deep Focus Mode', description: 'Block distractions', path: '/focus' },
-    { icon: FileText, label: 'Upload Content', description: 'Notes, past papers, videos', path: '/upload' },
     { icon: PenLine, label: 'Journal Entry', description: 'Reflect on your day', path: '/journal' },
   ];
 
