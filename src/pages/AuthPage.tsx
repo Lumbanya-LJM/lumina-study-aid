@@ -216,6 +216,18 @@ const AuthPage: React.FC = () => {
         </div>
       </div>
 
+      {isLogin && (
+        <div className="text-right">
+          <button
+            type="button"
+            onClick={() => navigate('/forgot-password')}
+            className="text-sm text-primary hover:underline"
+          >
+            Forgot password?
+          </button>
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={loading}
