@@ -27,6 +27,7 @@ import FlashcardsPage from "./pages/FlashcardsPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import InstallPage from "./pages/InstallPage";
 import SupportPage from "./pages/SupportPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
             <Route path="/install" element={<InstallPage />} />
             <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
