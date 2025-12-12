@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { 
@@ -39,14 +39,64 @@ const ChatPage: React.FC = () => {
   const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: "Mwanasheli! I'm Lumina, your AI study companion. I'm here to help you excel in your law studies. You can ask me to summarise Zambian cases, create flashcards, quiz you on topics, or help manage your study schedule. How can I assist you today?",
-      sender: 'lumina',
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+
+  // Load chat history on mount
+  useEffect(() => {
+    if (user) {
+      loadChatHistory();
+    }
+  }, [user]);
+
+  const loadChatHistory = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setMessages(data.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          sender: msg.role === 'user' ? 'user' : 'lumina',
+          timestamp: new Date(msg.created_at),
+        })));
+      } else {
+        // Show welcome message if no history
+        setMessages([{
+          id: 'welcome',
+          content: "Mwanasheli! I'm Lumina, your AI study companion. I'm here to help you excel in your law studies. You can ask me to summarise Zambian cases, create flashcards, quiz you on topics, or help manage your study schedule. How can I assist you today?",
+          sender: 'lumina',
+          timestamp: new Date(),
+        }]);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const saveMessage = async (content: string, role: 'user' | 'assistant') => {
+    if (!user) return;
+    
+    try {
+      await supabase.from('chat_messages').insert({
+        user_id: user.id,
+        content,
+        role,
+      });
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
+  };
 
   const handleSend = async (customMessage?: string, action?: string) => {
     const messageText = customMessage || message;
@@ -62,6 +112,9 @@ const ChatPage: React.FC = () => {
     setMessages(prev => [...prev, newMessage]);
     setMessage('');
     setIsLoading(true);
+
+    // Save user message to database
+    await saveMessage(messageText, 'user');
 
     try {
       // Prepare messages for API
@@ -141,6 +194,11 @@ const ChatPage: React.FC = () => {
             }
           }
         }
+
+        // Save assistant response to database after streaming completes
+        if (assistantContent) {
+          await saveMessage(assistantContent, 'assistant');
+        }
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -201,58 +259,66 @@ const ChatPage: React.FC = () => {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-4">
-          <div className="space-y-4">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn(
-                  "flex gap-3",
-                  msg.sender === 'user' && "flex-row-reverse"
-                )}
-              >
-                {msg.sender === 'lumina' && (
-                  <LuminaAvatar size="sm" />
-                )}
-                <div
-                  className={cn(
-                    "max-w-[80%] rounded-2xl px-4 py-3",
-                    msg.sender === 'user'
-                      ? "gradient-primary text-primary-foreground rounded-br-md"
-                      : "bg-secondary text-foreground rounded-bl-md"
-                  )}
-                >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  <p className={cn(
-                    "text-[10px] mt-2",
-                    msg.sender === 'user' ? "text-primary-foreground/70" : "text-muted-foreground"
-                  )}>
-                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Quick Prompts */}
-          {messages.length <= 2 && (
-            <div className="mt-6">
-              <p className="text-xs text-muted-foreground mb-3">Quick actions</p>
-              <div className="flex flex-wrap gap-2">
-                {quickPrompts.map((prompt, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setMessage(prompt.label);
-                      handleSend(prompt.label, prompt.action);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-card border border-border/50 rounded-full text-sm text-foreground hover:bg-primary/5 hover:border-primary/30 transition-all"
+          {isLoadingHistory ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={cn(
+                      "flex gap-3",
+                      msg.sender === 'user' && "flex-row-reverse"
+                    )}
                   >
-                    <prompt.icon className="w-4 h-4 text-primary" />
-                    {prompt.label}
-                  </button>
+                    {msg.sender === 'lumina' && (
+                      <LuminaAvatar size="sm" />
+                    )}
+                    <div
+                      className={cn(
+                        "max-w-[80%] rounded-2xl px-4 py-3",
+                        msg.sender === 'user'
+                          ? "gradient-primary text-primary-foreground rounded-br-md"
+                          : "bg-secondary text-foreground rounded-bl-md"
+                      )}
+                    >
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      <p className={cn(
+                        "text-[10px] mt-2",
+                        msg.sender === 'user' ? "text-primary-foreground/70" : "text-muted-foreground"
+                      )}>
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
+
+              {/* Quick Prompts */}
+              {messages.length <= 2 && (
+                <div className="mt-6">
+                  <p className="text-xs text-muted-foreground mb-3">Quick actions</p>
+                  <div className="flex flex-wrap gap-2">
+                    {quickPrompts.map((prompt, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setMessage(prompt.label);
+                          handleSend(prompt.label, prompt.action);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-card border border-border/50 rounded-full text-sm text-foreground hover:bg-primary/5 hover:border-primary/30 transition-all"
+                      >
+                        <prompt.icon className="w-4 h-4 text-primary" />
+                        {prompt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
