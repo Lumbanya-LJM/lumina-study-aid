@@ -20,9 +20,21 @@ import {
   Target,
   Flame,
   Shield,
-  GraduationCap
+  GraduationCap,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface Profile {
   full_name: string | null;
@@ -77,6 +89,37 @@ const ProfilePage: React.FC = () => {
         variant: "destructive",
         title: "Error",
         description: "Failed to log out. Please try again.",
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+
+    try {
+      // Delete user profile data
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Sign out the user
+      await signOut();
+
+      toast({
+        title: "Account Deleted",
+        description: "Your profile data has been permanently deleted.",
+      });
+
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete account. Please try again.",
       });
     }
   };
@@ -200,6 +243,35 @@ const ProfilePage: React.FC = () => {
           <LogOut className="w-5 h-5" />
           <span className="font-medium text-sm">Log Out</span>
         </button>
+
+        {/* Delete Account */}
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button 
+              className="w-full flex items-center justify-center gap-2 py-4 mt-2 text-destructive/70 hover:text-destructive hover:bg-destructive/5 rounded-2xl transition-colors border border-destructive/20"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span className="font-medium text-sm">Delete Account</span>
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete your profile data, study progress, and all associated information from our servers.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete Account
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Version */}
         <p className="text-center text-xs text-muted-foreground mt-6">
