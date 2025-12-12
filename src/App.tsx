@@ -15,6 +15,7 @@ import FocusPage from "./pages/FocusPage";
 import JournalPage from "./pages/JournalPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
+import AnalyticsDashboardPage from "./pages/AnalyticsDashboardPage";
 import CustomizeAvatarPage from "./pages/CustomizeAvatarPage";
 import PartnerPage from "./pages/PartnerPage";
 import UploadPage from "./pages/UploadPage";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/journal" element={<ProtectedRoute><JournalPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboardPage /></ProtectedRoute>} />
             <Route path="/customize-avatar" element={<ProtectedRoute><CustomizeAvatarPage /></ProtectedRoute>} />
             <Route path="/partner" element={<ProtectedRoute><PartnerPage /></ProtectedRoute>} />
             <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
