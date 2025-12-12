@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useNavigate } from 'react-router-dom';
 import { ZambiaLiiIntegration } from '@/components/library/ZambiaLiiIntegration';
+import { CaseSummarizer } from '@/components/library/CaseSummarizer';
 import { 
   Search, 
   Filter,
@@ -18,11 +19,12 @@ import {
   ExternalLink,
   Settings,
   Scale,
+  Sparkles,
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type ContentType = 'all' | 'papers' | 'videos' | 'cases' | 'alerts' | 'summaries' | 'zambialii';
+type ContentType = 'all' | 'papers' | 'videos' | 'cases' | 'alerts' | 'summaries' | 'zambialii' | 'summarizer';
 
 interface ContentItem {
   id: string;
@@ -50,6 +52,7 @@ const LibraryPage: React.FC = () => {
 
   const tabs = [
     { id: 'all' as ContentType, label: 'All' },
+    { id: 'summarizer' as ContentType, label: 'AI Summarizer', icon: Sparkles },
     { id: 'zambialii' as ContentType, label: 'ZambiaLII', icon: Scale },
     { id: 'cases' as ContentType, label: 'Cases' },
     { id: 'summaries' as ContentType, label: 'Summaries' },
@@ -192,8 +195,10 @@ const LibraryPage: React.FC = () => {
           ))}
         </div>
 
-        {/* ZambiaLII Tab Content */}
-        {activeTab === 'zambialii' ? (
+        {/* Tab Content */}
+        {activeTab === 'summarizer' ? (
+          <CaseSummarizer />
+        ) : activeTab === 'zambialii' ? (
           <ZambiaLiiIntegration />
         ) : loading ? (
           <div className="flex items-center justify-center py-12">
