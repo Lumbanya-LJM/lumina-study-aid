@@ -396,7 +396,10 @@ const ChatPage: React.FC = () => {
         {/* Input Area */}
         <div className="px-5 py-4 safe-bottom border-t border-border bg-background">
           <div className="flex items-center gap-3">
-            <button className="p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+            <button 
+              onClick={() => navigate('/upload')}
+              className="p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+            >
               <Paperclip className="w-5 h-5 text-muted-foreground" />
             </button>
             <div className="flex-1 relative">

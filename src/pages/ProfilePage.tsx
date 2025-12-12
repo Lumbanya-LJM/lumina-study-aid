@@ -132,7 +132,7 @@ const ProfilePage: React.FC = () => {
     { icon: Palette, label: 'Customize Lumina', path: '/customize-avatar', highlight: true },
     { icon: Users, label: 'Accountability Partner', path: '/partner' },
     { icon: CreditCard, label: 'Subscription & Payments', path: '/subscription' },
-    { icon: Bell, label: 'Notifications', path: '/settings', state: { tab: 'notifications' } },
+    { icon: Bell, label: 'Notifications', path: '/notifications' },
     { icon: HelpCircle, label: 'Help & Support', path: '/support' },
   ];
 

@@ -151,7 +151,10 @@ const HomePage: React.FC = () => {
               </span>
             </div>
           </div>
-          <button className="relative p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+          <button 
+            onClick={() => navigate('/notifications')}
+            className="relative p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+          >
             <Bell className="w-5 h-5 text-foreground" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
           </button>
