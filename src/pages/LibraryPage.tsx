@@ -284,7 +284,10 @@ const LibraryPage: React.FC = () => {
                 <p className="text-xs text-primary-foreground/80">Access all past papers, lectures & case summaries</p>
               </div>
             </div>
-            <button className="w-full mt-4 bg-primary-foreground text-primary py-3 rounded-xl font-semibold text-sm hover:bg-primary-foreground/90 transition-colors">
+            <button 
+              onClick={() => navigate('/subscription')}
+              className="w-full mt-4 bg-primary-foreground text-primary py-3 rounded-xl font-semibold text-sm hover:bg-primary-foreground/90 transition-colors"
+            >
               Upgrade Now
             </button>
           </div>
