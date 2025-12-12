@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LMVLogo } from '@/components/ui/lmv-logo';
+import { supabase } from '@/integrations/supabase/client';
+import { useAdmin } from '@/hooks/useAdmin';
+import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
   Filter,
@@ -10,50 +13,75 @@ import {
   AlertCircle,
   Lock,
   ChevronRight,
-  Folder
+  Folder,
+  ExternalLink,
+  Settings,
+  Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type ContentType = 'all' | 'papers' | 'videos' | 'cases' | 'alerts';
+type ContentType = 'all' | 'papers' | 'videos' | 'cases' | 'alerts' | 'summaries';
 
 interface ContentItem {
   id: string;
   title: string;
-  type: 'paper' | 'video' | 'case' | 'alert';
+  description: string | null;
+  content_type: string;
   subject: string;
-  date: string;
-  locked: boolean;
-  isNew?: boolean;
+  year: string | null;
+  citation: string | null;
+  court: string | null;
+  file_url: string | null;
+  external_url: string | null;
+  content_text: string | null;
+  is_premium: boolean;
+  created_at: string;
 }
 
 const LibraryPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ContentType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [content, setContent] = useState<ContentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { isAdmin } = useAdmin();
+  const navigate = useNavigate();
 
   const tabs = [
     { id: 'all' as ContentType, label: 'All' },
+    { id: 'cases' as ContentType, label: 'Cases' },
+    { id: 'summaries' as ContentType, label: 'Summaries' },
     { id: 'papers' as ContentType, label: 'Past Papers' },
     { id: 'videos' as ContentType, label: 'Videos' },
-    { id: 'cases' as ContentType, label: 'Cases' },
     { id: 'alerts' as ContentType, label: 'Alerts' },
   ];
 
-  const content: ContentItem[] = [
-    { id: '1', title: 'Contract Law Final 2023', type: 'paper', subject: 'Contract Law', date: 'Dec 2023', locked: false },
-    { id: '2', title: 'Understanding Consideration', type: 'video', subject: 'Contract Law', date: '45 min', locked: false },
-    { id: '3', title: 'Donoghue v Stevenson', type: 'case', subject: 'Tort Law', date: '1932', locked: false },
-    { id: '4', title: 'New Supreme Court Ruling', type: 'alert', subject: 'Constitutional Law', date: 'Today', locked: false, isNew: true },
-    { id: '5', title: 'Criminal Law Midterm 2024', type: 'paper', subject: 'Criminal Law', date: 'Mar 2024', locked: true },
-    { id: '6', title: 'R v Brown Analysis', type: 'case', subject: 'Criminal Law', date: '1994', locked: false },
-    { id: '7', title: 'Equity Principles Lecture', type: 'video', subject: 'Equity', date: '60 min', locked: true },
-    { id: '8', title: 'Property Law Essay Questions', type: 'paper', subject: 'Property Law', date: 'Nov 2023', locked: true },
-  ];
+  useEffect(() => {
+    fetchContent();
+  }, []);
+
+  const fetchContent = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('library_content')
+        .select('*')
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setContent(data || []);
+    } catch (error) {
+      console.error('Error fetching content:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getIcon = (type: string) => {
     switch (type) {
       case 'paper': return FileText;
       case 'video': return Video;
       case 'case': return BookOpen;
+      case 'summary': return FileText;
       case 'alert': return AlertCircle;
       default: return Folder;
     }
@@ -64,22 +92,34 @@ const LibraryPage: React.FC = () => {
       case 'paper': return 'bg-primary/10 text-primary';
       case 'video': return 'bg-destructive/10 text-destructive';
       case 'case': return 'bg-warning/10 text-warning';
-      case 'alert': return 'bg-success/10 text-success';
+      case 'summary': return 'bg-success/10 text-success';
+      case 'alert': return 'bg-accent/10 text-accent-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
 
   const filteredContent = content.filter((item) => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'papers') return item.type === 'paper';
-    if (activeTab === 'videos') return item.type === 'video';
-    if (activeTab === 'cases') return item.type === 'case';
-    if (activeTab === 'alerts') return item.type === 'alert';
+    if (activeTab === 'papers') return item.content_type === 'paper';
+    if (activeTab === 'videos') return item.content_type === 'video';
+    if (activeTab === 'cases') return item.content_type === 'case';
+    if (activeTab === 'summaries') return item.content_type === 'summary';
+    if (activeTab === 'alerts') return item.content_type === 'alert';
     return true;
   }).filter((item) => 
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.subject.toLowerCase().includes(searchQuery.toLowerCase())
+    item.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.citation && item.citation.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const handleContentClick = (item: ContentItem) => {
+    if (item.external_url) {
+      window.open(item.external_url, '_blank');
+    } else if (item.file_url) {
+      window.open(item.file_url, '_blank');
+    }
+    // For items with content_text, could open a modal or detail page
+  };
 
   return (
     <MobileLayout>
@@ -88,10 +128,36 @@ const LibraryPage: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <LMVLogo size="sm" variant="icon" />
           <h1 className="text-lg font-semibold text-foreground">Content Library</h1>
-          <button className="p-2 rounded-xl hover:bg-secondary transition-colors">
-            <Filter className="w-5 h-5 text-muted-foreground" />
-          </button>
+          {isAdmin ? (
+            <button 
+              onClick={() => navigate('/admin/content')}
+              className="p-2 rounded-xl hover:bg-secondary transition-colors"
+            >
+              <Settings className="w-5 h-5 text-primary" />
+            </button>
+          ) : (
+            <button className="p-2 rounded-xl hover:bg-secondary transition-colors">
+              <Filter className="w-5 h-5 text-muted-foreground" />
+            </button>
+          )}
         </div>
+
+        {/* ZambiaLii Quick Link */}
+        <a
+          href="https://zambialii.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-2xl p-4 mb-6"
+        >
+          <div className="p-2 rounded-xl bg-primary/20">
+            <Globe className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="font-medium text-foreground">ZambiaLii</p>
+            <p className="text-xs text-muted-foreground">Access Zambian Legal Information Institute</p>
+          </div>
+          <ExternalLink className="w-5 h-5 text-primary" />
+        </a>
 
         {/* Search */}
         <div className="relative mb-6">
@@ -100,7 +166,7 @@ const LibraryPage: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search resources..."
+            placeholder="Search cases, papers, citations..."
             className="w-full pl-12 pr-4 py-3 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground text-sm transition-all"
           />
         </div>
@@ -123,50 +189,81 @@ const LibraryPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Content Grid */}
-        <div className="space-y-3">
-          {filteredContent.map((item) => {
-            const Icon = getIcon(item.type);
-            return (
-              <button
-                key={item.id}
-                className={cn(
-                  "w-full bg-card rounded-2xl p-4 border shadow-card text-left transition-all hover:shadow-premium",
-                  item.locked ? "border-border/50 opacity-75" : "border-border/50"
-                )}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={cn("p-3 rounded-xl", getIconColor(item.type))}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-foreground truncate">{item.title}</p>
-                      {item.isNew && (
-                        <span className="px-2 py-0.5 bg-success/10 text-success text-[10px] font-medium rounded-full">
-                          NEW
-                        </span>
+        {/* Loading State */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+          </div>
+        ) : (
+          <>
+            {/* Content Grid */}
+            <div className="space-y-3">
+              {filteredContent.map((item) => {
+                const Icon = getIcon(item.content_type);
+                const isNew = new Date(item.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleContentClick(item)}
+                    className={cn(
+                      "w-full bg-card rounded-2xl p-4 border shadow-card text-left transition-all hover:shadow-premium",
+                      item.is_premium ? "border-warning/30" : "border-border/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn("p-3 rounded-xl", getIconColor(item.content_type))}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-foreground truncate">{item.title}</p>
+                          {isNew && (
+                            <span className="px-2 py-0.5 bg-success/10 text-success text-[10px] font-medium rounded-full">
+                              NEW
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {item.subject} {item.year && `· ${item.year}`}
+                        </p>
+                        {item.citation && (
+                          <p className="text-xs text-primary mt-1 truncate">{item.citation}</p>
+                        )}
+                        {item.court && (
+                          <p className="text-xs text-muted-foreground truncate">{item.court}</p>
+                        )}
+                      </div>
+                      {item.is_premium ? (
+                        <div className="p-2 rounded-xl bg-warning/10">
+                          <Lock className="w-4 h-4 text-warning" />
+                        </div>
+                      ) : item.external_url ? (
+                        <ExternalLink className="w-5 h-5 text-primary" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {item.subject} · {item.date}
-                    </p>
-                  </div>
-                  {item.locked ? (
-                    <div className="p-2 rounded-xl bg-muted">
-                      <Lock className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  ) : (
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+                  </button>
+                );
+              })}
+            </div>
 
-        {/* Unlock Premium */}
-        {content.some(item => item.locked) && (
+            {/* Empty State */}
+            {filteredContent.length === 0 && (
+              <div className="text-center py-12">
+                <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-foreground font-medium">No content found</p>
+                <p className="text-sm text-muted-foreground">
+                  {searchQuery ? 'Try a different search term' : 'Content will appear here soon'}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Premium Upgrade */}
+        {content.some(item => item.is_premium) && (
           <div className="mt-6 gradient-primary rounded-2xl p-5 shadow-glow">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">

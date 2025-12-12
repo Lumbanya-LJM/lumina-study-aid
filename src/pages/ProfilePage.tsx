@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
   User,
   Palette,
@@ -14,12 +18,68 @@ import {
   ChevronRight,
   Trophy,
   Target,
-  Flame
+  Flame,
+  Shield,
+  GraduationCap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface Profile {
+  full_name: string | null;
+  university: string | null;
+  year_of_study: number | null;
+  streak_days: number | null;
+  tasks_completed: number | null;
+  total_study_hours: number | null;
+}
+
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
+  const { toast } = useToast();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) throw error;
+        setProfile(data);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged Out",
+        description: "You've been successfully logged out.",
+      });
+      navigate('/auth');
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+      });
+    }
+  };
 
   const menuItems = [
     { icon: User, label: 'Account Settings', path: '/settings' },
@@ -30,11 +90,20 @@ const ProfilePage: React.FC = () => {
     { icon: HelpCircle, label: 'Help & Support', path: '/support' },
   ];
 
+  // Add admin option if user is admin
+  if (isAdmin) {
+    menuItems.unshift({ icon: Shield, label: 'Admin: Content Manager', path: '/admin/content', highlight: true });
+  }
+
   const stats = [
-    { icon: Flame, value: 12, label: 'Day Streak' },
-    { icon: Trophy, value: 28, label: 'Achievements' },
-    { icon: Target, value: 89, label: 'Accuracy %' },
+    { icon: Flame, value: profile?.streak_days || 0, label: 'Day Streak' },
+    { icon: Trophy, value: profile?.tasks_completed || 0, label: 'Completed' },
+    { icon: Target, value: Math.round(profile?.total_study_hours || 0), label: 'Study Hrs' },
   ];
+
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'Student';
+  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const yearLabel = profile?.year_of_study ? `Year ${profile.year_of_study}` : '';
 
   return (
     <MobileLayout>
@@ -51,12 +120,19 @@ const ProfilePage: React.FC = () => {
           <div className="absolute top-0 right-0 w-40 h-40 bg-primary-foreground/10 rounded-full blur-3xl" />
           <div className="relative z-10 flex items-center gap-4 mb-6">
             <div className="w-20 h-20 rounded-2xl bg-primary-foreground/20 flex items-center justify-center text-3xl font-bold text-primary-foreground">
-              JD
+              {initials}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-primary-foreground">John Doe</h2>
-              <p className="text-sm text-primary-foreground/80">Law Student · Year 2</p>
-              <p className="text-xs text-primary-foreground/60 mt-1">Premium Member</p>
+              <h2 className="text-xl font-bold text-primary-foreground">{displayName}</h2>
+              <p className="text-sm text-primary-foreground/80 flex items-center gap-1">
+                <GraduationCap className="w-4 h-4" />
+                {profile?.university || 'Law Student'} {yearLabel && `· ${yearLabel}`}
+              </p>
+              {isAdmin && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 bg-primary-foreground/20 rounded-full text-xs text-primary-foreground">
+                  <Shield className="w-3 h-3" /> Admin
+                </span>
+              )}
             </div>
           </div>
 
@@ -117,7 +193,10 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {/* Logout */}
-        <button className="w-full flex items-center justify-center gap-2 py-4 text-destructive hover:bg-destructive/5 rounded-2xl transition-colors">
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 py-4 text-destructive hover:bg-destructive/5 rounded-2xl transition-colors"
+        >
           <LogOut className="w-5 h-5" />
           <span className="font-medium text-sm">Log Out</span>
         </button>
