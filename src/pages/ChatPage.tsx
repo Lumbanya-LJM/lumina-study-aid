@@ -15,6 +15,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface Message {
   id: string;
@@ -24,47 +27,139 @@ interface Message {
 }
 
 const quickPrompts = [
-  { icon: FileText, label: 'Summarise a case' },
-  { icon: Brain, label: 'Create flashcards' },
-  { icon: BookOpen, label: 'Quiz me' },
-  { icon: Calendar, label: 'Update my schedule' },
+  { icon: FileText, label: 'Summarise a case', action: 'summarise' },
+  { icon: Brain, label: 'Create flashcards', action: 'flashcards' },
+  { icon: BookOpen, label: 'Quiz me', action: 'quiz' },
+  { icon: Calendar, label: 'Update my schedule', action: 'schedule' },
 ];
 
 const ChatPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hello! I'm Lumina, your AI study companion. How can I help you excel today? You can ask me to summarise cases, create flashcards, quiz you on topics, or even help manage your study schedule.",
+      content: "Mwanasheli! I'm Lumina, your AI study companion. I'm here to help you excel in your law studies. You can ask me to summarise Zambian cases, create flashcards, quiz you on topics, or help manage your study schedule. How can I assist you today?",
       sender: 'lumina',
       timestamp: new Date(),
     },
   ]);
 
-  const handleSend = () => {
-    if (!message.trim()) return;
+  const handleSend = async (customMessage?: string, action?: string) => {
+    const messageText = customMessage || message;
+    if (!messageText.trim() || isLoading) return;
     
     const newMessage: Message = {
       id: Date.now().toString(),
-      content: message,
+      content: messageText,
       sender: 'user',
       timestamp: new Date(),
     };
     
     setMessages(prev => [...prev, newMessage]);
     setMessage('');
-    
-    // Simulate Lumina response
-    setTimeout(() => {
-      const response: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "I'd be happy to help with that! Let me process your request. In the meantime, is there anything specific about your study materials you'd like me to focus on?",
+    setIsLoading(true);
+
+    try {
+      // Prepare messages for API
+      const apiMessages = messages.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.content,
+      }));
+      apiMessages.push({ role: 'user', content: messageText });
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ 
+          messages: apiMessages,
+          action: action 
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response');
+      }
+
+      // Stream the response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantContent = '';
+
+      // Add placeholder for assistant message
+      const assistantMessageId = (Date.now() + 1).toString();
+      setMessages(prev => [...prev, {
+        id: assistantMessageId,
+        content: '',
         sender: 'lumina',
         timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, response]);
-    }, 1500);
+      }]);
+
+      if (reader) {
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          
+          // Process SSE lines
+          let newlineIndex;
+          while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+            let line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
+            
+            if (line.endsWith('\r')) line = line.slice(0, -1);
+            if (line.startsWith(':') || line.trim() === '') continue;
+            if (!line.startsWith('data: ')) continue;
+            
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === '[DONE]') continue;
+            
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                assistantContent += content;
+                setMessages(prev => prev.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, content: assistantContent }
+                    : msg
+                ));
+              }
+            } catch {
+              // Partial JSON, put it back
+              buffer = line + '\n' + buffer;
+              break;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to get response from Lumina",
+      });
+      
+      // Add error message
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        content: "I apologize, but I'm having trouble responding right now. Please try again in a moment.",
+        sender: 'lumina',
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -80,12 +175,18 @@ const ChatPage: React.FC = () => {
               <ArrowLeft className="w-5 h-5 text-foreground" />
             </button>
             <div className="flex items-center gap-3 flex-1">
-              <LuminaAvatar size="sm" isActive />
+              <LuminaAvatar size="sm" isActive={!isLoading} />
               <div>
                 <h1 className="font-semibold text-foreground">Lumina</h1>
-                <p className="text-xs text-success flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-success rounded-full" />
-                  Online
+                <p className={cn(
+                  "text-xs flex items-center gap-1",
+                  isLoading ? "text-warning" : "text-success"
+                )}>
+                  <span className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    isLoading ? "bg-warning animate-pulse" : "bg-success"
+                  )} />
+                  {isLoading ? "Thinking..." : "Online"}
                 </p>
               </div>
             </div>
@@ -114,13 +215,13 @@ const ChatPage: React.FC = () => {
                 )}
                 <div
                   className={cn(
-                    "max-w-[75%] rounded-2xl px-4 py-3",
+                    "max-w-[80%] rounded-2xl px-4 py-3",
                     msg.sender === 'user'
                       ? "gradient-primary text-primary-foreground rounded-br-md"
                       : "bg-secondary text-foreground rounded-bl-md"
                   )}
                 >
-                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   <p className={cn(
                     "text-[10px] mt-2",
                     msg.sender === 'user' ? "text-primary-foreground/70" : "text-muted-foreground"
@@ -140,7 +241,10 @@ const ChatPage: React.FC = () => {
                 {quickPrompts.map((prompt, index) => (
                   <button
                     key={index}
-                    onClick={() => setMessage(prompt.label)}
+                    onClick={() => {
+                      setMessage(prompt.label);
+                      handleSend(prompt.label, prompt.action);
+                    }}
                     className="flex items-center gap-2 px-4 py-2 bg-card border border-border/50 rounded-full text-sm text-foreground hover:bg-primary/5 hover:border-primary/30 transition-all"
                   >
                     <prompt.icon className="w-4 h-4 text-primary" />
@@ -165,18 +269,19 @@ const ChatPage: React.FC = () => {
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Ask Lumina anything..."
-                className="w-full px-4 py-3 pr-12 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground text-sm transition-all"
+                disabled={isLoading}
+                className="w-full px-4 py-3 pr-12 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground text-sm transition-all disabled:opacity-50"
               />
               <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-primary/10 transition-colors">
                 <Sparkles className="w-4 h-4 text-primary" />
               </button>
             </div>
             <button 
-              onClick={handleSend}
-              disabled={!message.trim()}
+              onClick={() => handleSend()}
+              disabled={!message.trim() || isLoading}
               className={cn(
                 "p-3 rounded-xl transition-all",
-                message.trim() 
+                message.trim() && !isLoading
                   ? "gradient-primary shadow-glow" 
                   : "bg-secondary"
               )}

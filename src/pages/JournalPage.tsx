@@ -4,21 +4,21 @@ import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { ArrowLeft, Send, Lock, Unlock, Calendar, Smile, Meh, Frown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-
-interface JournalEntry {
-  id: string;
-  content: string;
-  mood: 'happy' | 'neutral' | 'sad';
-  date: Date;
-  response?: string;
-  isPrivate: boolean;
-}
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const JournalPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const [entry, setEntry] = useState('');
   const [selectedMood, setSelectedMood] = useState<'happy' | 'neutral' | 'sad' | null>(null);
   const [isPrivate, setIsPrivate] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const moods = [
     { id: 'happy' as const, icon: Smile, label: 'Good', color: 'text-success' },
@@ -26,30 +26,77 @@ const JournalPage: React.FC = () => {
     { id: 'sad' as const, icon: Frown, label: 'Tough', color: 'text-destructive' },
   ];
 
-  const pastEntries: JournalEntry[] = [
-    {
-      id: '1',
-      content: "Had a really productive study session today. Finally understood consideration in contract law!",
-      mood: 'happy',
-      date: new Date(Date.now() - 86400000),
-      response: "That's wonderful progress! Understanding consideration is a key milestone. Remember, consistent effort like today's session is what leads to exam success.",
-      isPrivate: true,
+  // Fetch journal entries
+  const { data: entries = [], isLoading } = useQuery({
+    queryKey: ['journal-entries', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('journal_entries')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data;
     },
-    {
-      id: '2',
-      content: "Feeling overwhelmed with the amount of cases I need to memorize for tort law.",
-      mood: 'neutral',
-      date: new Date(Date.now() - 172800000),
-      response: "It's completely normal to feel this way. Let's break it down together – would you like me to create a spaced repetition schedule for those cases?",
-      isPrivate: true,
-    },
-  ];
+    enabled: !!user,
+  });
 
-  const handleSubmit = () => {
-    if (!entry.trim() || !selectedMood) return;
-    // In a real app, this would save the entry
-    setEntry('');
-    setSelectedMood(null);
+  const handleSubmit = async () => {
+    if (!entry.trim() || !selectedMood || !user) return;
+    
+    setIsSubmitting(true);
+    try {
+      // Get AI response for the journal entry
+      const aiResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/journal-response`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ content: entry, mood: selectedMood }),
+      });
+
+      let luminaResponse = null;
+      if (aiResponse.ok) {
+        const data = await aiResponse.json();
+        luminaResponse = data.response;
+      }
+
+      // Save to database
+      const { error } = await supabase
+        .from('journal_entries')
+        .insert({
+          user_id: user.id,
+          content: entry,
+          mood: selectedMood,
+          is_private: isPrivate,
+          lumina_response: luminaResponse,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Journal Entry Saved",
+        description: "Lumina has responded to your entry.",
+      });
+
+      // Reset form and refetch entries
+      setEntry('');
+      setSelectedMood(null);
+      queryClient.invalidateQueries({ queryKey: ['journal-entries'] });
+    } catch (error) {
+      console.error('Journal error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save your journal entry. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -128,16 +175,16 @@ const JournalPage: React.FC = () => {
                 </div>
                 <button
                   onClick={handleSubmit}
-                  disabled={!entry.trim() || !selectedMood}
+                  disabled={!entry.trim() || !selectedMood || isSubmitting}
                   className={cn(
                     "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
-                    entry.trim() && selectedMood
+                    entry.trim() && selectedMood && !isSubmitting
                       ? "gradient-primary text-primary-foreground shadow-glow"
                       : "bg-secondary text-muted-foreground"
                   )}
                 >
                   <Send className="w-4 h-4" />
-                  Save Entry
+                  {isSubmitting ? 'Saving...' : 'Save Entry'}
                 </button>
               </div>
             </div>
@@ -154,44 +201,54 @@ const JournalPage: React.FC = () => {
           {/* Past Entries */}
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-4">Past Entries</h2>
-            <div className="space-y-4">
-              {pastEntries.map((pastEntry) => {
-                const MoodIcon = moods.find(m => m.id === pastEntry.mood)?.icon || Meh;
-                const moodColor = moods.find(m => m.id === pastEntry.mood)?.color || 'text-muted-foreground';
-                
-                return (
-                  <div key={pastEntry.id} className="bg-card rounded-2xl border border-border/50 shadow-card overflow-hidden">
-                    {/* Entry */}
-                    <div className="p-4 border-b border-border/50">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs text-muted-foreground">
-                          {pastEntry.date.toLocaleDateString('en-US', { 
-                            weekday: 'short', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })}
-                        </span>
-                        <MoodIcon className={cn("w-5 h-5", moodColor)} />
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+              </div>
+            ) : entries.length === 0 ? (
+              <div className="text-center py-8 bg-secondary rounded-2xl">
+                <p className="text-muted-foreground">No journal entries yet. Start writing!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {entries.map((pastEntry) => {
+                  const MoodIcon = moods.find(m => m.id === pastEntry.mood)?.icon || Meh;
+                  const moodColor = moods.find(m => m.id === pastEntry.mood)?.color || 'text-muted-foreground';
+                  
+                  return (
+                    <div key={pastEntry.id} className="bg-card rounded-2xl border border-border/50 shadow-card overflow-hidden">
+                      {/* Entry */}
+                      <div className="p-4 border-b border-border/50">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(pastEntry.created_at).toLocaleDateString('en-US', { 
+                              weekday: 'short', 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })}
+                          </span>
+                          <MoodIcon className={cn("w-5 h-5", moodColor)} />
+                        </div>
+                        <p className="text-sm text-foreground leading-relaxed">{pastEntry.content}</p>
                       </div>
-                      <p className="text-sm text-foreground leading-relaxed">{pastEntry.content}</p>
-                    </div>
 
-                    {/* Lumina's Response */}
-                    {pastEntry.response && (
-                      <div className="p-4 bg-primary/5">
-                        <div className="flex items-start gap-3">
-                          <LuminaAvatar size="sm" />
-                          <div className="flex-1">
-                            <p className="text-xs text-primary font-medium mb-1">Lumina's Response</p>
-                            <p className="text-sm text-muted-foreground leading-relaxed">{pastEntry.response}</p>
+                      {/* Lumina's Response */}
+                      {pastEntry.lumina_response && (
+                        <div className="p-4 bg-primary/5">
+                          <div className="flex items-start gap-3">
+                            <LuminaAvatar size="sm" />
+                            <div className="flex-1">
+                              <p className="text-xs text-primary font-medium mb-1">Lumina's Response</p>
+                              <p className="text-sm text-muted-foreground leading-relaxed">{pastEntry.lumina_response}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
