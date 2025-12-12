@@ -43,10 +43,19 @@ const UploadPage: React.FC = () => {
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !user) return;
+    if (!e.target.files) return;
+
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Sign in required",
+        description: "Please sign in to upload and save your study materials.",
+      });
+      return;
+    }
 
     const selectedFiles = Array.from(e.target.files);
-    
+
     for (const file of selectedFiles) {
       const fileId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
       
