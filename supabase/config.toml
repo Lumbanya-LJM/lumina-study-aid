@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.send-push-notification]
 verify_jwt = false
+
+[functions.summarize-case]
+verify_jwt = false

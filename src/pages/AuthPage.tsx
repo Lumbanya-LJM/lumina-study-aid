@@ -16,6 +16,7 @@ const universities = [
   'Zambian Open University',
   'ZCAS University',
   'Northrise University',
+  'Zambia Institute of Advanced Legal Education (ZIALE)',
   'Other',
 ];
 
@@ -42,6 +43,7 @@ const AuthPage: React.FC = () => {
     email: '',
     password: '',
     university: 'University of Zambia',
+    customUniversity: '',
     yearOfStudy: 1,
   });
 
@@ -123,7 +125,7 @@ const AuthPage: React.FC = () => {
           const { error: profileError } = await supabase
             .from('profiles')
             .update({
-              university: formData.university,
+              university: formData.university === 'Other' ? formData.customUniversity : formData.university,
               year_of_study: formData.yearOfStudy,
             })
             .eq('user_id', currentUser.id);
@@ -241,6 +243,19 @@ const AuthPage: React.FC = () => {
             ))}
           </select>
         </div>
+        {formData.university === 'Other' && (
+          <div className="relative mt-2">
+            <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              value={formData.customUniversity}
+              onChange={(e) => setFormData({ ...formData, customUniversity: e.target.value })}
+              placeholder="Enter your university name"
+              required
+              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
+        )}
       </div>
 
       <div>
@@ -316,11 +331,13 @@ const AuthPage: React.FC = () => {
           </div>
         )}
 
-        {/* Zambia Context */}
+        {/* Tagline */}
         <div className="mt-8 p-4 bg-primary/5 rounded-2xl border border-primary/10">
           <p className="text-xs text-center text-muted-foreground">
-            🇿🇲 Designed for Zambian law students — covering Zambian case law, 
-            statutes, and the Constitution of Zambia
+            🇿🇲 An app designed to enhance learning through modern learning methods
+          </p>
+          <p className="text-[10px] text-center text-muted-foreground/70 mt-1">
+            Covering Zambian case law, statutes, and the Constitution of Zambia
           </p>
         </div>
       </div>
