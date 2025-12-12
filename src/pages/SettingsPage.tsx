@@ -3,6 +3,7 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,10 @@ import {
   Brain,
   Moon,
   Sun,
-  Monitor
+  Monitor,
+  Smartphone,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +50,7 @@ const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const pushNotifications = usePushNotifications();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'appearance'>('notifications');
 
@@ -179,35 +184,135 @@ const SettingsPage: React.FC = () => {
         <div className="space-y-6">
           {/* Notifications Tab */}
           {activeTab === 'notifications' && (
-            <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5 space-y-5">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <Bell className="w-5 h-5 text-primary" />
+            <>
+              {/* Push Notifications Card */}
+              <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Smartphone className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="font-semibold text-foreground">Push Notifications</h2>
+                    <p className="text-xs text-muted-foreground">Receive notifications on this device</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-semibold text-foreground">Notification Preferences</h2>
-                  <p className="text-xs text-muted-foreground">Manage how you receive updates</p>
-                </div>
+
+                {!pushNotifications.isSupported ? (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-xl">
+                    <AlertCircle className="w-5 h-5 text-destructive" />
+                    <p className="text-sm text-destructive">Push notifications are not supported in this browser</p>
+                  </div>
+                ) : pushNotifications.isSubscribed ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-xl">
+                      <CheckCircle2 className="w-5 h-5 text-primary" />
+                      <p className="text-sm text-primary font-medium">Push notifications are enabled</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          await pushNotifications.sendTestNotification();
+                          toast({
+                            title: "Test Sent",
+                            description: "Check your notifications!",
+                          });
+                        }}
+                        className="flex-1"
+                      >
+                        Send Test
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={async () => {
+                          const success = await pushNotifications.unsubscribe();
+                          if (success) {
+                            toast({
+                              title: "Unsubscribed",
+                              description: "Push notifications have been disabled.",
+                            });
+                          }
+                        }}
+                        disabled={pushNotifications.loading}
+                        className="flex-1"
+                      >
+                        Disable
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Enable push notifications to receive study reminders and updates even when the app is closed.
+                    </p>
+                    <Button
+                      onClick={async () => {
+                        const success = await pushNotifications.subscribe();
+                        if (success) {
+                          toast({
+                            title: "Subscribed!",
+                            description: "You'll now receive push notifications.",
+                          });
+                        } else if (pushNotifications.error) {
+                          toast({
+                            variant: "destructive",
+                            title: "Failed",
+                            description: pushNotifications.error,
+                          });
+                        }
+                      }}
+                      disabled={pushNotifications.loading}
+                      className="w-full"
+                    >
+                      {pushNotifications.loading ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                          Enabling...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <Bell className="w-4 h-4" />
+                          Enable Push Notifications
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
 
-              {notificationOptions.map((option) => (
-                <div 
-                  key={option.key}
-                  className="flex items-center justify-between py-3 border-b border-border/50 last:border-0"
-                >
-                  <div className="flex-1 pr-4">
-                    <p className="font-medium text-sm text-foreground">{option.label}</p>
-                    <p className="text-xs text-muted-foreground">{option.description}</p>
+              {/* Notification Preferences Card */}
+              <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5 space-y-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Bell className="w-5 h-5 text-primary" />
                   </div>
-                  <Switch
-                    checked={notifications[option.key]}
-                    onCheckedChange={(checked) => 
-                      setNotifications(prev => ({ ...prev, [option.key]: checked }))
-                    }
-                  />
+                  <div>
+                    <h2 className="font-semibold text-foreground">Notification Types</h2>
+                    <p className="text-xs text-muted-foreground">Choose what to be notified about</p>
+                  </div>
                 </div>
-              ))}
-            </div>
+
+                {notificationOptions.map((option) => (
+                  <div 
+                    key={option.key}
+                    className="flex items-center justify-between py-3 border-b border-border/50 last:border-0"
+                  >
+                    <div className="flex-1 pr-4">
+                      <p className="font-medium text-sm text-foreground">{option.label}</p>
+                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                    </div>
+                    <Switch
+                      checked={notifications[option.key]}
+                      onCheckedChange={(checked) => 
+                        setNotifications(prev => ({ ...prev, [option.key]: checked }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {/* Study Goals Tab */}
