@@ -68,6 +68,42 @@ export type Database = {
         }
         Relationships: []
       }
+      flashcard_decks: {
+        Row: {
+          cards: Json
+          created_at: string
+          id: string
+          last_reviewed_at: string | null
+          mastered_count: number | null
+          next_review_at: string | null
+          subject: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          cards?: Json
+          created_at?: string
+          id?: string
+          last_reviewed_at?: string | null
+          mastered_count?: number | null
+          next_review_at?: string | null
+          subject: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          cards?: Json
+          created_at?: string
+          id?: string
+          last_reviewed_at?: string | null
+          mastered_count?: number | null
+          next_review_at?: string | null
+          subject?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       journal_entries: {
         Row: {
           content: string
@@ -158,6 +194,54 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          payment_method: string
+          phone_number: string | null
+          product_id: string | null
+          product_type: string
+          provider: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: string
+          phone_number?: string | null
+          product_id?: string | null
+          product_type: string
+          provider?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: string
+          phone_number?: string | null
+          product_id?: string | null
+          product_type?: string
+          provider?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -200,6 +284,42 @@ export type Database = {
           updated_at?: string
           user_id?: string
           year_of_study?: number | null
+        }
+        Relationships: []
+      }
+      quizzes: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          questions: Json
+          score: number | null
+          subject: string
+          title: string
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          questions?: Json
+          score?: number | null
+          subject: string
+          title: string
+          total_questions?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          questions?: Json
+          score?: number | null
+          subject?: string
+          title?: string
+          total_questions?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -271,6 +391,36 @@ export type Database = {
           scheduled_time?: string | null
           task_type?: string | null
           title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          plan: string
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          plan?: string
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          plan?: string
+          started_at?: string
+          status?: string
           user_id?: string
         }
         Relationships: []
