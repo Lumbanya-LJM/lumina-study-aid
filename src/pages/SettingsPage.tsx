@@ -25,7 +25,11 @@ import {
   Monitor,
   Smartphone,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Shield,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -52,7 +56,14 @@ const SettingsPage: React.FC = () => {
   const { toast } = useToast();
   const pushNotifications = usePushNotifications();
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'appearance'>('notifications');
+  const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'appearance' | 'security'>('notifications');
+  
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   // Notification settings
   const [notifications, setNotifications] = useState<NotificationSettings>({
@@ -127,10 +138,61 @@ const SettingsPage: React.FC = () => {
     }, 500);
   };
 
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Passwords Don't Match",
+        description: "Please make sure both passwords are the same.",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        variant: "destructive",
+        title: "Password Too Short",
+        description: "New password must be at least 6 characters long.",
+      });
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Failed to Change Password",
+          description: error.message,
+        });
+      } else {
+        toast({
+          title: "Password Changed",
+          description: "Your password has been updated successfully.",
+        });
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+      });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const tabs = [
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
-    { id: 'goals' as const, label: 'Study Goals', icon: Target },
+    { id: 'goals' as const, label: 'Goals', icon: Target },
     { id: 'appearance' as const, label: 'Appearance', icon: Palette },
+    { id: 'security' as const, label: 'Security', icon: Shield },
   ];
 
   const notificationOptions = [
@@ -456,6 +518,76 @@ const SettingsPage: React.FC = () => {
                     ? "Theme will follow your device settings"
                     : `${theme.charAt(0).toUpperCase() + theme.slice(1)} mode is active`}
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === 'security' && (
+            <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5 space-y-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <Shield className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-foreground">Change Password</h2>
+                  <p className="text-xs text-muted-foreground">Update your account password</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">New Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type={showPasswords ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password (min. 6 chars)"
+                      className="pl-10 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(!showPasswords)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Confirm New Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type={showPasswords ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm your new password"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleChangePassword}
+                  disabled={changingPassword || !newPassword || !confirmPassword}
+                  className="w-full"
+                >
+                  {changingPassword ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      Updating...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      Change Password
+                    </span>
+                  )}
+                </Button>
               </div>
             </div>
           )}
