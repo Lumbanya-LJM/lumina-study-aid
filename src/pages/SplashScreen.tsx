@@ -12,18 +12,22 @@ const SplashScreen: React.FC = () => {
   useEffect(() => {
     const timer1 = setTimeout(() => setStage('lumina'), 1200);
     const timer2 = setTimeout(() => setStage('complete'), 2400);
-    const timer3 = setTimeout(() => {
-      if (!loading) {
-        navigate(user ? '/home' : '/auth');
-      }
-    }, 3200);
 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
-      clearTimeout(timer3);
     };
-  }, [navigate, user, loading]);
+  }, []);
+
+  // Navigate after loading is complete and animation finishes
+  useEffect(() => {
+    if (stage === 'complete' && !loading) {
+      const navTimer = setTimeout(() => {
+        navigate(user ? '/home' : '/auth');
+      }, 800);
+      return () => clearTimeout(navTimer);
+    }
+  }, [stage, loading, user, navigate]);
 
   return (
     <div className="mobile-container min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
