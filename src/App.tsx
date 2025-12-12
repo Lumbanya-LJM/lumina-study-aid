@@ -18,6 +18,9 @@ import CustomizeAvatarPage from "./pages/CustomizeAvatarPage";
 import PartnerPage from "./pages/PartnerPage";
 import UploadPage from "./pages/UploadPage";
 import AdminContentPage from "./pages/AdminContentPage";
+import QuizPage from "./pages/QuizPage";
+import FlashcardsPage from "./pages/FlashcardsPage";
+import SubscriptionPage from "./pages/SubscriptionPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +46,11 @@ const App = () => (
             <Route path="/partner" element={<ProtectedRoute><PartnerPage /></ProtectedRoute>} />
             <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
             <Route path="/admin/content" element={<ProtectedRoute><AdminContentPage /></ProtectedRoute>} />
+            <Route path="/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
+            <Route path="/quiz/:quizId" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
+            <Route path="/flashcards" element={<ProtectedRoute><FlashcardsPage /></ProtectedRoute>} />
+            <Route path="/flashcards/:deckId" element={<ProtectedRoute><FlashcardsPage /></ProtectedRoute>} />
+            <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
