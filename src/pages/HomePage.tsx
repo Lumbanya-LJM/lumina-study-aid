@@ -62,18 +62,22 @@ const HomePage: React.FC = () => {
     if (!user) return;
 
     try {
-      // Fetch profile
-      const { data: profileData } = await supabase
+      // Fetch profile - use maybeSingle to avoid errors if no profile exists
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('full_name, streak_days, total_study_hours, tasks_completed, cases_read')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (profileData) setProfile(profileData);
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      } else if (profileData) {
+        setProfile(profileData);
+      }
 
       // Fetch today's tasks
       const today = format(new Date(), 'yyyy-MM-dd');
-      const { data: tasksData } = await supabase
+      const { data: tasksData, error: tasksError } = await supabase
         .from('study_tasks')
         .select('id, title, scheduled_time, task_type, completed')
         .eq('user_id', user.id)
@@ -81,7 +85,11 @@ const HomePage: React.FC = () => {
         .order('scheduled_time', { ascending: true })
         .limit(3);
 
-      if (tasksData) setTodaysTasks(tasksData);
+      if (tasksError) {
+        console.error('Error fetching tasks:', tasksError);
+      } else if (tasksData) {
+        setTodaysTasks(tasksData);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     }

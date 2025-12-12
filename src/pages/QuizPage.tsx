@@ -67,10 +67,17 @@ const QuizPage: React.FC = () => {
       .from('quizzes')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) {
+      console.error('Error loading quiz:', error);
       toast({ variant: "destructive", title: "Error", description: "Failed to load quiz" });
+      return;
+    }
+
+    if (!data) {
+      toast({ variant: "destructive", title: "Error", description: "Quiz not found" });
+      navigate('/quiz');
       return;
     }
 

@@ -61,10 +61,17 @@ const FlashcardsPage: React.FC = () => {
       .from('flashcard_decks')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) {
+      console.error('Error loading deck:', error);
       toast({ variant: "destructive", title: "Error", description: "Failed to load flashcards" });
+      return;
+    }
+
+    if (!data) {
+      toast({ variant: "destructive", title: "Error", description: "Flashcard deck not found" });
+      navigate('/flashcards');
       return;
     }
 

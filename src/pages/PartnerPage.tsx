@@ -80,9 +80,11 @@ const PartnerPage: React.FC = () => {
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError && profileError.code !== 'PGRST116') throw profileError;
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      }
       setProfile(profileData);
 
       // Fetch weekly tasks
