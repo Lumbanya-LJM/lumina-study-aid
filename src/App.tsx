@@ -17,6 +17,7 @@ import ProfilePage from "./pages/ProfilePage";
 import CustomizeAvatarPage from "./pages/CustomizeAvatarPage";
 import PartnerPage from "./pages/PartnerPage";
 import UploadPage from "./pages/UploadPage";
+import AdminContentPage from "./pages/AdminContentPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/customize-avatar" element={<ProtectedRoute><CustomizeAvatarPage /></ProtectedRoute>} />
             <Route path="/partner" element={<ProtectedRoute><PartnerPage /></ProtectedRoute>} />
             <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
+            <Route path="/admin/content" element={<ProtectedRoute><AdminContentPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

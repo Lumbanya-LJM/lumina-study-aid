@@ -98,6 +98,66 @@ export type Database = {
         }
         Relationships: []
       }
+      library_content: {
+        Row: {
+          citation: string | null
+          content_text: string | null
+          content_type: string
+          court: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          external_url: string | null
+          file_url: string | null
+          id: string
+          is_premium: boolean | null
+          is_published: boolean | null
+          subject: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          year: string | null
+        }
+        Insert: {
+          citation?: string | null
+          content_text?: string | null
+          content_type?: string
+          court?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          external_url?: string | null
+          file_url?: string | null
+          id?: string
+          is_premium?: boolean | null
+          is_published?: boolean | null
+          subject: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          year?: string | null
+        }
+        Update: {
+          citation?: string | null
+          content_text?: string | null
+          content_type?: string
+          court?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          external_url?: string | null
+          file_url?: string | null
+          id?: string
+          is_premium?: boolean | null
+          is_published?: boolean | null
+          subject?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          year?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -248,15 +308,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -383,6 +470,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const

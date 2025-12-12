@@ -29,7 +29,7 @@ export const LuminaAvatar: React.FC<LuminaAvatarProps> = ({
         )} />
       )}
       <div className={cn(
-        "rounded-full overflow-hidden border-2 border-primary/20 shadow-card relative",
+        "rounded-full overflow-hidden border-2 border-primary/20 shadow-card relative bg-secondary",
         sizes[size],
         isActive && "border-primary shadow-glow"
       )}>
