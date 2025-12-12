@@ -14,7 +14,240 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      accountability_partners: {
+        Row: {
+          created_at: string
+          id: string
+          partner_email: string
+          partner_name: string | null
+          relationship: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          partner_email: string
+          partner_name?: string | null
+          relationship?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          partner_email?: string
+          partner_name?: string | null
+          relationship?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_private: boolean | null
+          lumina_response: string | null
+          mood: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_private?: boolean | null
+          lumina_response?: string | null
+          mood?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_private?: boolean | null
+          lumina_response?: string | null
+          mood?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          cases_read: number | null
+          created_at: string
+          full_name: string | null
+          id: string
+          streak_days: number | null
+          tasks_completed: number | null
+          total_study_hours: number | null
+          university: string | null
+          updated_at: string
+          user_id: string
+          year_of_study: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          cases_read?: number | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          streak_days?: number | null
+          tasks_completed?: number | null
+          total_study_hours?: number | null
+          university?: string | null
+          updated_at?: string
+          user_id: string
+          year_of_study?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          cases_read?: number | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          streak_days?: number | null
+          tasks_completed?: number | null
+          total_study_hours?: number | null
+          university?: string | null
+          updated_at?: string
+          user_id?: string
+          year_of_study?: number | null
+        }
+        Relationships: []
+      }
+      study_sessions: {
+        Row: {
+          completed: boolean | null
+          duration_minutes: number
+          ended_at: string | null
+          id: string
+          mode: string | null
+          started_at: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          duration_minutes?: number
+          ended_at?: string | null
+          id?: string
+          mode?: string | null
+          started_at?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          duration_minutes?: number
+          ended_at?: string | null
+          id?: string
+          mode?: string | null
+          started_at?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      study_tasks: {
+        Row: {
+          completed: boolean | null
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          scheduled_date: string | null
+          scheduled_time: string | null
+          task_type: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          task_type?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          task_type?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_files: {
+        Row: {
+          category: string | null
+          created_at: string
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

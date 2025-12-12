@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import lmvLogo from '@/assets/lmv-logo.png';
 
 interface LMVLogoProps {
   className?: string;
@@ -13,22 +14,19 @@ export const LMVLogo: React.FC<LMVLogoProps> = ({
   variant = 'full' 
 }) => {
   const sizes = {
-    sm: { icon: 'w-8 h-8', text: 'text-lg' },
-    md: { icon: 'w-12 h-12', text: 'text-xl' },
-    lg: { icon: 'w-16 h-16', text: 'text-2xl' },
-    xl: { icon: 'w-24 h-24', text: 'text-4xl' },
+    sm: { icon: 'w-10 h-10', text: 'text-lg' },
+    md: { icon: 'w-14 h-14', text: 'text-xl' },
+    lg: { icon: 'w-20 h-20', text: 'text-2xl' },
+    xl: { icon: 'w-32 h-32', text: 'text-4xl' },
   };
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div className={cn(
-        "gradient-primary rounded-2xl flex items-center justify-center shadow-glow",
-        sizes[size].icon
-      )}>
-        <span className="font-display font-bold text-primary-foreground" style={{ fontSize: size === 'xl' ? '1.5rem' : size === 'lg' ? '1rem' : '0.75rem' }}>
-          LMV
-        </span>
-      </div>
+      <img 
+        src={lmvLogo} 
+        alt="Luminary Innovision Academy" 
+        className={cn("object-contain", sizes[size].icon)}
+      />
       {variant === 'full' && (
         <div className="flex flex-col">
           <span className={cn("font-display font-semibold text-foreground leading-tight", sizes[size].text)}>
