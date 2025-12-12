@@ -133,11 +133,18 @@ const AuthPage: React.FC = () => {
           if (profileError) {
             console.error('Profile update error:', profileError);
           }
+
+          // Send welcome email (fire and forget - don't block signup)
+          supabase.functions.invoke('send-welcome-email', {
+            body: { email: formData.email, fullName: formData.fullName }
+          }).then(({ error }) => {
+            if (error) console.error('Welcome email error:', error);
+          });
         }
 
         toast({
           title: "Account Created!",
-          description: "Welcome to Luminary Study. Let's begin your journey!",
+          description: "Welcome to Luminary Study. Check your email for a welcome message!",
         });
         navigate('/home');
       }
