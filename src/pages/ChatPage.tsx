@@ -32,6 +32,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { haptics } from '@/lib/haptics';
 
 interface Message {
   id: string;
@@ -80,6 +81,15 @@ const ChatPage: React.FC = () => {
     onResult: handleVoiceResult,
     onError: handleVoiceError,
   });
+
+  const handleVoiceToggle = () => {
+    haptics.medium();
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
 
   // Update message as user speaks
   useEffect(() => {
@@ -512,7 +522,7 @@ const ChatPage: React.FC = () => {
                 className="w-full resize-none rounded-2xl bg-card border border-border/60 px-4 py-3 pr-12 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
               <button
-                onClick={() => handleSend()}
+                onClick={() => { haptics.medium(); handleSend(); }}
                 disabled={!message.trim() || isLoading}
                 className={cn(
                   'absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors',
@@ -530,7 +540,7 @@ const ChatPage: React.FC = () => {
             </div>
             {isVoiceSupported && (
               <button 
-                onClick={isListening ? stopListening : startListening}
+                onClick={handleVoiceToggle}
                 className={cn(
                   'p-3 rounded-xl transition-colors',
                   isListening 

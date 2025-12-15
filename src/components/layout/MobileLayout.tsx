@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Home, MessageCircle, Calendar, BookOpen, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { haptics } from '@/lib/haptics';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -18,6 +19,12 @@ const navItems = [
 
 export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, showNav = true }) => {
   const location = useLocation();
+
+  const handleNavClick = (isCurrentlyActive: boolean) => {
+    if (!isCurrentlyActive) {
+      haptics.selection();
+    }
+  };
 
   return (
     <div className="mobile-container bg-background min-h-screen flex flex-col">
@@ -36,6 +43,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, showNav = 
                     <Link
                       key={item.path}
                       to={item.path}
+                      onClick={() => handleNavClick(isActive)}
                       className={cn(
                         "flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 active:scale-90",
                         isActive 

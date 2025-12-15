@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LMVLogo } from '@/components/ui/lmv-logo';
+import { haptics } from '@/lib/haptics';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -56,6 +57,7 @@ const PlannerPage: React.FC = () => {
   };
 
   const toggleTask = async (taskId: string, completed: boolean) => {
+    haptics.success();
     await supabase.from('study_tasks').update({ completed: !completed }).eq('id', taskId);
     loadTasks();
   };

@@ -1,8 +1,9 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
+import { haptics } from '@/lib/haptics';
 
-interface QuickActionProps {
+export interface QuickActionProps {
   icon: LucideIcon;
   label: string;
   description?: string;
@@ -19,9 +20,14 @@ export const QuickAction: React.FC<QuickActionProps> = ({
   className,
   variant = 'default',
 }) => {
+  const handleClick = () => {
+    haptics.light();
+    onClick?.();
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className={cn(
         "flex items-center gap-3 p-4 rounded-2xl transition-all duration-300 w-full text-left active:scale-[0.98]",
         variant === 'gradient' 
