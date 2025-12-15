@@ -5,8 +5,10 @@ import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { StatCard } from '@/components/ui/stat-card';
 import { QuickAction } from '@/components/ui/quick-action';
 import { HomePageSkeleton } from '@/components/ui/skeletons';
+import { StudyRemindersCard } from '@/components/lumina/StudyRemindersCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { haptics } from '@/lib/haptics';
 import lmvLogo from '@/assets/lmv-logo.png';
 import { 
   Flame, 
@@ -182,7 +184,7 @@ const HomePage: React.FC = () => {
               <p className="text-primary-foreground/80 text-sm mb-1">{greeting}, {firstName}!</p>
               <h1 className="text-primary-foreground text-xl font-bold mb-2">Ready to excel today?</h1>
               <button 
-                onClick={() => navigate('/chat')}
+                onClick={() => { haptics.medium(); navigate('/chat'); }}
                 className="flex items-center gap-2 bg-primary-foreground/20 rounded-full px-4 py-2 text-sm text-primary-foreground hover:bg-primary-foreground/30 transition-all hover:scale-105 active:scale-95"
               >
                 <span>Ask Lumina anything</span>
@@ -191,6 +193,9 @@ const HomePage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Lumina's Study Reminders */}
+        <StudyRemindersCard />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-6">
