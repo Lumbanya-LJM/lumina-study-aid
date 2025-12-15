@@ -41,7 +41,7 @@ const SupportPage: React.FC = () => {
 
   return (
     <MobileLayout showNav={false}>
-      <div className="px-5 py-6 safe-top">
+      <div className="py-6 safe-top">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <button 

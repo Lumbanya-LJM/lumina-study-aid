@@ -212,7 +212,7 @@ const AdminContentPage: React.FC = () => {
 
   return (
     <MobileLayout showNav={false}>
-      <div className="px-5 py-6 safe-top">
+      <div className="py-6 safe-top">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-secondary">

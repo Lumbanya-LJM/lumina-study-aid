@@ -95,7 +95,7 @@ const ResetPasswordPage: React.FC = () => {
 
   if (checkingSession) {
     return (
-      <div className="mobile-container min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
@@ -103,15 +103,15 @@ const ResetPasswordPage: React.FC = () => {
 
   if (!isValidSession) {
     return (
-      <div className="mobile-container min-h-screen bg-background flex flex-col">
-        <div className="gradient-subtle px-5 pt-12 pb-8 text-center">
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="gradient-subtle px-5 md:px-8 pt-12 pb-8 text-center">
           <LMVLogo size="lg" className="justify-center mb-6" />
           <h1 className="text-2xl font-bold text-foreground mb-2">Invalid Link</h1>
           <p className="text-muted-foreground text-sm">
             This password reset link is invalid or has expired.
           </p>
         </div>
-        <div className="flex-1 px-5 py-8">
+        <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
           <button
             onClick={() => navigate('/auth')}
             className="w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow hover:opacity-90 transition-all"
@@ -125,8 +125,8 @@ const ResetPasswordPage: React.FC = () => {
 
   if (success) {
     return (
-      <div className="mobile-container min-h-screen bg-background flex flex-col">
-        <div className="gradient-subtle px-5 pt-12 pb-8 text-center">
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="gradient-subtle px-5 md:px-8 pt-12 pb-8 text-center">
           <LMVLogo size="lg" className="justify-center mb-6" />
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-green-500" />
@@ -136,7 +136,7 @@ const ResetPasswordPage: React.FC = () => {
             Your password has been successfully updated.
           </p>
         </div>
-        <div className="flex-1 px-5 py-8">
+        <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
           <button
             onClick={() => navigate('/home')}
             className="w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow hover:opacity-90 transition-all"
@@ -149,9 +149,9 @@ const ResetPasswordPage: React.FC = () => {
   }
 
   return (
-    <div className="mobile-container min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="gradient-subtle px-5 pt-12 pb-8 text-center">
+      <div className="gradient-subtle px-5 md:px-8 pt-12 pb-8 text-center">
         <LMVLogo size="lg" className="justify-center mb-6" />
         <h1 className="text-2xl font-bold text-foreground mb-2">Set New Password</h1>
         <p className="text-muted-foreground text-sm">
@@ -160,7 +160,7 @@ const ResetPasswordPage: React.FC = () => {
       </div>
 
       {/* Form */}
-      <div className="flex-1 px-5 py-8">
+      <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">New Password</label>

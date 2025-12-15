@@ -153,7 +153,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <MobileLayout>
-      <div className="px-5 py-6 safe-top">
+      <div className="py-6 safe-top">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <LMVLogo size="sm" variant="icon" />

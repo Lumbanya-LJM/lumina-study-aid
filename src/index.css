@@ -188,12 +188,36 @@
     scrollbar-width: none;
   }
 
-  /* Mobile app container */
-  .mobile-container {
-    max-width: 430px;
+  /* App container - responsive full-width */
+  .app-container {
+    width: 100%;
+    max-width: 1400px;
     margin: 0 auto;
     min-height: 100vh;
     min-height: 100dvh;
+  }
+
+  /* Content container with responsive padding */
+  .content-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .content-container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .content-container {
+      padding-left: 3rem;
+      padding-right: 3rem;
+    }
   }
 
   /* Safe area padding */
