@@ -36,8 +36,8 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, showNav = 
       
       {showNav && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border">
-          <div className="max-w-3xl mx-auto px-2 pt-2 pb-6 safe-bottom">
-            <div className="flex items-center justify-around">
+          <div className="w-full px-4 md:px-8 pt-2 pb-6 safe-bottom">
+            <div className="flex items-center justify-around max-w-2xl mx-auto">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (

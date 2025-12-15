@@ -188,11 +188,9 @@
     scrollbar-width: none;
   }
 
-  /* App container - responsive full-width */
+  /* App container - full screen */
   .app-container {
     width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
     min-height: 100vh;
     min-height: 100dvh;
   }
@@ -200,8 +198,6 @@
   /* Content container with responsive padding */
   .content-container {
     width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
     padding-left: 1rem;
     padding-right: 1rem;
   }
@@ -215,8 +211,15 @@
 
   @media (min-width: 1024px) {
     .content-container {
-      padding-left: 3rem;
-      padding-right: 3rem;
+      padding-left: 4rem;
+      padding-right: 4rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .content-container {
+      padding-left: 6rem;
+      padding-right: 6rem;
     }
   }
 
