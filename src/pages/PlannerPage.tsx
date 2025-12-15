@@ -32,6 +32,16 @@ interface Task {
   completed: boolean | null;
 }
 
+const taskTypes = [
+  { value: 'study', label: 'Study' },
+  { value: 'recall', label: 'Active Recall' },
+  { value: 'quiz', label: 'Quiz' },
+  { value: 'reading', label: 'Reading' },
+  { value: 'assignment', label: 'Assignment' },
+];
+
+const durationOptions = [15, 30, 45, 60, 90, 120];
+
 const PlannerPage: React.FC = () => {
   const navigate = useNavigate();
   const [displayDate, setDisplayDate] = useState(new Date(currentDate));
@@ -39,6 +49,10 @@ const PlannerPage: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskTime, setNewTaskTime] = useState('09:00');
+  const [newTaskDuration, setNewTaskDuration] = useState(30);
+  const [newTaskType, setNewTaskType] = useState('study');
+  const [newTaskDescription, setNewTaskDescription] = useState('');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -68,16 +82,32 @@ const PlannerPage: React.FC = () => {
     const { error } = await supabase.from('study_tasks').insert({
       user_id: user.id,
       title: newTaskTitle,
+      description: newTaskDescription || null,
       scheduled_date: selectedDate,
-      task_type: 'study'
+      scheduled_time: newTaskTime,
+      duration_minutes: newTaskDuration,
+      task_type: newTaskType
     });
 
     if (!error) {
       setNewTaskTitle('');
+      setNewTaskTime('09:00');
+      setNewTaskDuration(30);
+      setNewTaskType('study');
+      setNewTaskDescription('');
       setShowAddTask(false);
       loadTasks();
       toast({ title: "Task added successfully" });
     }
+  };
+
+  const resetTaskForm = () => {
+    setNewTaskTitle('');
+    setNewTaskTime('09:00');
+    setNewTaskDuration(30);
+    setNewTaskType('study');
+    setNewTaskDescription('');
+    setShowAddTask(false);
   };
 
   const changeWeek = (direction: number) => {
@@ -279,24 +309,88 @@ const PlannerPage: React.FC = () => {
         {/* Add Task Modal */}
         {showAddTask && (
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end">
-            <div className="w-full bg-card rounded-t-3xl p-5 pb-8 shadow-premium">
+            <div className="w-full bg-card rounded-t-3xl p-5 pb-8 shadow-premium max-h-[85vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-foreground">Add New Task</h3>
                 <button 
-                  onClick={() => setShowAddTask(false)}
+                  onClick={resetTaskForm}
                   className="p-2 rounded-xl hover:bg-secondary"
                 >
                   <X className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
-              <input
-                type="text"
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder="Task title..."
-                className="w-full px-4 py-3 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground text-sm mb-4"
-                autoFocus
-              />
+              
+              {/* Task Title */}
+              <div className="mb-4">
+                <label className="text-sm font-medium text-foreground mb-2 block">Task Title *</label>
+                <input
+                  type="text"
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="e.g., Review Constitutional Law notes"
+                  className="w-full px-4 py-3 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground text-sm"
+                  autoFocus
+                />
+              </div>
+
+              {/* Time and Duration Row */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Time</label>
+                  <input
+                    type="time"
+                    value={newTaskTime}
+                    onChange={(e) => setNewTaskTime(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Duration</label>
+                  <select
+                    value={newTaskDuration}
+                    onChange={(e) => setNewTaskDuration(Number(e.target.value))}
+                    className="w-full px-4 py-3 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground text-sm appearance-none"
+                  >
+                    {durationOptions.map(d => (
+                      <option key={d} value={d}>{d} min</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Task Type */}
+              <div className="mb-4">
+                <label className="text-sm font-medium text-foreground mb-2 block">Task Type</label>
+                <div className="flex flex-wrap gap-2">
+                  {taskTypes.map(type => (
+                    <button
+                      key={type.value}
+                      onClick={() => setNewTaskType(type.value)}
+                      className={cn(
+                        "px-4 py-2 rounded-xl text-sm font-medium transition-all",
+                        newTaskType === type.value
+                          ? "gradient-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description (Optional) */}
+              <div className="mb-6">
+                <label className="text-sm font-medium text-foreground mb-2 block">Description (optional)</label>
+                <textarea
+                  value={newTaskDescription}
+                  onChange={(e) => setNewTaskDescription(e.target.value)}
+                  placeholder="Add more details about this task..."
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground text-sm resize-none"
+                />
+              </div>
+
               <button
                 onClick={addTask}
                 disabled={!newTaskTitle.trim()}

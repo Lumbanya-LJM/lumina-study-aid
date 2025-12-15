@@ -155,7 +155,7 @@ const HomePage: React.FC = () => {
             <img 
               src={lmvLogo} 
               alt="Luminary Study" 
-              className="w-10 h-10 object-contain rounded-xl"
+              className="w-10 h-10 object-contain"
             />
             <div className="flex flex-col">
               <span className="font-display font-semibold text-foreground text-lg leading-tight">

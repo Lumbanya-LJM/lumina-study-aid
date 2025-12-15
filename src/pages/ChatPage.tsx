@@ -137,7 +137,7 @@ const ChatPage: React.FC = () => {
           {
             id: 'welcome',
             content:
-              `Mwanasheli, ${displayName}! I'm Lumina, your AI study companion. I'm here to help you excel in your law studies. You can ask me to summarise Zambian cases, create flashcards, quiz you on topics, or help manage your study schedule. How can I assist you today?`,
+              `Hi ${displayName}! I'm Lumina, your AI study companion. I'm here to help you excel in your law studies. You can ask me to summarise Zambian cases, create flashcards, quiz you on topics, or help manage your study schedule. How can I assist you today?`,
             sender: 'lumina',
             timestamp: new Date(),
           },
@@ -185,7 +185,7 @@ const ChatPage: React.FC = () => {
         {
           id: 'welcome',
           content:
-            `Mwanasheli, ${displayName}! I'm Lumina, your AI study companion. I'm here to help you excel in your law studies. You can ask me to summarise Zambian cases, create flashcards, quiz you on topics, or help manage your study schedule. How can I assist you today?`,
+            `Hi ${displayName}! I'm Lumina, your AI study companion. I'm here to help you excel in your law studies. You can ask me to summarise Zambian cases, create flashcards, quiz you on topics, or help manage your study schedule. How can I assist you today?`,
           sender: 'lumina',
           timestamp: new Date(),
         },
@@ -399,7 +399,7 @@ const ChatPage: React.FC = () => {
               <LuminaAvatar size="lg" />
               <div className="space-y-2">
                 <h2 className="text-lg font-semibold text-foreground">
-                  Mwanasheli, {displayName}!
+                  Hi {displayName}!
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   I'm Lumina, your AI study companion. Ask me to summarise cases, create
