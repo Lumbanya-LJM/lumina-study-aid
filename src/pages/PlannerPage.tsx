@@ -77,19 +77,33 @@ const PlannerPage: React.FC = () => {
   };
 
   const addTask = async () => {
-    if (!newTaskTitle.trim() || !user) return;
+    if (!newTaskTitle.trim()) {
+      toast({ title: "Please enter a task title", variant: "destructive" });
+      return;
+    }
+    if (!user) {
+      toast({ title: "Please sign in to add tasks", variant: "destructive" });
+      return;
+    }
     
-    const { error } = await supabase.from('study_tasks').insert({
-      user_id: user.id,
-      title: newTaskTitle,
-      description: newTaskDescription || null,
-      scheduled_date: selectedDate,
-      scheduled_time: newTaskTime,
-      duration_minutes: newTaskDuration,
-      task_type: newTaskType
-    });
+    try {
+      const { error } = await supabase.from('study_tasks').insert({
+        user_id: user.id,
+        title: newTaskTitle,
+        description: newTaskDescription || null,
+        scheduled_date: selectedDate,
+        scheduled_time: newTaskTime,
+        duration_minutes: newTaskDuration,
+        task_type: newTaskType
+      });
 
-    if (!error) {
+      if (error) {
+        console.error('Error adding task:', error);
+        toast({ title: "Failed to save task", description: error.message, variant: "destructive" });
+        return;
+      }
+
+      haptics.success();
       setNewTaskTitle('');
       setNewTaskTime('09:00');
       setNewTaskDuration(30);
@@ -98,6 +112,9 @@ const PlannerPage: React.FC = () => {
       setShowAddTask(false);
       loadTasks();
       toast({ title: "Task added successfully" });
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      toast({ title: "Something went wrong", variant: "destructive" });
     }
   };
 
