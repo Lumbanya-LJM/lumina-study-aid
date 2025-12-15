@@ -106,7 +106,7 @@ const HomePage: React.FC = () => {
     { icon: MessageCircle, label: 'Chat with Lumina', description: 'Get instant study help', path: '/chat' },
     { icon: BarChart3, label: 'Analytics', description: 'Track your progress', path: '/analytics' },
     { icon: Focus, label: 'Deep Focus Mode', description: 'Block distractions', path: '/focus' },
-    { icon: PenLine, label: 'Journal Entry', description: 'Reflect on your day', path: '/journal' },
+    { icon: Target, label: 'Achievements', description: 'View your badges', path: '/achievements' },
   ];
 
   const formatTime = (time: string | null) => {

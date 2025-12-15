@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import {
   ArrowLeft,
   Send,
   Mic,
+  MicOff,
   Paperclip,
   Sparkles,
   FileText,
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
 
 interface Message {
   id: string;
@@ -54,6 +56,37 @@ const ChatPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+
+  // Voice input hook
+  const handleVoiceResult = useCallback((transcript: string) => {
+    setMessage(transcript);
+  }, []);
+
+  const handleVoiceError = useCallback((error: string) => {
+    toast({
+      variant: 'destructive',
+      title: 'Voice Error',
+      description: error,
+    });
+  }, [toast]);
+
+  const {
+    isListening,
+    isSupported: isVoiceSupported,
+    transcript,
+    startListening,
+    stopListening,
+  } = useVoiceInput({
+    onResult: handleVoiceResult,
+    onError: handleVoiceError,
+  });
+
+  // Update message as user speaks
+  useEffect(() => {
+    if (transcript) {
+      setMessage(transcript);
+    }
+  }, [transcript]);
 
   // Load chat history on mount
   useEffect(() => {
@@ -485,9 +518,23 @@ const ChatPage: React.FC = () => {
                 )}
               </button>
             </div>
-            <button className="p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
-              <Mic className="w-5 h-5 text-muted-foreground" />
-            </button>
+            {isVoiceSupported && (
+              <button 
+                onClick={isListening ? stopListening : startListening}
+                className={cn(
+                  'p-3 rounded-xl transition-colors',
+                  isListening 
+                    ? 'bg-destructive text-destructive-foreground animate-pulse' 
+                    : 'bg-secondary hover:bg-secondary/80'
+                )}
+              >
+                {isListening ? (
+                  <MicOff className="w-5 h-5" />
+                ) : (
+                  <Mic className="w-5 h-5 text-muted-foreground" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

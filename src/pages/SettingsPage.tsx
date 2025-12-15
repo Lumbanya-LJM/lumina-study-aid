@@ -4,6 +4,7 @@ import { LMVLogo } from '@/components/ui/lmv-logo';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,10 @@ import {
   Shield,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Download,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -55,8 +59,9 @@ const SettingsPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const pushNotifications = usePushNotifications();
+  const offlineSync = useOfflineSync();
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'appearance' | 'security'>('notifications');
+  const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'appearance' | 'offline' | 'security'>('notifications');
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -192,6 +197,7 @@ const SettingsPage: React.FC = () => {
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
     { id: 'goals' as const, label: 'Goals', icon: Target },
     { id: 'appearance' as const, label: 'Appearance', icon: Palette },
+    { id: 'offline' as const, label: 'Offline', icon: Download },
     { id: 'security' as const, label: 'Security', icon: Shield },
   ];
 
@@ -519,6 +525,48 @@ const SettingsPage: React.FC = () => {
                     : `${theme.charAt(0).toUpperCase() + theme.slice(1)} mode is active`}
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Offline Tab */}
+          {activeTab === 'offline' && (
+            <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5 space-y-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-primary/10">
+                  {offlineSync.isOnline ? (
+                    <Wifi className="w-5 h-5 text-primary" />
+                  ) : (
+                    <WifiOff className="w-5 h-5 text-destructive" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="font-semibold text-foreground">Offline Mode</h2>
+                  <p className="text-xs text-muted-foreground">
+                    {offlineSync.isOnline ? 'You are online' : 'You are offline'}
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Download flashcards and quizzes to study offline. Your progress will sync when you're back online.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-secondary rounded-xl text-center">
+                  <p className="text-2xl font-bold text-primary">{offlineSync.offlineDecksCount}</p>
+                  <p className="text-xs text-muted-foreground">Flashcard Decks</p>
+                </div>
+                <div className="p-4 bg-secondary rounded-xl text-center">
+                  <p className="text-2xl font-bold text-primary">{offlineSync.offlineQuizzesCount}</p>
+                  <p className="text-xs text-muted-foreground">Quizzes Saved</p>
+                </div>
+              </div>
+              <Button
+                onClick={offlineSync.downloadForOffline}
+                disabled={offlineSync.isSyncing || !offlineSync.isOnline}
+                className="w-full"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {offlineSync.isSyncing ? 'Downloading...' : 'Download for Offline'}
+              </Button>
             </div>
           )}
 
