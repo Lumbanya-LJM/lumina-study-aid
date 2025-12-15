@@ -6,6 +6,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { QuickAction } from '@/components/ui/quick-action';
 import { HomePageSkeleton } from '@/components/ui/skeletons';
 import { StudyRemindersCard } from '@/components/lumina/StudyRemindersCard';
+import { OnboardingTutorial } from '@/components/onboarding/OnboardingTutorial';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { haptics } from '@/lib/haptics';
@@ -50,6 +51,15 @@ const HomePage: React.FC = () => {
   const [todaysTasks, setTodaysTasks] = useState<StudyTask[]>([]);
   const [greeting, setGreeting] = useState('Good morning');
   const [isLoading, setIsLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    // Check if onboarding has been completed
+    const onboardingComplete = localStorage.getItem('luminary_onboarding_complete');
+    if (!onboardingComplete) {
+      setShowOnboarding(true);
+    }
+  }, []);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -137,6 +147,11 @@ const HomePage: React.FC = () => {
   };
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Student';
+
+  // Show onboarding tutorial for new users
+  if (showOnboarding) {
+    return <OnboardingTutorial onComplete={() => setShowOnboarding(false)} />;
+  }
 
   if (isLoading) {
     return (
