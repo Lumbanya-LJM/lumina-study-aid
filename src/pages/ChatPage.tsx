@@ -413,21 +413,31 @@ const ChatPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((msg) => (
+              {messages.map((msg, index) => (
                 <div
                   key={msg.id}
-                  className={cn('flex', {
-                    'justify-end': msg.sender === 'user',
-                    'justify-start': msg.sender === 'lumina',
-                  })}
+                  className={cn(
+                    'flex animate-fade-in-up',
+                    {
+                      'justify-end': msg.sender === 'user',
+                      'justify-start': msg.sender === 'lumina',
+                    }
+                  )}
+                  style={{ 
+                    animationDelay: `${index * 0.05}s`,
+                    animationFillMode: 'forwards'
+                  }}
                 >
                   <div
-                    className={cn('max-w-[80%] rounded-2xl px-4 py-3 text-sm', {
-                      'bg-primary text-primary-foreground rounded-br-sm shadow-lg':
-                        msg.sender === 'user',
-                      'bg-card text-foreground border border-border/60 rounded-bl-sm shadow-sm':
-                        msg.sender === 'lumina',
-                    })}
+                    className={cn(
+                      'max-w-[80%] rounded-2xl px-4 py-3 text-sm transition-all duration-300',
+                      {
+                        'bg-primary text-primary-foreground rounded-br-sm shadow-lg hover:shadow-xl':
+                          msg.sender === 'user',
+                        'bg-card text-foreground border border-border/60 rounded-bl-sm shadow-sm hover:shadow-md':
+                          msg.sender === 'lumina',
+                      }
+                    )}
                   >
                     {msg.content}
                   </div>

@@ -23,10 +23,10 @@ export const QuickAction: React.FC<QuickActionProps> = ({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 p-4 rounded-2xl transition-all duration-300 w-full text-left",
+        "flex items-center gap-3 p-4 rounded-2xl transition-all duration-300 w-full text-left active:scale-[0.98]",
         variant === 'gradient' 
-          ? "gradient-primary text-primary-foreground shadow-glow hover:scale-[1.02]"
-          : "bg-card border border-border/50 shadow-card hover:shadow-premium hover:border-primary/20",
+          ? "gradient-primary text-primary-foreground shadow-glow hover:scale-[1.02] animate-glow-pulse"
+          : "bg-card border border-border/50 shadow-card hover:shadow-premium hover:border-primary/20 hover:scale-[1.02]",
         className
       )}
     >

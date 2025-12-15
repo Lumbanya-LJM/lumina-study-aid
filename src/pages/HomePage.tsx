@@ -4,6 +4,7 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { StatCard } from '@/components/ui/stat-card';
 import { QuickAction } from '@/components/ui/quick-action';
+import { HomePageSkeleton } from '@/components/ui/skeletons';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import lmvLogo from '@/assets/lmv-logo.png';
@@ -46,6 +47,7 @@ const HomePage: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [todaysTasks, setTodaysTasks] = useState<StudyTask[]>([]);
   const [greeting, setGreeting] = useState('Good morning');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -60,6 +62,7 @@ const HomePage: React.FC = () => {
 
   const fetchData = async () => {
     if (!user) return;
+    setIsLoading(true);
 
     try {
       // Fetch profile - use maybeSingle to avoid errors if no profile exists
@@ -92,6 +95,8 @@ const HomePage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -131,6 +136,14 @@ const HomePage: React.FC = () => {
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Student';
 
+  if (isLoading) {
+    return (
+      <MobileLayout>
+        <HomePageSkeleton />
+      </MobileLayout>
+    );
+  }
+
   return (
     <MobileLayout>
       <div className="px-5 py-6 safe-top">
@@ -161,7 +174,7 @@ const HomePage: React.FC = () => {
         </div>
 
         {/* Greeting Card with Lumina */}
-        <div className="gradient-primary rounded-3xl p-5 mb-6 shadow-glow relative overflow-hidden">
+        <div className="gradient-primary rounded-3xl p-5 mb-6 shadow-glow relative overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary-foreground/10 rounded-full blur-2xl" />
           <div className="flex items-center gap-4 relative z-10">
             <LuminaAvatar size="lg" isActive />
@@ -170,7 +183,7 @@ const HomePage: React.FC = () => {
               <h1 className="text-primary-foreground text-xl font-bold mb-2">Ready to excel today?</h1>
               <button 
                 onClick={() => navigate('/chat')}
-                className="flex items-center gap-2 bg-primary-foreground/20 rounded-full px-4 py-2 text-sm text-primary-foreground hover:bg-primary-foreground/30 transition-colors"
+                className="flex items-center gap-2 bg-primary-foreground/20 rounded-full px-4 py-2 text-sm text-primary-foreground hover:bg-primary-foreground/30 transition-all hover:scale-105 active:scale-95"
               >
                 <span>Ask Lumina anything</span>
                 <ChevronRight className="w-4 h-4" />
@@ -182,29 +195,39 @@ const HomePage: React.FC = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           {stats.map((stat, index) => (
-            <StatCard
+            <div 
               key={index}
-              icon={stat.icon}
-              label={stat.label}
-              value={stat.value}
-              trend={stat.trend}
-            />
+              className="animate-fade-in-up opacity-0"
+              style={{ animationDelay: `${0.2 + index * 0.05}s`, animationFillMode: 'forwards' }}
+            >
+              <StatCard
+                icon={stat.icon}
+                label={stat.label}
+                value={stat.value}
+                trend={stat.trend}
+              />
+            </div>
           ))}
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-6">
+        <div className="mb-6 animate-fade-in-up opacity-0" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
           <h2 className="text-lg font-semibold text-foreground mb-3">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-3">
             {quickActions.map((action, index) => (
-              <QuickAction
+              <div 
                 key={index}
-                icon={action.icon}
-                label={action.label}
-                description={action.description}
-                onClick={() => navigate(action.path)}
-                variant={index === 0 ? 'gradient' : 'default'}
-              />
+                className="animate-scale-in opacity-0"
+                style={{ animationDelay: `${0.45 + index * 0.05}s`, animationFillMode: 'forwards' }}
+              >
+                <QuickAction
+                  icon={action.icon}
+                  label={action.label}
+                  description={action.description}
+                  onClick={() => navigate(action.path)}
+                  variant={index === 0 ? 'gradient' : 'default'}
+                />
+              </div>
             ))}
           </div>
         </div>
