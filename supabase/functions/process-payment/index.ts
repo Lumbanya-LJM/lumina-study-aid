@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, phoneNumber, provider, productType, productId } = await req.json();
+    const { amount, phoneNumber, provider, productType, productId, selectedCourses } = await req.json();
     
     const MONEYUNIFY_API_KEY = Deno.env.get("MONEYUNIFY_API_KEY");
     const MONEYUNIFY_MERCHANT_ID = Deno.env.get("MONEYUNIFY_MERCHANT_ID");
@@ -45,7 +45,7 @@ serve(async (req) => {
       throw new Error("Invalid payment provider");
     }
 
-    console.log("Processing payment:", { amount, provider, productType });
+    console.log("Processing payment:", { amount, provider, productType, selectedCourses });
 
     // Create payment record
     const { data: payment, error: paymentError } = await supabaseClient
@@ -102,25 +102,43 @@ serve(async (req) => {
         })
         .eq("id", payment.id);
 
-      // If subscription, update user subscription
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+      // Handle subscription types
       if (productType === "subscription") {
-        const expiresAt = new Date();
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
-        
         await supabaseClient
           .from("subscriptions")
           .upsert({
             user_id: user.id,
-            plan: "premium",
+            plan: "pro",
             status: "active",
             expires_at: expiresAt.toISOString(),
           });
+      } else if (productType === "academy" && selectedCourses && selectedCourses.length > 0) {
+        // Create enrollments for each selected course
+        const enrollments = selectedCourses.map((courseId: string) => ({
+          user_id: user.id,
+          course_id: courseId,
+          status: "active",
+          expires_at: expiresAt.toISOString(),
+        }));
+
+        const { error: enrollError } = await supabaseClient
+          .from("academy_enrollments")
+          .upsert(enrollments, { onConflict: "user_id,course_id" });
+
+        if (enrollError) {
+          console.error("Error creating enrollments:", enrollError);
+        }
       }
 
       return new Response(JSON.stringify({ 
         success: true, 
         paymentId: payment.id,
-        message: "Payment processed successfully" 
+        message: productType === "academy" 
+          ? "Academy enrollment successful!" 
+          : "Payment processed successfully" 
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

@@ -24,7 +24,9 @@ import {
   Bell,
   ChevronRight,
   Upload,
-  BarChart3
+  BarChart3,
+  Users,
+  GraduationCap
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -121,8 +123,10 @@ const HomePage: React.FC = () => {
 
   const quickActions = [
     { icon: MessageCircle, label: 'Chat with Lumina', description: 'Get instant study help', path: '/chat' },
-    { icon: BarChart3, label: 'Analytics', description: 'Track your progress', path: '/analytics' },
+    { icon: Users, label: 'Community', description: 'Join study groups', path: '/community' },
+    { icon: GraduationCap, label: 'Lumina Academy', description: 'Tutor updates', path: '/academy' },
     { icon: Focus, label: 'Deep Focus Mode', description: 'Block distractions', path: '/focus' },
+    { icon: BarChart3, label: 'Analytics', description: 'Track your progress', path: '/analytics' },
     { icon: Target, label: 'Achievements', description: 'View your badges', path: '/achievements' },
   ];
 

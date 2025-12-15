@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      academy_courses: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          institution: string | null
+          is_active: boolean | null
+          name: string
+          price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          institution?: string | null
+          is_active?: boolean | null
+          name: string
+          price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          institution?: string | null
+          is_active?: boolean | null
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      academy_enrollments: {
+        Row: {
+          course_id: string
+          enrolled_at: string
+          expires_at: string | null
+          id: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          course_id: string
+          enrolled_at?: string
+          expires_at?: string | null
+          id?: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          course_id?: string
+          enrolled_at?: string
+          expires_at?: string | null
+          id?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "academy_courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accountability_partners: {
         Row: {
           created_at: string
@@ -386,6 +451,106 @@ export type Database = {
         }
         Relationships: []
       }
+      study_group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      study_group_messages: {
+        Row: {
+          content: string
+          created_at: string
+          group_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          group_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      study_groups: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_private: boolean | null
+          max_members: number | null
+          name: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_private?: boolean | null
+          max_members?: number | null
+          name: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_private?: boolean | null
+          max_members?: number | null
+          name?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       study_sessions: {
         Row: {
           completed: boolean | null
@@ -487,6 +652,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      tutor_updates: {
+        Row: {
+          class_link: string | null
+          class_time: string | null
+          content: string
+          course_id: string
+          created_at: string
+          id: string
+          is_published: boolean | null
+          title: string
+          tutor_id: string
+          update_type: string | null
+        }
+        Insert: {
+          class_link?: string | null
+          class_time?: string | null
+          content: string
+          course_id: string
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          title: string
+          tutor_id: string
+          update_type?: string | null
+        }
+        Update: {
+          class_link?: string | null
+          class_time?: string | null
+          content?: string
+          course_id?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          title?: string
+          tutor_id?: string
+          update_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_updates_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "academy_courses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_achievements: {
         Row: {
