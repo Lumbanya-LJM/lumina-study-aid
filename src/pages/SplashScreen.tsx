@@ -31,14 +31,6 @@ const SplashScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-primary/3 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-primary/5 rounded-full" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-primary/10 rounded-full" />
-      </div>
-
       <div className="relative z-10 flex flex-col items-center">
         {/* Logo with elegant fade */}
         <div className={`transition-all duration-1000 ease-out ${
@@ -62,10 +54,7 @@ const SplashScreen: React.FC = () => {
             ? 'opacity-100 translate-y-0' 
             : 'opacity-0 translate-y-12 pointer-events-none'
         }`}>
-          <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
-            <LuminaAvatar size="xl" isActive={stage === 'complete'} />
-          </div>
+          <LuminaAvatar size="xl" isActive={stage === 'complete'} />
           <div className="text-center mt-6">
             <h2 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
               Meet Lumina
@@ -76,19 +65,17 @@ const SplashScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Loading indicator */}
-        <div className={`mt-12 transition-all duration-500 ${
+        {/* Loading bar */}
+        <div className={`mt-12 w-48 transition-all duration-500 ${
           stage === 'complete' ? 'opacity-0' : 'opacity-100'
         }`}>
-          <div className="flex gap-2">
-            {[0, 1, 2].map((i) => (
-              <div 
-                key={i} 
-                className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              />
-            ))}
+          <div className="h-1 bg-secondary rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary rounded-full transition-all duration-[3000ms] ease-out"
+              style={{ width: stage === 'logo' ? '30%' : stage === 'lumina' ? '70%' : '100%' }}
+            />
           </div>
+          <p className="text-xs text-muted-foreground text-center mt-3">Loading...</p>
         </div>
       </div>
 
