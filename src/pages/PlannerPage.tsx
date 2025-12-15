@@ -13,7 +13,9 @@ import {
   CheckCircle2,
   Circle,
   Upload,
-  X
+  X,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,6 +50,7 @@ const PlannerPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(currentDate.toISOString().split('T')[0]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskTime, setNewTaskTime] = useState('09:00');
   const [newTaskDuration, setNewTaskDuration] = useState(30);
@@ -125,6 +128,49 @@ const PlannerPage: React.FC = () => {
     setNewTaskType('study');
     setNewTaskDescription('');
     setShowAddTask(false);
+    setEditingTask(null);
+  };
+
+  const deleteTask = async (taskId: string) => {
+    const { error } = await supabase.from('study_tasks').delete().eq('id', taskId);
+    if (error) {
+      toast({ title: "Failed to delete task", variant: "destructive" });
+      return;
+    }
+    haptics.success();
+    loadTasks();
+    toast({ title: "Task deleted" });
+  };
+
+  const openEditTask = (task: Task) => {
+    setEditingTask(task);
+    setNewTaskTitle(task.title);
+    setNewTaskTime(task.scheduled_time || '09:00');
+    setNewTaskDuration(task.duration_minutes || 30);
+    setNewTaskType(task.task_type || 'study');
+    setNewTaskDescription('');
+    setShowAddTask(true);
+  };
+
+  const updateTask = async () => {
+    if (!editingTask || !newTaskTitle.trim()) return;
+    
+    const { error } = await supabase.from('study_tasks').update({
+      title: newTaskTitle,
+      scheduled_time: newTaskTime,
+      duration_minutes: newTaskDuration,
+      task_type: newTaskType,
+    }).eq('id', editingTask.id);
+
+    if (error) {
+      toast({ title: "Failed to update task", variant: "destructive" });
+      return;
+    }
+
+    haptics.success();
+    resetTaskForm();
+    loadTasks();
+    toast({ title: "Task updated" });
   };
 
   const changeWeek = (direction: number) => {
@@ -275,7 +321,7 @@ const PlannerPage: React.FC = () => {
                           : "border-border/50"
                       )}
                     >
-                      <div className="flex items-start gap-4">
+                      <div className="flex items-start gap-3">
                         <button className="mt-0.5" onClick={() => toggleTask(task.id, task.completed || false)}>
                           {task.completed ? (
                             <CheckCircle2 className="w-5 h-5 text-success" />
@@ -300,8 +346,22 @@ const PlannerPage: React.FC = () => {
                             </span>
                           </div>
                         </div>
-                        <div className={cn("p-2 rounded-xl", getTaskColor(task.task_type || 'study'))}>
-                          <Icon className="w-4 h-4" />
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => openEditTask(task)}
+                            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+                          >
+                            <Pencil className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button 
+                            onClick={() => deleteTask(task.id)}
+                            className="p-2 rounded-xl hover:bg-destructive/10 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </button>
+                          <div className={cn("p-2 rounded-xl", getTaskColor(task.task_type || 'study'))}>
+                            <Icon className="w-4 h-4" />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -328,7 +388,7 @@ const PlannerPage: React.FC = () => {
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end">
             <div className="w-full bg-card rounded-t-3xl p-5 pb-8 shadow-premium max-h-[85vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-foreground">Add New Task</h3>
+                <h3 className="font-semibold text-foreground">{editingTask ? 'Edit Task' : 'Add New Task'}</h3>
                 <button 
                   onClick={resetTaskForm}
                   className="p-2 rounded-xl hover:bg-secondary"
@@ -409,11 +469,11 @@ const PlannerPage: React.FC = () => {
               </div>
 
               <button
-                onClick={addTask}
+                onClick={editingTask ? updateTask : addTask}
                 disabled={!newTaskTitle.trim()}
                 className="w-full gradient-primary text-primary-foreground py-3 rounded-xl font-semibold text-sm disabled:opacity-50"
               >
-                Add Task
+                {editingTask ? 'Update Task' : 'Add Task'}
               </button>
             </div>
           </div>

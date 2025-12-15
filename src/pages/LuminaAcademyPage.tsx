@@ -60,22 +60,44 @@ const LuminaAcademyPage: React.FC = () => {
   useEffect(() => {
     loadData();
     
-    // Subscribe to real-time updates
+    // Subscribe to real-time updates with push notifications
     const channel = supabase
       .channel('tutor-updates')
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'tutor_updates'
-      }, (payload) => {
+      }, async (payload) => {
         loadUpdates();
+        
+        // Show push notification for new updates
+        if (Notification.permission === 'granted' && hasAcademyAccess) {
+          const update = payload.new as TutorUpdate;
+          const course = courses.find(c => c.id === update.course_id);
+          
+          const registration = await navigator.serviceWorker?.ready;
+          if (registration) {
+            registration.showNotification('Lumina Academy', {
+              body: `${course?.name || 'Course'}: ${update.title}`,
+              icon: '/pwa-192x192.png',
+              badge: '/pwa-192x192.png',
+              tag: `tutor-update-${update.id}`,
+              data: { url: '/academy' }
+            });
+          }
+        }
+        
+        toast({
+          title: "New Update",
+          description: "Your tutor posted a new update!",
+        });
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [hasAcademyAccess, courses]);
 
   const loadData = async () => {
     setIsLoading(true);
