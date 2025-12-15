@@ -235,6 +235,45 @@ export type Database = {
         }
         Relationships: []
       }
+      legal_alerts: {
+        Row: {
+          alert_type: string
+          citation: string | null
+          court: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_read: boolean | null
+          published_date: string | null
+          source_url: string | null
+          title: string
+        }
+        Insert: {
+          alert_type?: string
+          citation?: string | null
+          court?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_read?: boolean | null
+          published_date?: string | null
+          source_url?: string | null
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          citation?: string | null
+          court?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_read?: boolean | null
+          published_date?: string | null
+          source_url?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       library_content: {
         Row: {
           citation: string | null
@@ -761,6 +800,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_legal_alert_reads: {
+        Row: {
+          alert_id: string
+          id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_id: string
+          id?: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_id?: string
+          id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_legal_alert_reads_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "legal_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
