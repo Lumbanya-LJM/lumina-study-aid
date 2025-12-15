@@ -29,6 +29,8 @@ import InstallPage from "./pages/InstallPage";
 import SupportPage from "./pages/SupportPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import AchievementsPage from "./pages/AchievementsPage";
+import CommunityPage from "./pages/CommunityPage";
+import LuminaAcademyPage from "./pages/LuminaAcademyPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -67,6 +69,8 @@ const App = () => (
             <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
+            <Route path="/community" element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
+            <Route path="/academy" element={<ProtectedRoute><LuminaAcademyPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
