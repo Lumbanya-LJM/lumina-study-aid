@@ -249,7 +249,6 @@ const HomePage: React.FC = () => {
                   label={action.label}
                   description={action.description}
                   onClick={() => navigate(action.path)}
-                  variant={index === 0 ? 'gradient' : 'default'}
                 />
               </div>
             ))}
