@@ -47,7 +47,7 @@ const FocusPage: React.FC = () => {
   if (!mode) {
     return (
       <MobileLayout showNav={false}>
-        <div className="flex flex-col min-h-screen px-5 py-6 safe-top">
+        <div className="flex flex-col min-h-screen py-6 safe-top">
           {/* Header */}
           <div className="flex items-center gap-4 mb-8">
             <button 

@@ -184,7 +184,7 @@ const QuizPage: React.FC = () => {
   if (!quiz) {
     return (
       <MobileLayout showNav={false}>
-        <div className="flex flex-col min-h-screen px-5 py-6 safe-top">
+        <div className="flex flex-col min-h-screen py-6 safe-top">
           <div className="flex items-center gap-4 mb-6">
             <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-secondary transition-colors">
               <ArrowLeft className="w-5 h-5 text-foreground" />
@@ -306,7 +306,7 @@ const QuizPage: React.FC = () => {
   
   return (
     <MobileLayout showNav={false}>
-      <div className="flex flex-col min-h-screen px-5 py-6 safe-top">
+      <div className="flex flex-col min-h-screen py-6 safe-top">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-secondary transition-colors">

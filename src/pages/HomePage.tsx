@@ -148,7 +148,7 @@ const HomePage: React.FC = () => {
 
   return (
     <MobileLayout>
-      <div className="px-5 py-6 safe-top">
+      <div className="py-6 safe-top">
         {/* Header with Logo */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">

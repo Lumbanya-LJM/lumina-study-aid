@@ -51,8 +51,8 @@ const ForgotPasswordPage: React.FC = () => {
 
   if (emailSent) {
     return (
-      <div className="mobile-container min-h-screen bg-background flex flex-col">
-        <div className="gradient-subtle px-5 pt-12 pb-8 text-center">
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="gradient-subtle px-5 md:px-8 pt-12 pb-8 text-center">
           <LMVLogo size="lg" className="justify-center mb-6" />
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-primary" />
@@ -63,7 +63,7 @@ const ForgotPasswordPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex-1 px-5 py-8">
+        <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
           <div className="p-4 bg-secondary/50 rounded-2xl border border-border/50 mb-6">
             <p className="text-sm text-muted-foreground text-center">
               Didn't receive the email? Check your spam folder or try again in a few minutes.
@@ -90,9 +90,9 @@ const ForgotPasswordPage: React.FC = () => {
   }
 
   return (
-    <div className="mobile-container min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="gradient-subtle px-5 pt-12 pb-8 text-center">
+      <div className="gradient-subtle px-5 md:px-8 pt-12 pb-8 text-center">
         <LMVLogo size="lg" className="justify-center mb-6" />
         <h1 className="text-2xl font-bold text-foreground mb-2">Forgot Password?</h1>
         <p className="text-muted-foreground text-sm">
@@ -101,7 +101,7 @@ const ForgotPasswordPage: React.FC = () => {
       </div>
 
       {/* Form */}
-      <div className="flex-1 px-5 py-8">
+      <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">Email Address</label>

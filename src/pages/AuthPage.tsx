@@ -315,9 +315,9 @@ const AuthPage: React.FC = () => {
   );
 
   return (
-    <div className="mobile-container min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="gradient-subtle px-5 pt-12 pb-8 text-center">
+      <div className="gradient-subtle px-5 md:px-8 pt-12 pb-8 text-center">
         <LMVLogo size="lg" className="justify-center mb-6" />
         <h1 className="text-2xl font-bold text-foreground mb-2">
           {step === 'profile' ? 'Almost There!' : isLogin ? 'Welcome Back' : 'Join Luminary'}
@@ -332,7 +332,7 @@ const AuthPage: React.FC = () => {
       </div>
 
       {/* Form */}
-      <div className="flex-1 px-5 py-8">
+      <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
         {step === 'credentials' ? renderCredentialsStep() : renderProfileStep()}
 
         {/* Toggle */}

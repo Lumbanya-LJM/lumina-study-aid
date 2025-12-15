@@ -53,7 +53,7 @@ const AchievementsPage: React.FC = () => {
 
   return (
     <MobileLayout>
-      <div className="px-5 py-6 safe-top pb-24">
+      <div className="py-6 safe-top pb-24">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
