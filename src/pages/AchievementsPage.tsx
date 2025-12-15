@@ -1,6 +1,7 @@
 import React from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { useAchievements } from '@/hooks/useAchievements';
+import { AchievementsSkeleton } from '@/components/ui/skeletons';
 import { ArrowLeft, Trophy, Lock, Flame, Brain, BookOpen, Clock, Layers, PenLine } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
@@ -81,13 +82,15 @@ const AchievementsPage: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
+          <AchievementsSkeleton />
         ) : (
           <div className="space-y-6">
-            {Object.entries(groupedAchievements).map(([category, categoryAchievements]) => (
-              <div key={category}>
+            {Object.entries(groupedAchievements).map(([category, categoryAchievements], categoryIndex) => (
+              <div 
+                key={category}
+                className="animate-fade-in-up opacity-0"
+                style={{ animationDelay: `${categoryIndex * 0.1}s`, animationFillMode: 'forwards' }}
+              >
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                   {categoryLabels[category] || category}
                 </h2>
