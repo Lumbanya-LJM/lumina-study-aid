@@ -33,6 +33,8 @@ import AchievementsPage from "./pages/AchievementsPage";
 import CommunityPage from "./pages/CommunityPage";
 import LuminaAcademyPage from "./pages/LuminaAcademyPage";
 import TeachDashboardPage from "./pages/TeachDashboardPage";
+import LiveClassPage from "./pages/LiveClassPage";
+import ClassRecordingsPage from "./pages/ClassRecordingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +76,8 @@ const App = () => (
             <Route path="/community" element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
             <Route path="/academy" element={<ProtectedRoute><LuminaAcademyPage /></ProtectedRoute>} />
             <Route path="/teach" element={<TutorProtectedRoute><TeachDashboardPage /></TutorProtectedRoute>} />
+            <Route path="/class/:classId" element={<ProtectedRoute><LiveClassPage /></ProtectedRoute>} />
+            <Route path="/recordings" element={<ProtectedRoute><ClassRecordingsPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
