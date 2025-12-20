@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { MarkdownRenderer } from '@/components/lumina/MarkdownRenderer';
+import { ConversationSidebar } from '@/components/lumina/ConversationSidebar';
 import {
   ArrowLeft,
   Send,
@@ -12,23 +13,13 @@ import {
   Brain,
   BookOpen,
   Calendar,
-  RotateCcw,
+  Menu,
   Copy,
   Check,
   Loader2,
+  Plus,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +32,13 @@ interface Message {
   content: string;
   sender: 'user' | 'lumina';
   timestamp: Date;
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
 }
 
 const quickPrompts = [
@@ -62,6 +60,12 @@ const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  // Conversation management
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
 
   // Voice input hook
   const handleVoiceResult = useCallback((transcript: string) => {
@@ -108,12 +112,22 @@ const ChatPage: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load chat history on mount
+  // Load conversations on mount
   useEffect(() => {
     if (user) {
-      loadChatHistory();
+      loadConversations();
     }
   }, [user]);
+
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (user && currentConversationId) {
+      loadChatHistory(currentConversationId);
+    } else if (user && currentConversationId === null) {
+      setMessages([]);
+      setIsLoadingHistory(false);
+    }
+  }, [user, currentConversationId]);
 
   // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -122,14 +136,44 @@ const ChatPage: React.FC = () => {
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
   };
 
-  const loadChatHistory = async () => {
+  const loadConversations = async () => {
     if (!user) return;
+    setIsLoadingConversations(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+
+      setConversations(data || []);
+      
+      // If there are conversations and none selected, select the most recent
+      if (data && data.length > 0 && !currentConversationId) {
+        setCurrentConversationId(data[0].id);
+      } else if (!data || data.length === 0) {
+        setIsLoadingHistory(false);
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  };
+
+  const loadChatHistory = async (conversationId: string) => {
+    if (!user) return;
+    setIsLoadingHistory(true);
 
     try {
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*')
         .eq('user_id', user.id)
+        .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -143,6 +187,8 @@ const ChatPage: React.FC = () => {
             timestamp: new Date(msg.created_at),
           })),
         );
+      } else {
+        setMessages([]);
       }
     } catch (error) {
       console.error('Error loading chat history:', error);
@@ -151,7 +197,89 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const saveMessage = async (content: string, role: 'user' | 'assistant') => {
+  const createNewConversation = async (title: string = 'New Chat'): Promise<string | null> => {
+    if (!user) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          title: title.slice(0, 50),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setConversations(prev => [data, ...prev]);
+      setCurrentConversationId(data.id);
+      setMessages([]);
+      return data.id;
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      return null;
+    }
+  };
+
+  const updateConversationTitle = async (conversationId: string, title: string) => {
+    try {
+      await supabase
+        .from('conversations')
+        .update({ title: title.slice(0, 50), updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+
+      setConversations(prev =>
+        prev.map(c => c.id === conversationId ? { ...c, title: title.slice(0, 50) } : c)
+      );
+    } catch (error) {
+      console.error('Error updating conversation title:', error);
+    }
+  };
+
+  const deleteConversation = async (conversationId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId);
+
+      if (error) throw error;
+
+      setConversations(prev => prev.filter(c => c.id !== conversationId));
+      
+      if (currentConversationId === conversationId) {
+        const remaining = conversations.filter(c => c.id !== conversationId);
+        if (remaining.length > 0) {
+          setCurrentConversationId(remaining[0].id);
+        } else {
+          setCurrentConversationId(null);
+          setMessages([]);
+        }
+      }
+
+      toast({
+        title: 'Conversation deleted',
+        description: 'The conversation has been removed.',
+      });
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to delete conversation.',
+      });
+    }
+  };
+
+  const handleNewConversation = () => {
+    setCurrentConversationId(null);
+    setMessages([]);
+  };
+
+  const saveMessage = async (content: string, role: 'user' | 'assistant', conversationId: string) => {
     if (!user) return;
 
     try {
@@ -159,36 +287,16 @@ const ChatPage: React.FC = () => {
         user_id: user.id,
         content,
         role,
+        conversation_id: conversationId,
       });
+      
+      // Update conversation updated_at
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
     } catch (error) {
       console.error('Error saving message:', error);
-    }
-  };
-
-  const clearChatHistory = async () => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setMessages([]);
-
-      toast({
-        title: 'Chat cleared',
-        description: 'Your conversation history has been deleted.',
-      });
-    } catch (error) {
-      console.error('Error clearing chat:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to clear chat history.',
-      });
     }
   };
 
@@ -207,6 +315,25 @@ const ChatPage: React.FC = () => {
     const messageText = customMessage || message;
     if (!messageText.trim() || isLoading) return;
 
+    let activeConversationId = currentConversationId;
+    
+    // Create new conversation if none exists
+    if (!activeConversationId) {
+      const newId = await createNewConversation(messageText.slice(0, 40));
+      if (!newId) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to create conversation.',
+        });
+        return;
+      }
+      activeConversationId = newId;
+    } else if (messages.length === 0) {
+      // Update title for first message in existing conversation
+      await updateConversationTitle(activeConversationId, messageText.slice(0, 40));
+    }
+
     const newMessage: Message = {
       id: Date.now().toString(),
       content: messageText,
@@ -222,7 +349,7 @@ const ChatPage: React.FC = () => {
     setIsLoading(true);
 
     // Save user message to database
-    await saveMessage(messageText, 'user');
+    await saveMessage(messageText, 'user', activeConversationId);
 
     try {
       // Prepare messages for API
@@ -313,7 +440,7 @@ const ChatPage: React.FC = () => {
 
         // Save assistant response to database after streaming completes
         if (assistantContent) {
-          await saveMessage(assistantContent, 'assistant');
+          await saveMessage(assistantContent, 'assistant', activeConversationId);
         }
       }
     } catch (error) {
@@ -374,46 +501,51 @@ const ChatPage: React.FC = () => {
 
   return (
     <MobileLayout showNav={false}>
+      <ConversationSidebar
+        conversations={conversations}
+        currentConversationId={currentConversationId}
+        isOpen={isSidebarOpen}
+        isLoading={isLoadingConversations}
+        onClose={() => setIsSidebarOpen(false)}
+        onSelectConversation={setCurrentConversationId}
+        onNewConversation={handleNewConversation}
+        onDeleteConversation={deleteConversation}
+      />
+
       <div className="flex flex-col h-screen bg-background">
         {/* Header */}
         <div className="shrink-0 px-4 py-3 safe-top border-b border-border/50 bg-background/95 backdrop-blur-sm flex items-center gap-3">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => setIsSidebarOpen(true)}
             className="p-2 -ml-2 rounded-xl hover:bg-secondary transition-colors"
           >
-            <ArrowLeft className="w-5 h-5 text-foreground" />
+            <Menu className="w-5 h-5 text-foreground" />
           </button>
           <div className="flex items-center gap-3 flex-1">
             <div className="relative">
               <LuminaAvatar size="sm" />
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">Lumina</p>
-              <p className="text-[11px] text-muted-foreground">AI Study Companion</p>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {currentConversationId && conversations.find(c => c.id === currentConversationId)?.title || 'New Chat'}
+              </p>
             </div>
           </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button className="p-2 rounded-xl hover:bg-secondary transition-colors">
-                <RotateCcw className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Start new conversation?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will clear your current chat history. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={clearChatHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Clear & Start New
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <button
+            onClick={handleNewConversation}
+            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+            title="New Chat"
+          >
+            <Plus className="w-5 h-5 text-muted-foreground" />
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-foreground" />
+          </button>
         </div>
 
         {/* Messages Area */}
