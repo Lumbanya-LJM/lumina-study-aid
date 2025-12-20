@@ -12,7 +12,10 @@ import {
   BookOpen,
   Users,
   Play,
-  Clock
+  Clock,
+  CheckCircle,
+  Plus,
+  Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,6 +66,81 @@ interface LiveClass {
   host_id: string;
   academy_courses?: { name: string } | null;
 }
+
+// Course Enrollment Card Component
+const CourseEnrollCard: React.FC<{
+  course: Course;
+  userId: string;
+  onEnrolled: () => void;
+}> = ({ course, userId, onEnrolled }) => {
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const { toast } = useToast();
+
+  const handleEnroll = async () => {
+    if (!userId) {
+      toast({ variant: "destructive", title: "Error", description: "Please log in to enroll" });
+      return;
+    }
+
+    setIsEnrolling(true);
+    try {
+      const { error } = await supabase.from('academy_enrollments').insert({
+        user_id: userId,
+        course_id: course.id,
+        status: 'active',
+        expires_at: null // No expiry for dev mode
+      });
+
+      if (error) {
+        if (error.code === '23505') {
+          toast({ title: "Already Enrolled", description: "You're already enrolled in this course" });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({ title: "Enrolled!", description: `You're now enrolled in ${course.name}` });
+        onEnrolled();
+      }
+    } catch (error) {
+      console.error('Enrollment error:', error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to enroll. Please try again." });
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
+  return (
+    <div className="bg-card rounded-2xl p-4 border border-border/50">
+      <div className="flex items-start gap-3">
+        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <GraduationCap className="w-6 h-6 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-foreground">{course.name}</h3>
+          <p className="text-xs text-muted-foreground">{course.institution}</p>
+          {course.description && (
+            <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{course.description}</p>
+          )}
+        </div>
+        <Button
+          size="sm"
+          onClick={handleEnroll}
+          disabled={isEnrolling}
+          className="shrink-0"
+        >
+          {isEnrolling ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <Plus className="w-4 h-4 mr-1" />
+              Enroll
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 const LuminaAcademyPage: React.FC = () => {
   const navigate = useNavigate();
@@ -475,30 +553,62 @@ const LuminaAcademyPage: React.FC = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="courses" className="space-y-3">
-            {enrollments.map((enrollment) => {
-              const course = courses.find(c => c.id === enrollment.course_id);
-              if (!course) return null;
-              
-              return (
-                <div key={enrollment.id} className="bg-card rounded-2xl p-4 border border-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <BookOpen className="w-6 h-6 text-primary" />
+          <TabsContent value="courses" className="space-y-4">
+            {/* Enrolled Courses */}
+            {enrollments.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  My Enrolled Courses
+                </h3>
+                {enrollments.map((enrollment) => {
+                  const course = courses.find(c => c.id === enrollment.course_id);
+                  if (!course) return null;
+                  
+                  return (
+                    <div key={enrollment.id} className="bg-card rounded-2xl p-4 border border-green-500/20">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                          <BookOpen className="w-6 h-6 text-green-500" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground">{course.name}</h3>
+                          <p className="text-xs text-muted-foreground">{course.institution}</p>
+                        </div>
+                        <Badge variant="secondary" className="bg-green-500/10 text-green-600">
+                          Enrolled
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">{course.name}</h3>
-                      <p className="text-xs text-muted-foreground">{course.institution}</p>
-                      {enrollment.expires_at && (
-                        <p className="text-xs text-primary mt-1">
-                          Expires: {new Date(enrollment.expires_at).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Available Courses to Enroll */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Plus className="w-4 h-4 text-primary" />
+                Available Courses
+              </h3>
+              {courses.filter(c => !enrollments.some(e => e.course_id === c.id)).length === 0 ? (
+                <div className="text-center py-8">
+                  <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-4" />
+                  <p className="text-muted-foreground">You're enrolled in all available courses!</p>
                 </div>
-              );
-            })}
+              ) : (
+                courses
+                  .filter(c => !enrollments.some(e => e.course_id === c.id))
+                  .map((course) => (
+                    <CourseEnrollCard
+                      key={course.id}
+                      course={course}
+                      userId={user?.id || ''}
+                      onEnrolled={() => loadEnrollments()}
+                    />
+                  ))
+              )}
+            </div>
           </TabsContent>
         </Tabs>
 
