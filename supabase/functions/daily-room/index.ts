@@ -157,6 +157,27 @@ serve(async (req) => {
       }
 
       const recordings = await recordingsResponse.json();
+      
+      // If there are recordings and classId is provided, save the first recording URL to the database
+      if (recordings.data && recordings.data.length > 0 && classId) {
+        const recording = recordings.data[0];
+        if (recording.download_link) {
+          const { error: updateError } = await supabase
+            .from('live_classes')
+            .update({
+              recording_url: recording.download_link,
+              recording_duration_seconds: recording.duration || null,
+            })
+            .eq('id', classId);
+          
+          if (updateError) {
+            console.error("Failed to save recording URL:", updateError);
+          } else {
+            console.log("Recording URL saved for class:", classId);
+          }
+        }
+      }
+      
       return new Response(
         JSON.stringify(recordings),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -136,6 +136,19 @@ const LiveClassRoom: React.FC<LiveClassRoomProps> = ({
           ended_at: new Date().toISOString() 
         })
         .eq("id", classId);
+      
+      // Fetch recordings and save URL to database
+      try {
+        await supabase.functions.invoke("daily-room", {
+          body: {
+            action: "get-recordings",
+            roomName,
+            classId,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to fetch recordings:", error);
+      }
     }
     
     handleCallEnded();
