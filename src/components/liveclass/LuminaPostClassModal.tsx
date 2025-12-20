@@ -18,9 +18,12 @@ import {
   BookOpen, 
   CheckCircle2,
   Send,
-  Loader2
+  Loader2,
+  Save,
+  Download
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import luminaAvatar from "@/assets/lumina-avatar.png";
 
 interface LuminaPostClassModalProps {
@@ -52,10 +55,12 @@ const LuminaPostClassModal: React.FC<LuminaPostClassModalProps> = ({
   transcripts,
 }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [view, setView] = useState<"summary" | "chat">("summary");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const fullTranscript = transcripts
     .map((t) => `${t.speaker}: ${t.text}`)
@@ -148,6 +153,43 @@ const LuminaPostClassModal: React.FC<LuminaPostClassModalProps> = ({
         content: `Hi! I was in the "${classTitle}" class with you. 🎓\n\nI took notes and I'm ready to help you consolidate what you learned. Ask me anything about the class - I can explain concepts, clarify points, or help you connect ideas to your broader studies.\n\nWhat would you like to discuss?`,
       },
     ]);
+  };
+
+  const handleSaveChat = async () => {
+    if (chatMessages.length === 0) return;
+    
+    setIsSaving(true);
+    try {
+      // Save each message to chat_messages
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const messagesToSave = chatMessages.map(msg => ({
+        user_id: user.id,
+        role: msg.role,
+        content: `[Class: ${classTitle}] ${msg.content}`,
+      }));
+
+      const { error } = await supabase
+        .from('chat_messages')
+        .insert(messagesToSave);
+
+      if (error) throw error;
+
+      toast({
+        title: "Chat Saved!",
+        description: "Your class discussion with Lumina has been saved to your chat history.",
+      });
+    } catch (error) {
+      console.error("Error saving chat:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save chat. Please try again.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -314,9 +356,24 @@ const LuminaPostClassModal: React.FC<LuminaPostClassModalProps> = ({
                 >
                   Back to Summary
                 </Button>
-                <Button variant="ghost" size="sm" onClick={onClose}>
-                  Done
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleSaveChat}
+                    disabled={isSaving || chatMessages.length <= 1}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-1" />
+                    )}
+                    Save Chat
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={onClose}>
+                    Done
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

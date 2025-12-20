@@ -15,7 +15,8 @@ import {
   Clock,
   CheckCircle,
   Plus,
-  Loader2
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -65,6 +66,16 @@ interface LiveClass {
   course_id: string | null;
   host_id: string;
   academy_courses?: { name: string } | null;
+}
+
+interface ClassSummary {
+  id: string;
+  class_id: string;
+  summary: string;
+  key_points: string[] | null;
+  topics_covered: string[] | null;
+  created_at: string;
+  live_classes?: { title: string; course_id: string | null } | null;
 }
 
 // Course Enrollment Card Component
@@ -149,6 +160,7 @@ const LuminaAcademyPage: React.FC = () => {
 
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [updates, setUpdates] = useState<TutorUpdate[]>([]);
+  const [classSummaries, setClassSummaries] = useState<ClassSummary[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [scheduledClasses, setScheduledClasses] = useState<LiveClass[]>([]);
@@ -215,7 +227,8 @@ const LuminaAcademyPage: React.FC = () => {
       loadEnrollments(),
       loadCourses(),
       loadUpdates(),
-      loadLiveClasses()
+      loadLiveClasses(),
+      loadClassSummaries()
     ]);
     setIsLoading(false);
   };
@@ -243,7 +256,14 @@ const LuminaAcademyPage: React.FC = () => {
       .eq('status', 'live')
       .order('started_at', { ascending: false });
 
-    setLiveClasses(liveData || []);
+    // Only update if data actually changed to prevent flickering
+    if (liveData) {
+      setLiveClasses(prev => {
+        const prevIds = prev.map(c => c.id).join(',');
+        const newIds = liveData.map(c => c.id).join(',');
+        return prevIds !== newIds ? liveData : prev;
+      });
+    }
 
     // Load scheduled classes
     const { data: scheduledData } = await supabase
@@ -254,7 +274,13 @@ const LuminaAcademyPage: React.FC = () => {
       .order('scheduled_at', { ascending: true })
       .limit(10);
 
-    setScheduledClasses(scheduledData || []);
+    if (scheduledData) {
+      setScheduledClasses(prev => {
+        const prevIds = prev.map(c => c.id).join(',');
+        const newIds = scheduledData.map(c => c.id).join(',');
+        return prevIds !== newIds ? scheduledData : prev;
+      });
+    }
   };
 
   const loadCourses = async () => {
@@ -274,7 +300,39 @@ const LuminaAcademyPage: React.FC = () => {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    setUpdates(data || []);
+    // Only update if data actually changed to prevent flickering
+    if (data) {
+      setUpdates(prev => {
+        const prevIds = prev.map(u => u.id).join(',');
+        const newIds = data.map(u => u.id).join(',');
+        return prevIds !== newIds ? data : prev;
+      });
+    }
+  };
+
+  const loadClassSummaries = async () => {
+    const { data } = await supabase
+      .from('class_ai_summaries')
+      .select('*, live_classes(title, course_id)')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (data) {
+      const mappedData: ClassSummary[] = data.map(item => ({
+        id: item.id,
+        class_id: item.class_id,
+        summary: item.summary,
+        key_points: Array.isArray(item.key_points) ? item.key_points as string[] : null,
+        topics_covered: Array.isArray(item.topics_covered) ? item.topics_covered as string[] : null,
+        created_at: item.created_at,
+        live_classes: item.live_classes,
+      }));
+      setClassSummaries(prev => {
+        const prevIds = prev.map(s => s.id).join(',');
+        const newIds = mappedData.map(s => s.id).join(',');
+        return prevIds !== newIds ? mappedData : prev;
+      });
+    }
   };
 
   const getUpdateIcon = (type: string) => {
@@ -282,6 +340,7 @@ const LuminaAcademyPage: React.FC = () => {
       case 'class': return Video;
       case 'alert': return Bell;
       case 'schedule': return Calendar;
+      case 'summary': return Sparkles;
       default: return BookOpen;
     }
   };
@@ -493,63 +552,118 @@ const LuminaAcademyPage: React.FC = () => {
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            ) : updates.length > 0 ? (
-              updates.map((update) => {
-                const Icon = getUpdateIcon(update.update_type);
-                const colorClass = getUpdateColor(update.update_type);
-                const course = courses.find(c => c.id === update.course_id);
-                
-                return (
-                  <div key={update.id} className="bg-card rounded-2xl p-4 border border-border/50">
-                    <div className="flex items-start gap-3">
-                      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", colorClass)}>
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <h3 className="font-semibold text-foreground">{update.title}</h3>
-                            {course && (
-                              <span className="text-xs text-primary">{course.name}</span>
+            ) : (
+              <>
+                {/* Class Summaries from Lumina */}
+                {classSummaries.length > 0 && (
+                  <div className="space-y-3 mb-4">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      Class Summaries from Lumina
+                    </h3>
+                    {classSummaries.map((summary) => {
+                      const course = summary.live_classes?.course_id 
+                        ? courses.find(c => c.id === summary.live_classes?.course_id)
+                        : null;
+                      
+                      return (
+                        <div key={summary.id} className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-4 border border-primary/20">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              <Sparkles className="w-5 h-5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <h3 className="font-semibold text-foreground">
+                                    {summary.live_classes?.title || 'Class Summary'}
+                                  </h3>
+                                  {course && (
+                                    <span className="text-xs text-primary">{course.name}</span>
+                                  )}
+                                </div>
+                                <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                                  AI Summary
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-2 line-clamp-3">{summary.summary}</p>
+                              {summary.key_points && summary.key_points.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {summary.key_points.slice(0, 3).map((point, idx) => (
+                                    <Badge key={idx} variant="outline" className="text-xs">
+                                      {point}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Tutor Updates */}
+                {updates.length > 0 ? (
+                  updates.map((update) => {
+                    const Icon = getUpdateIcon(update.update_type);
+                    const colorClass = getUpdateColor(update.update_type);
+                    const course = courses.find(c => c.id === update.course_id);
+                    
+                    return (
+                      <div key={update.id} className="bg-card rounded-2xl p-4 border border-border/50">
+                        <div className="flex items-start gap-3">
+                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", colorClass)}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h3 className="font-semibold text-foreground">{update.title}</h3>
+                                {course && (
+                                  <span className="text-xs text-primary">{course.name}</span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                                {new Date(update.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-2">{update.content}</p>
+                            
+                            {update.class_time && (
+                              <div className="flex items-center gap-2 mt-3 text-sm text-foreground">
+                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                                {new Date(update.class_time).toLocaleString()}
+                              </div>
+                            )}
+                            
+                            {update.class_link && (
+                              <a
+                                href={update.class_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 mt-3 text-sm text-primary hover:underline"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                                Join Class
+                              </a>
                             )}
                           </div>
-                          <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                            {new Date(update.created_at).toLocaleDateString()}
-                          </span>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-2">{update.content}</p>
-                        
-                        {update.class_time && (
-                          <div className="flex items-center gap-2 mt-3 text-sm text-foreground">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                            {new Date(update.class_time).toLocaleString()}
-                          </div>
-                        )}
-                        
-                        {update.class_link && (
-                          <a
-                            href={update.class_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 mt-3 text-sm text-primary hover:underline"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                            Join Class
-                          </a>
-                        )}
                       </div>
-                    </div>
+                    );
+                  })
+                ) : classSummaries.length === 0 && (
+                  <div className="text-center py-12">
+                    <Bell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No updates yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Your tutors will post updates here
+                    </p>
                   </div>
-                );
-              })
-            ) : (
-              <div className="text-center py-12">
-                <Bell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No updates yet</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Your tutors will post updates here
-                </p>
-              </div>
+                )}
+              </>
             )}
           </TabsContent>
 
