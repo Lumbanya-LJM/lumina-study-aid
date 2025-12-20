@@ -272,7 +272,8 @@ const LibraryPage: React.FC = () => {
           </>
         )}
 
-        {/* Premium Upgrade */}
+        {/* Premium Upgrade - Hidden in dev mode */}
+        {/* DEV MODE: Premium upsell disabled
         {content.some(item => item.is_premium) && (
           <div className="mt-6 gradient-primary rounded-2xl p-5 shadow-glow">
             <div className="flex items-center gap-4">
@@ -292,6 +293,7 @@ const LibraryPage: React.FC = () => {
             </button>
           </div>
         )}
+        */}
       </div>
     </MobileLayout>
   );
