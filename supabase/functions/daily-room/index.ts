@@ -36,14 +36,11 @@ serve(async (req) => {
         body: JSON.stringify({
           name: roomName || `class-${Date.now()}`,
           properties: {
-            enable_recording: "cloud",
-            enable_transcription_storage: true,
             enable_chat: true,
             enable_screenshare: true,
             enable_knocking: false,
             start_video_off: false,
             start_audio_off: false,
-            max_participants: 100,
             exp: Math.floor(Date.now() / 1000) + 86400 * 7, // 7 days
           },
         }),
