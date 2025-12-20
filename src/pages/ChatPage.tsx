@@ -3,6 +3,7 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { MarkdownRenderer } from '@/components/lumina/MarkdownRenderer';
 import { ConversationSidebar } from '@/components/lumina/ConversationSidebar';
+import { ConversationSearch } from '@/components/lumina/ConversationSearch';
 import {
   ArrowLeft,
   Send,
@@ -18,6 +19,8 @@ import {
   Check,
   Loader2,
   Plus,
+  Search,
+  Globe,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -66,6 +69,8 @@ const ChatPage: React.FC = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [enableWebSearch, setEnableWebSearch] = useState(false);
 
   // Voice input hook
   const handleVoiceResult = useCallback((transcript: string) => {

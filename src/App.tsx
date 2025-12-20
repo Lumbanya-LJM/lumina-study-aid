@@ -22,6 +22,7 @@ import AnalyticsDashboardPage from "./pages/AnalyticsDashboardPage";
 import CustomizeAvatarPage from "./pages/CustomizeAvatarPage";
 import PartnerPage from "./pages/PartnerPage";
 import UploadPage from "./pages/UploadPage";
+import StudyLockerPage from "./pages/StudyLockerPage";
 import AdminContentPage from "./pages/AdminContentPage";
 import QuizPage from "./pages/QuizPage";
 import FlashcardsPage from "./pages/FlashcardsPage";
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/customize-avatar" element={<ProtectedRoute><CustomizeAvatarPage /></ProtectedRoute>} />
             <Route path="/partner" element={<ProtectedRoute><PartnerPage /></ProtectedRoute>} />
             <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
+            <Route path="/locker" element={<ProtectedRoute><StudyLockerPage /></ProtectedRoute>} />
             <Route path="/admin/content" element={<ProtectedRoute><AdminContentPage /></ProtectedRoute>} />
             <Route path="/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
             <Route path="/quiz/:quizId" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
