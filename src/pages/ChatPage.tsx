@@ -375,6 +375,9 @@ const ChatPage: React.FC = () => {
           body: JSON.stringify({
             messages: apiMessages,
             action,
+            userId: user?.id,
+            enableWebSearch,
+            deepSearch: enableWebSearch,
           }),
         },
       );
@@ -517,9 +520,18 @@ const ChatPage: React.FC = () => {
         onDeleteConversation={deleteConversation}
       />
 
+      <ConversationSearch
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onSelectConversation={(id) => {
+          setCurrentConversationId(id);
+          setIsSearchOpen(false);
+        }}
+      />
+
       <div className="flex flex-col h-screen bg-background">
         {/* Header */}
-        <div className="shrink-0 px-4 py-3 safe-top border-b border-border/50 bg-background/95 backdrop-blur-sm flex items-center gap-3">
+        <div className="shrink-0 px-4 py-3 safe-top border-b border-border/50 bg-background/95 backdrop-blur-sm flex items-center gap-2">
           <button
             onClick={() => setIsSidebarOpen(true)}
             className="p-2 -ml-2 rounded-xl hover:bg-secondary transition-colors"
@@ -538,6 +550,33 @@ const ChatPage: React.FC = () => {
               </p>
             </div>
           </div>
+          
+          {/* Web Search Toggle */}
+          <button
+            onClick={() => {
+              setEnableWebSearch(!enableWebSearch);
+              haptics.light();
+            }}
+            className={cn(
+              "p-2 rounded-xl transition-colors",
+              enableWebSearch 
+                ? "bg-primary/10 text-primary" 
+                : "hover:bg-secondary text-muted-foreground"
+            )}
+            title={enableWebSearch ? "Web Search On" : "Web Search Off"}
+          >
+            <Globe className="w-5 h-5" />
+          </button>
+          
+          {/* Search Button */}
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+            title="Search Conversations"
+          >
+            <Search className="w-5 h-5 text-muted-foreground" />
+          </button>
+          
           <button
             onClick={handleNewConversation}
             className="p-2 rounded-xl hover:bg-secondary transition-colors"
@@ -552,6 +591,15 @@ const ChatPage: React.FC = () => {
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
         </div>
+        
+        {/* Web Search Indicator */}
+        {enableWebSearch && (
+          <div className="px-4 py-2 bg-primary/5 border-b border-primary/10 flex items-center gap-2">
+            <Globe className="w-4 h-4 text-primary" />
+            <span className="text-xs text-primary font-medium">Deep Search Mode Active</span>
+            <span className="text-xs text-muted-foreground">- Lumina will search the web for answers</span>
+          </div>
+        )}
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto">
