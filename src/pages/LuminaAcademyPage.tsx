@@ -169,7 +169,12 @@ const LuminaAcademyPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    
+  }, [user?.id]);
+
+  // Separate effect for realtime subscriptions - only run once
+  useEffect(() => {
+    if (!user?.id) return;
+
     // Subscribe to real-time updates
     const updatesChannel = supabase
       .channel('tutor-updates')
@@ -178,16 +183,15 @@ const LuminaAcademyPage: React.FC = () => {
         schema: 'public',
         table: 'tutor_updates'
       }, async (payload) => {
-        loadUpdates();
+        // Just append the new update instead of refetching everything
+        const update = payload.new as TutorUpdate;
+        setUpdates(prev => [update, ...prev.slice(0, 49)]);
         
-        if (Notification.permission === 'granted' && hasAcademyAccess) {
-          const update = payload.new as TutorUpdate;
-          const course = courses.find(c => c.id === update.course_id);
-          
+        if (Notification.permission === 'granted') {
           const registration = await navigator.serviceWorker?.ready;
           if (registration) {
             registration.showNotification('Lumina Academy', {
-              body: `${course?.name || 'Course'}: ${update.title}`,
+              body: `New update: ${update.title}`,
               icon: '/pwa-192x192.png',
               badge: '/pwa-192x192.png',
               tag: `tutor-update-${update.id}`,
@@ -219,7 +223,7 @@ const LuminaAcademyPage: React.FC = () => {
       supabase.removeChannel(updatesChannel);
       supabase.removeChannel(classesChannel);
     };
-  }, [hasAcademyAccess, courses]);
+  }, [user?.id, toast]);
 
   const loadData = async () => {
     setIsLoading(true);
