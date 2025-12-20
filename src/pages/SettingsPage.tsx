@@ -572,21 +572,6 @@ const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Lumina Customization Link */}
-              <button
-                onClick={() => navigate('/customize-avatar')}
-                className="w-full bg-card rounded-2xl border border-border/50 shadow-card p-5 flex items-center gap-4 hover:border-primary/30 transition-colors"
-              >
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 text-left">
-                  <h2 className="font-semibold text-foreground">Customize Lumina</h2>
-                  <p className="text-xs text-muted-foreground">Change appearance and gender presentation</p>
-                </div>
-                <ArrowLeft className="w-5 h-5 text-muted-foreground rotate-180" />
-              </button>
-
               {/* LuminaVault Link */}
               <button
                 onClick={() => navigate('/locker')}

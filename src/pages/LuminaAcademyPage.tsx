@@ -15,7 +15,8 @@ import {
   FileText,
   FolderOpen,
   ChevronRight,
-  Download
+  Download,
+  Plus
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AddCourseModal } from '@/components/academy/AddCourseModal';
 
 interface Course {
   id: string;
@@ -88,6 +90,7 @@ const LuminaAcademyPage: React.FC = () => {
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAddCourseModal, setShowAddCourseModal] = useState(false);
   
   // Course-specific data
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
@@ -275,14 +278,24 @@ const LuminaAcademyPage: React.FC = () => {
     return (
       <MobileLayout showNav={true}>
         <div className="flex flex-col min-h-screen py-6 safe-top">
-          <div className="flex items-center gap-4 mb-6">
-            <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-secondary transition-colors">
-              <ArrowLeft className="w-5 h-5 text-foreground" />
-            </button>
-            <div>
-              <h1 className="text-lg font-semibold text-foreground">Lumina Academy</h1>
-              <p className="text-xs text-muted-foreground">Select a course to continue</p>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-secondary transition-colors">
+                <ArrowLeft className="w-5 h-5 text-foreground" />
+              </button>
+              <div>
+                <h1 className="text-lg font-semibold text-foreground">Lumina Academy</h1>
+                <p className="text-xs text-muted-foreground">Select a course to continue</p>
+              </div>
             </div>
+            <Button
+              onClick={() => setShowAddCourseModal(true)}
+              size="sm"
+              className="gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              Add
+            </Button>
           </div>
 
           {isLoading ? (
@@ -296,12 +309,18 @@ const LuminaAcademyPage: React.FC = () => {
               </div>
               <h2 className="text-xl font-bold text-foreground mb-2">No Enrolled Courses</h2>
               <p className="text-muted-foreground mb-6">
-                You haven't enrolled in any courses yet. Contact your institution to get enrolled.
+                You haven't enrolled in any courses yet. Tap the button above to add courses.
               </p>
+              <Button onClick={() => setShowAddCourseModal(true)} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Browse Available Courses
+              </Button>
             </div>
           ) : (
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-foreground mb-4">My Courses</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-foreground">My Courses ({enrolledCourses.length})</h2>
+              </div>
               {enrolledCourses.map((course) => (
                 <button
                   key={course.id}
@@ -325,6 +344,13 @@ const LuminaAcademyPage: React.FC = () => {
               ))}
             </div>
           )}
+
+          <AddCourseModal
+            open={showAddCourseModal}
+            onOpenChange={setShowAddCourseModal}
+            enrolledCourseIds={enrolledCourses.map(c => c.id)}
+            onEnrollmentSuccess={loadEnrolledCourses}
+          />
         </div>
       </MobileLayout>
     );

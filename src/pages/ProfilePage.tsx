@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LMVLogo } from '@/components/ui/lmv-logo';
-import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -9,7 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
   User,
-  Palette,
   Users,
   CreditCard,
   Bell,
@@ -127,9 +125,8 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const menuItems = [
+  const menuItems: Array<{ icon: React.ComponentType<{ className?: string }>; label: string; path: string; highlight?: boolean }> = [
     { icon: User, label: 'Account Settings', path: '/settings' },
-    { icon: Palette, label: 'Customize Lumina', path: '/customize-avatar', highlight: true },
     { icon: Users, label: 'Accountability Partner', path: '/partner' },
     { icon: CreditCard, label: 'Subscription & Payments', path: '/subscription' },
     { icon: Bell, label: 'Notifications', path: '/notifications' },
@@ -194,18 +191,6 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Customize Lumina Card */}
-        <button 
-          onClick={() => navigate('/customize-avatar')}
-          className="w-full bg-card rounded-2xl p-4 border border-primary/30 shadow-card mb-6 flex items-center gap-4 hover:shadow-premium transition-all"
-        >
-          <LuminaAvatar size="lg" isActive />
-          <div className="flex-1 text-left">
-            <p className="font-semibold text-foreground">Customize Lumina</p>
-            <p className="text-xs text-muted-foreground">Personalize your AI study buddy</p>
-          </div>
-          <ChevronRight className="w-5 h-5 text-primary" />
-        </button>
 
         {/* Menu Items */}
         <div className="bg-card rounded-2xl border border-border/50 shadow-card overflow-hidden mb-6">
