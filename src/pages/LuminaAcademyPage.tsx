@@ -207,15 +207,51 @@ const LuminaAcademyPage: React.FC = () => {
       })
       .subscribe();
 
-    // Subscribe to live class updates
+    // Subscribe to live class updates - handle changes incrementally
     const classesChannel = supabase
       .channel('live-classes-academy')
       .on('postgres_changes', {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
         table: 'live_classes'
-      }, () => {
-        loadLiveClasses();
+      }, (payload) => {
+        const newClass = payload.new as LiveClass;
+        if (newClass.status === 'live') {
+          setLiveClasses(prev => [newClass, ...prev]);
+        } else if (newClass.status === 'scheduled') {
+          setScheduledClasses(prev => [newClass, ...prev]);
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'live_classes'
+      }, (payload) => {
+        const updated = payload.new as LiveClass;
+        // Handle status transitions
+        if (updated.status === 'live') {
+          setScheduledClasses(prev => prev.filter(c => c.id !== updated.id));
+          setLiveClasses(prev => {
+            const exists = prev.some(c => c.id === updated.id);
+            if (exists) return prev.map(c => c.id === updated.id ? updated : c);
+            return [updated, ...prev];
+          });
+        } else if (updated.status === 'ended') {
+          setLiveClasses(prev => prev.filter(c => c.id !== updated.id));
+          setScheduledClasses(prev => prev.filter(c => c.id !== updated.id));
+        } else {
+          setLiveClasses(prev => prev.map(c => c.id === updated.id ? updated : c));
+          setScheduledClasses(prev => prev.map(c => c.id === updated.id ? updated : c));
+        }
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'live_classes'
+      }, (payload) => {
+        const deleted = payload.old as LiveClass;
+        setLiveClasses(prev => prev.filter(c => c.id !== deleted.id));
+        setScheduledClasses(prev => prev.filter(c => c.id !== deleted.id));
       })
       .subscribe();
 
