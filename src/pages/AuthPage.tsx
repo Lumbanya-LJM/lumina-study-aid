@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { LMVLogo } from '@/components/ui/lmv-logo';
-import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Building } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Building, BookOpen, Check, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const universities = [
   'University of Zambia',
@@ -28,6 +29,13 @@ const years = [
   { value: 5, label: 'Year 5 (LLM/Masters)' },
 ];
 
+interface Course {
+  id: string;
+  name: string;
+  description: string | null;
+  institution: string | null;
+}
+
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
   const { signUp, signIn } = useAuth();
@@ -36,7 +44,9 @@ const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'credentials' | 'profile'>('credentials');
+  const [step, setStep] = useState<'credentials' | 'profile' | 'courses'>('credentials');
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -45,7 +55,32 @@ const AuthPage: React.FC = () => {
     university: 'University of Zambia',
     customUniversity: '',
     yearOfStudy: 1,
+    selectedCourses: [] as string[],
   });
+
+  // Load available courses when reaching the courses step
+  useEffect(() => {
+    if (step === 'courses' && courses.length === 0) {
+      loadCourses();
+    }
+  }, [step]);
+
+  const loadCourses = async () => {
+    setLoadingCourses(true);
+    try {
+      const { data, error } = await supabase
+        .from('academy_courses')
+        .select('id, name, description, institution')
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      setCourses(data || []);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
 
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +130,12 @@ const AuthPage: React.FC = () => {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Move to course selection step
+    setStep('courses');
+  };
+
+  const handleCoursesSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
 
     try {
@@ -134,6 +175,23 @@ const AuthPage: React.FC = () => {
             console.error('Profile update error:', profileError);
           }
 
+          // Enroll in selected courses
+          if (formData.selectedCourses.length > 0) {
+            const enrollments = formData.selectedCourses.map(courseId => ({
+              user_id: currentUser.id,
+              course_id: courseId,
+              status: 'active',
+            }));
+
+            const { error: enrollmentError } = await supabase
+              .from('academy_enrollments')
+              .insert(enrollments);
+
+            if (enrollmentError) {
+              console.error('Enrollment error:', enrollmentError);
+            }
+          }
+
           // Send welcome email (fire and forget - don't block signup)
           supabase.functions.invoke('send-welcome-email', {
             body: { email: formData.email, fullName: formData.fullName }
@@ -144,7 +202,9 @@ const AuthPage: React.FC = () => {
 
         toast({
           title: "Account Created!",
-          description: "Welcome to Luminary Study. Check your email for a welcome message!",
+          description: formData.selectedCourses.length > 0 
+            ? `Welcome! You've enrolled in ${formData.selectedCourses.length} course(s).`
+            : "Welcome to Luminary Study!",
         });
         navigate('/home');
       }
@@ -157,6 +217,15 @@ const AuthPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleCourse = (courseId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedCourses: prev.selectedCourses.includes(courseId)
+        ? prev.selectedCourses.filter(id => id !== courseId)
+        : [...prev.selectedCourses, courseId]
+    }));
   };
 
   const renderCredentialsStep = () => (
@@ -301,7 +370,7 @@ const AuthPage: React.FC = () => {
           loading ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
         )}
       >
-        {loading ? 'Creating Account...' : 'Create Account'}
+        Continue
       </button>
 
       <button
@@ -314,26 +383,141 @@ const AuthPage: React.FC = () => {
     </form>
   );
 
+  const renderCoursesStep = () => (
+    <form onSubmit={handleCoursesSubmit} className="space-y-4">
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold text-foreground">Select Your Courses</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Choose the courses you'd like to enroll in (optional)
+        </p>
+      </div>
+
+      {loadingCourses ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : courses.length === 0 ? (
+        <div className="text-center py-8">
+          <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+          <p className="text-muted-foreground">No courses available at the moment</p>
+        </div>
+      ) : (
+        <div className="space-y-3 max-h-64 overflow-y-auto">
+          {courses.map((course) => {
+            const isSelected = formData.selectedCourses.includes(course.id);
+            return (
+              <div
+                key={course.id}
+                onClick={() => toggleCourse(course.id)}
+                className={cn(
+                  "p-4 rounded-2xl border cursor-pointer transition-all",
+                  isSelected 
+                    ? "bg-primary/10 border-primary/50" 
+                    : "bg-secondary border-border/50 hover:border-primary/30"
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={cn(
+                    "w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5",
+                    isSelected ? "border-primary bg-primary" : "border-muted-foreground"
+                  )}>
+                    {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-foreground">{course.name}</h3>
+                    {course.institution && (
+                      <p className="text-xs text-primary mt-0.5">{course.institution}</p>
+                    )}
+                    {course.description && (
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                        {course.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {formData.selectedCourses.length > 0 && (
+        <p className="text-sm text-center text-primary font-medium">
+          {formData.selectedCourses.length} course(s) selected
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className={cn(
+          "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
+          loading ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
+        )}
+      >
+        {loading ? 'Creating Account...' : formData.selectedCourses.length > 0 ? 'Create Account & Enroll' : 'Create Account'}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setStep('profile')}
+        className="w-full py-3 text-primary font-medium hover:underline"
+      >
+        Go Back
+      </button>
+    </form>
+  );
+
+  const getStepTitle = () => {
+    switch (step) {
+      case 'profile': return 'Almost There!';
+      case 'courses': return 'One Last Step!';
+      default: return isLogin ? 'Welcome Back' : 'Join Luminary';
+    }
+  };
+
+  const getStepDescription = () => {
+    switch (step) {
+      case 'profile': return 'Tell us about your studies';
+      case 'courses': return 'Choose your courses to get started';
+      default: return isLogin ? 'Sign in to continue your studies' : 'Create your account to start excelling';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="gradient-subtle px-5 md:px-8 pt-12 pb-8 text-center">
         <LMVLogo size="lg" className="justify-center mb-6" />
         <h1 className="text-2xl font-bold text-foreground mb-2">
-          {step === 'profile' ? 'Almost There!' : isLogin ? 'Welcome Back' : 'Join Luminary'}
+          {getStepTitle()}
         </h1>
         <p className="text-muted-foreground text-sm">
-          {step === 'profile' 
-            ? 'Just a few more details to personalize your experience'
-            : isLogin 
-              ? 'Sign in to continue your studies' 
-              : 'Create your account to start excelling'}
+          {getStepDescription()}
         </p>
+        
+        {/* Step indicator for signup */}
+        {!isLogin && (
+          <div className="flex items-center justify-center gap-2 mt-4">
+            {['credentials', 'profile', 'courses'].map((s, idx) => (
+              <div
+                key={s}
+                className={cn(
+                  "w-2 h-2 rounded-full transition-all",
+                  step === s ? "w-6 bg-primary" : 
+                  ['credentials', 'profile', 'courses'].indexOf(step) > idx ? "bg-primary" : "bg-muted-foreground/30"
+                )}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Form */}
       <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
-        {step === 'credentials' ? renderCredentialsStep() : renderProfileStep()}
+        {step === 'credentials' && renderCredentialsStep()}
+        {step === 'profile' && renderProfileStep()}
+        {step === 'courses' && renderCoursesStep()}
 
         {/* Toggle */}
         {step === 'credentials' && (
