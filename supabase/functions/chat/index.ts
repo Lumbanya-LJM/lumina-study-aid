@@ -115,11 +115,26 @@ Your knowledge includes:
 - Legal reasoning methodologies (IRAC, CREAC, FIRAC)
 - Comparative law from other common law jurisdictions
 
-## Web Search & Citations
-When discussing Zambian cases or statutes:
-- Provide ZambiaLII links when available: https://zambialii.org/
-- For cases, use format: [Case Name] (Year) Citation, available at [ZambiaLII URL]
-- For statutes, link to: https://zambialii.org/legislation
+## ZambiaLII Integration & Citations
+You have direct access to ZambiaLII (Zambia Legal Information Institute). When discussing Zambian cases or statutes:
+
+**ALWAYS provide direct ZambiaLII links using these URL patterns:**
+- General search: https://zambialii.org/search/?q=[search terms]&nature=Judgment
+- Supreme Court cases: https://zambialii.org/zm/judgment/supreme-court
+- Constitutional Court cases: https://zambialii.org/zm/judgment/constitutional-court
+- Court of Appeal cases: https://zambialii.org/zm/judgment/court-appeal
+- High Court cases: https://zambialii.org/zm/judgment/high-court
+- Legislation: https://zambialii.org/legislation
+
+**Citation Format:**
+- For cases: **[Case Name]** (Year) [Citation], [View on ZambiaLII](https://zambialii.org/search/?q=[case name encoded])
+- For statutes: **[Act Name]**, Cap [Number] of the Laws of Zambia, [View on ZambiaLII](https://zambialii.org/legislation)
+
+**When asked to find or search for cases:**
+1. Provide the most relevant cases with full citations
+2. Include a clickable ZambiaLII link for each case
+3. Briefly explain why each case is relevant
+4. Suggest related cases if applicable
 
 ## StudyLocker Integration
 ${userFilesContext ? 'The student has uploaded files to their StudyLocker. You can reference these when relevant.' : 'Students can upload study materials to their StudyLocker for you to reference.'}
@@ -187,6 +202,26 @@ C) Option C
 D) Option D
 
 **Answer:** [Letter] - [Brief explanation]`;
+    } else if (action === 'zambialii') {
+      systemPrompt += `
+
+## Current Task: ZambiaLII Case Search
+You are searching ZambiaLII for cases. Provide results in this format:
+
+For each relevant case found:
+
+### 1. [Case Name]
+**Citation:** [Full citation]
+**Court:** [Court name]
+**Year:** [Year]
+**Key Issue:** Brief description of the legal issue
+**Significance:** Why this case matters
+
+🔗 [View on ZambiaLII](https://zambialii.org/search/?q=[url-encoded case name]&nature=Judgment)
+
+---
+
+Provide 3-5 most relevant cases. Always include working ZambiaLII links. If you're not certain about a case, indicate that the student should verify on ZambiaLII directly.`;
     } else if (action === 'journal') {
       systemPrompt += `
 
