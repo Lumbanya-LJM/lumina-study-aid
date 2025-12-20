@@ -56,6 +56,8 @@ const AuthPage: React.FC = () => {
     customUniversity: '',
     yearOfStudy: 1,
     selectedCourses: [] as string[],
+    agreePrivacyPolicy: false,
+    agreeDataConsent: false,
   });
 
   // Load available courses when reaching the courses step
@@ -383,91 +385,131 @@ const AuthPage: React.FC = () => {
     </form>
   );
 
-  const renderCoursesStep = () => (
-    <form onSubmit={handleCoursesSubmit} className="space-y-4">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-foreground">Select Your Courses</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Choose the courses you'd like to enroll in (optional)
-        </p>
-      </div>
+  const renderCoursesStep = () => {
+    const canSubmit = formData.agreePrivacyPolicy && formData.agreeDataConsent;
+    
+    return (
+      <form onSubmit={handleCoursesSubmit} className="space-y-4">
+        <div className="text-center mb-6">
+          <h2 className="text-xl font-bold text-foreground">Select Your Courses</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Choose the courses you'd like to enroll in (optional)
+          </p>
+        </div>
 
-      {loadingCourses ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      ) : courses.length === 0 ? (
-        <div className="text-center py-8">
-          <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-          <p className="text-muted-foreground">No courses available at the moment</p>
-        </div>
-      ) : (
-        <div className="space-y-3 max-h-64 overflow-y-auto">
-          {courses.map((course) => {
-            const isSelected = formData.selectedCourses.includes(course.id);
-            return (
-              <div
-                key={course.id}
-                onClick={() => toggleCourse(course.id)}
-                className={cn(
-                  "p-4 rounded-2xl border cursor-pointer transition-all",
-                  isSelected 
-                    ? "bg-primary/10 border-primary/50" 
-                    : "bg-secondary border-border/50 hover:border-primary/30"
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={cn(
-                    "w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5",
-                    isSelected ? "border-primary bg-primary" : "border-muted-foreground"
-                  )}>
-                    {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-foreground">{course.name}</h3>
-                    {course.institution && (
-                      <p className="text-xs text-primary mt-0.5">{course.institution}</p>
-                    )}
-                    {course.description && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                        {course.description}
-                      </p>
-                    )}
+        {loadingCourses ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : courses.length === 0 ? (
+          <div className="text-center py-8">
+            <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">No courses available at the moment</p>
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-48 overflow-y-auto">
+            {courses.map((course) => {
+              const isSelected = formData.selectedCourses.includes(course.id);
+              return (
+                <div
+                  key={course.id}
+                  onClick={() => toggleCourse(course.id)}
+                  className={cn(
+                    "p-4 rounded-2xl border cursor-pointer transition-all",
+                    isSelected 
+                      ? "bg-primary/10 border-primary/50" 
+                      : "bg-secondary border-border/50 hover:border-primary/30"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5",
+                      isSelected ? "border-primary bg-primary" : "border-muted-foreground"
+                    )}>
+                      {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-foreground">{course.name}</h3>
+                      {course.institution && (
+                        <p className="text-xs text-primary mt-0.5">{course.institution}</p>
+                      )}
+                      {course.description && (
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                          {course.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {formData.selectedCourses.length > 0 && (
-        <p className="text-sm text-center text-primary font-medium">
-          {formData.selectedCourses.length} course(s) selected
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className={cn(
-          "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
-          loading ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
+              );
+            })}
+          </div>
         )}
-      >
-        {loading ? 'Creating Account...' : formData.selectedCourses.length > 0 ? 'Create Account & Enroll' : 'Create Account'}
-      </button>
 
-      <button
-        type="button"
-        onClick={() => setStep('profile')}
-        className="w-full py-3 text-primary font-medium hover:underline"
-      >
-        Go Back
-      </button>
-    </form>
-  );
+        {formData.selectedCourses.length > 0 && (
+          <p className="text-sm text-center text-primary font-medium">
+            {formData.selectedCourses.length} course(s) selected
+          </p>
+        )}
 
+        {/* Consent Checkboxes */}
+        <div className="space-y-3 pt-4 border-t border-border/50">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="privacyPolicy"
+              checked={formData.agreePrivacyPolicy}
+              onCheckedChange={(checked) => 
+                setFormData(prev => ({ ...prev, agreePrivacyPolicy: checked === true }))
+              }
+              className="mt-0.5"
+            />
+            <label htmlFor="privacyPolicy" className="text-sm text-muted-foreground cursor-pointer leading-relaxed">
+              I agree to <span className="text-primary font-medium">Luminary Innovision Academy's Privacy Policy</span>
+            </label>
+          </div>
+          
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="dataConsent"
+              checked={formData.agreeDataConsent}
+              onCheckedChange={(checked) => 
+                setFormData(prev => ({ ...prev, agreeDataConsent: checked === true }))
+              }
+              className="mt-0.5"
+            />
+            <label htmlFor="dataConsent" className="text-sm text-muted-foreground cursor-pointer leading-relaxed">
+              I consent to the use of my personal data for educational purposes
+            </label>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading || !canSubmit}
+          className={cn(
+            "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
+            (loading || !canSubmit) ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
+          )}
+        >
+          {loading ? 'Creating Account...' : formData.selectedCourses.length > 0 ? 'Create Account & Enroll' : 'Create Account'}
+        </button>
+
+        {!canSubmit && (
+          <p className="text-xs text-center text-muted-foreground">
+            Please agree to both policies to continue
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setStep('profile')}
+          className="w-full py-3 text-primary font-medium hover:underline"
+        >
+          Go Back
+        </button>
+      </form>
+    );
+  };
   const getStepTitle = () => {
     switch (step) {
       case 'profile': return 'Almost There!';
