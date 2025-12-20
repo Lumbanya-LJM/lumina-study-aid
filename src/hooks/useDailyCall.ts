@@ -16,6 +16,7 @@ interface Participant {
 interface UseDailyCallOptions {
   classId: string;
   roomName: string;
+  roomUrl?: string;
   userName: string;
   userId: string;
   isHost: boolean;
@@ -24,7 +25,7 @@ interface UseDailyCallOptions {
 }
 
 export const useDailyCall = (options: UseDailyCallOptions) => {
-  const { classId, roomName, userName, userId, isHost, onTranscript, onCallEnded } = options;
+  const { classId, roomName, roomUrl, userName, userId, isHost, onTranscript, onCallEnded } = options;
   const { toast } = useToast();
   
   const [callObject, setCallObject] = useState<DailyCall | null>(null);
@@ -163,9 +164,9 @@ export const useDailyCall = (options: UseDailyCallOptions) => {
 
       setCallObject(call);
 
-      // Join the room
+      // Join the room (use stored room URL when available)
       await call.join({
-        url: `https://lumina.daily.co/${roomName}`,
+        url: roomUrl || `https://lmvacademy.daily.co/${roomName}`,
         token: tokenData.token,
       });
 

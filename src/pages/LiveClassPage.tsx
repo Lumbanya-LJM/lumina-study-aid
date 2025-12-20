@@ -108,6 +108,7 @@ const LiveClassPage: React.FC = () => {
     <LiveClassRoom
       classId={liveClass.id}
       roomName={liveClass.daily_room_name}
+      roomUrl={liveClass.daily_room_url}
       classTitle={liveClass.title}
       isHost={isHost}
       onLeave={() => navigate("/academy")}

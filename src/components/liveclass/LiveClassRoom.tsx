@@ -31,6 +31,7 @@ import LuminaPostClassModal from "./LuminaPostClassModal";
 interface LiveClassRoomProps {
   classId: string;
   roomName: string;
+  roomUrl?: string;
   classTitle: string;
   isHost: boolean;
   onLeave?: () => void;
@@ -45,6 +46,7 @@ interface TranscriptLine {
 const LiveClassRoom: React.FC<LiveClassRoomProps> = ({
   classId,
   roomName,
+  roomUrl,
   classTitle,
   isHost,
   onLeave,
@@ -106,6 +108,7 @@ const LiveClassRoom: React.FC<LiveClassRoomProps> = ({
   } = useDailyCall({
     classId,
     roomName,
+    roomUrl,
     userName: user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student",
     userId: user?.id || "",
     isHost,
