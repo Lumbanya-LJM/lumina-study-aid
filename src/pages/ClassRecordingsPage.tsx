@@ -31,6 +31,7 @@ interface ClassRecording {
   ended_at: string | null;
   course_id: string | null;
   host_id: string;
+  status?: string;
   academy_courses?: { name: string } | null;
 }
 
@@ -41,6 +42,7 @@ interface UpcomingClass {
   scheduled_at: string | null;
   daily_room_name: string;
   course_id: string | null;
+  status?: string;
   academy_courses?: { name: string } | null;
 }
 
@@ -56,18 +58,67 @@ const ClassRecordingsPage: React.FC = () => {
   useEffect(() => {
     loadClasses();
 
-    // Subscribe to live class updates
+    // Subscribe to live class updates - handle incrementally
     const channel = supabase
-      .channel("live-classes")
+      .channel("live-classes-recordings")
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "live_classes",
         },
-        () => {
-          loadClasses();
+        (payload) => {
+          const newClass = payload.new as ClassRecording & UpcomingClass;
+          if (newClass.status === 'live') {
+            setLiveClasses(prev => [newClass as UpcomingClass, ...prev]);
+          } else if (newClass.status === 'scheduled') {
+            setUpcomingClasses(prev => [newClass as UpcomingClass, ...prev]);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "live_classes",
+        },
+        (payload) => {
+          const updated = payload.new as ClassRecording & UpcomingClass & { status: string };
+          if (updated.status === 'ended' && updated.recording_url) {
+            // Add to recordings, remove from live/upcoming
+            setRecordings(prev => {
+              const exists = prev.some(r => r.id === updated.id);
+              if (exists) return prev;
+              return [updated as ClassRecording, ...prev];
+            });
+            setLiveClasses(prev => prev.filter(c => c.id !== updated.id));
+            setUpcomingClasses(prev => prev.filter(c => c.id !== updated.id));
+          } else if (updated.status === 'live') {
+            setUpcomingClasses(prev => prev.filter(c => c.id !== updated.id));
+            setLiveClasses(prev => {
+              const exists = prev.some(c => c.id === updated.id);
+              if (exists) return prev.map(c => c.id === updated.id ? updated as UpcomingClass : c);
+              return [updated as UpcomingClass, ...prev];
+            });
+          } else if (updated.status === 'ended') {
+            setLiveClasses(prev => prev.filter(c => c.id !== updated.id));
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "live_classes",
+        },
+        (payload) => {
+          const deleted = payload.old as { id: string };
+          setRecordings(prev => prev.filter(r => r.id !== deleted.id));
+          setLiveClasses(prev => prev.filter(c => c.id !== deleted.id));
+          setUpcomingClasses(prev => prev.filter(c => c.id !== deleted.id));
         }
       )
       .subscribe();

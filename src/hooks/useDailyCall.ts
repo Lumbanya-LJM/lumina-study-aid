@@ -37,6 +37,7 @@ export const useDailyCall = (options: UseDailyCallOptions) => {
   const [connectionState, setConnectionState] = useState<string>("idle");
   
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const joinedAtRef = useRef<number | null>(null);
 
   const updateParticipants = useCallback((call: DailyCall) => {
     const dailyParticipants = call.participants();
@@ -84,6 +85,7 @@ export const useDailyCall = (options: UseDailyCallOptions) => {
         setIsJoined(true);
         setConnectionState("connected");
         updateParticipants(call);
+        joinedAtRef.current = Date.now();
         
         // Record participation
         supabase.from("class_participants").insert({
@@ -192,12 +194,17 @@ export const useDailyCall = (options: UseDailyCallOptions) => {
     if (!callObject) return;
 
     try {
+      // Calculate actual duration
+      const durationSeconds = joinedAtRef.current 
+        ? Math.floor((Date.now() - joinedAtRef.current) / 1000)
+        : 0;
+      
       // Update participation record
       await supabase
         .from("class_participants")
         .update({ 
           left_at: new Date().toISOString(),
-          duration_seconds: Math.floor((Date.now() - Date.now()) / 1000),
+          duration_seconds: durationSeconds,
         })
         .eq("class_id", classId)
         .eq("user_id", userId)
@@ -208,6 +215,7 @@ export const useDailyCall = (options: UseDailyCallOptions) => {
       setCallObject(null);
       setIsJoined(false);
       setParticipants([]);
+      joinedAtRef.current = null;
     } catch (error) {
       console.error("Failed to leave call:", error);
     }
