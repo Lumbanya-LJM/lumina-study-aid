@@ -9,6 +9,7 @@ import { StudyRemindersCard } from '@/components/lumina/StudyRemindersCard';
 import { OnboardingTutorial } from '@/components/onboarding/OnboardingTutorial';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useSoundNotifications } from '@/hooks/useSoundNotifications';
 import { haptics } from '@/lib/haptics';
 import lmvLogo from '@/assets/lmv-logo.png';
 import { 
@@ -49,6 +50,8 @@ interface StudyTask {
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  // Initialize sound notifications globally
+  useSoundNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [todaysTasks, setTodaysTasks] = useState<StudyTask[]>([]);
   const [greeting, setGreeting] = useState('Good morning');

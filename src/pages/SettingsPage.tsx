@@ -4,6 +4,7 @@ import { LMVLogo } from '@/components/ui/lmv-logo';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useSoundNotifications } from '@/hooks/useSoundNotifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -33,7 +34,9 @@ import {
   EyeOff,
   Download,
   Wifi,
-  WifiOff
+  WifiOff,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -59,6 +62,7 @@ const SettingsPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const pushNotifications = usePushNotifications();
+  const soundNotifications = useSoundNotifications();
   const offlineSync = useOfflineSync();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'appearance' | 'offline' | 'security'>('notifications');
@@ -347,6 +351,53 @@ const SettingsPage: React.FC = () => {
                       )}
                     </Button>
                   </div>
+                )}
+              </div>
+
+              {/* Sound Notifications Card */}
+              <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    {soundNotifications.isEnabled ? (
+                      <Volume2 className="w-5 h-5 text-primary" />
+                    ) : (
+                      <VolumeX className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="font-semibold text-foreground">Sound Notifications</h2>
+                    <p className="text-xs text-muted-foreground">Play sounds for class starts and updates</p>
+                  </div>
+                  <Switch
+                    checked={soundNotifications.isEnabled}
+                    onCheckedChange={() => {
+                      const newState = soundNotifications.toggleSound();
+                      toast({
+                        title: newState ? "Sounds Enabled" : "Sounds Disabled",
+                        description: newState 
+                          ? "You'll hear sounds for important events" 
+                          : "Sound notifications are now muted",
+                      });
+                    }}
+                  />
+                </div>
+                
+                {soundNotifications.isEnabled && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      await soundNotifications.playTestSound();
+                      toast({
+                        title: "Sound Test",
+                        description: "Did you hear that?",
+                      });
+                    }}
+                    className="w-full"
+                  >
+                    <Volume2 className="w-4 h-4 mr-2" />
+                    Test Sound
+                  </Button>
                 )}
               </div>
 
