@@ -96,14 +96,18 @@ const CommunityPage: React.FC = () => {
   }, [selectedGroup]);
 
   const checkSubscription = async () => {
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', user?.id)
-      .eq('status', 'active')
-      .maybeSingle();
-
-    setIsPremium(data?.plan === 'pro' || data?.plan === 'premium' || data?.plan === 'academy');
+    // DEV MODE: Bypass subscription check - treat all users as premium
+    setIsPremium(true);
+    return;
+    
+    // Original subscription check (disabled for development)
+    // const { data } = await supabase
+    //   .from('subscriptions')
+    //   .select('*')
+    //   .eq('user_id', user?.id)
+    //   .eq('status', 'active')
+    //   .maybeSingle();
+    // setIsPremium(data?.plan === 'pro' || data?.plan === 'premium' || data?.plan === 'academy');
   };
 
   const loadGroups = async () => {

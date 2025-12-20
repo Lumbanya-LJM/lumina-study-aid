@@ -110,6 +110,9 @@ const LuminaAcademyPage: React.FC = () => {
   };
 
   const loadEnrollments = async () => {
+    // DEV MODE: Bypass enrollment check - grant access to all users
+    setHasAcademyAccess(true);
+    
     const { data } = await supabase
       .from('academy_enrollments')
       .select('*')
@@ -117,7 +120,6 @@ const LuminaAcademyPage: React.FC = () => {
       .eq('status', 'active');
 
     if (data && data.length > 0) {
-      setHasAcademyAccess(true);
       setEnrollments(data);
     }
   };
