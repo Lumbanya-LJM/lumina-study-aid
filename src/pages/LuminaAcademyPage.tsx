@@ -7,16 +7,15 @@ import {
   Video,
   Calendar,
   ExternalLink,
-  Lock,
-  Crown,
   BookOpen,
-  Users,
   Play,
   Clock,
-  CheckCircle,
-  Plus,
   Loader2,
-  Sparkles
+  Sparkles,
+  FileText,
+  FolderOpen,
+  ChevronRight,
+  Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, formatDistanceToNow } from 'date-fns';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Course {
   id: string;
@@ -40,7 +40,6 @@ interface Enrollment {
   course_id: string;
   status: string;
   expires_at: string;
-  course?: Course;
 }
 
 interface TutorUpdate {
@@ -52,7 +51,6 @@ interface TutorUpdate {
   class_link: string | null;
   class_time: string | null;
   created_at: string;
-  course_name?: string;
 }
 
 interface LiveClass {
@@ -62,144 +60,81 @@ interface LiveClass {
   status: string;
   scheduled_at: string | null;
   started_at: string | null;
+  ended_at: string | null;
   daily_room_name: string | null;
+  daily_room_url: string | null;
   course_id: string | null;
   host_id: string;
-  academy_courses?: { name: string } | null;
+  recording_url: string | null;
 }
 
-interface ClassSummary {
+interface CourseMaterial {
   id: string;
-  class_id: string;
-  summary: string;
-  key_points: string[] | null;
-  topics_covered: string[] | null;
+  course_id: string;
+  title: string;
+  description: string | null;
+  file_url: string;
+  file_name: string;
+  file_type: string | null;
+  file_size: number | null;
   created_at: string;
-  live_classes?: { title: string; course_id: string | null } | null;
 }
-
-// Course Enrollment Card Component
-const CourseEnrollCard: React.FC<{
-  course: Course;
-  userId: string;
-  onEnrolled: () => void;
-}> = ({ course, userId, onEnrolled }) => {
-  const [isEnrolling, setIsEnrolling] = useState(false);
-  const { toast } = useToast();
-
-  const handleEnroll = async () => {
-    if (!userId) {
-      toast({ variant: "destructive", title: "Error", description: "Please log in to enroll" });
-      return;
-    }
-
-    setIsEnrolling(true);
-    try {
-      const { error } = await supabase.from('academy_enrollments').insert({
-        user_id: userId,
-        course_id: course.id,
-        status: 'active',
-        expires_at: null // No expiry for dev mode
-      });
-
-      if (error) {
-        if (error.code === '23505') {
-          toast({ title: "Already Enrolled", description: "You're already enrolled in this course" });
-        } else {
-          throw error;
-        }
-      } else {
-        toast({ title: "Enrolled!", description: `You're now enrolled in ${course.name}` });
-        onEnrolled();
-      }
-    } catch (error) {
-      console.error('Enrollment error:', error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to enroll. Please try again." });
-    } finally {
-      setIsEnrolling(false);
-    }
-  };
-
-  return (
-    <div className="bg-card rounded-2xl p-4 border border-border/50">
-      <div className="flex items-start gap-3">
-        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-          <GraduationCap className="w-6 h-6 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground">{course.name}</h3>
-          <p className="text-xs text-muted-foreground">{course.institution}</p>
-          {course.description && (
-            <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{course.description}</p>
-          )}
-        </div>
-        <Button
-          size="sm"
-          onClick={handleEnroll}
-          disabled={isEnrolling}
-          className="shrink-0"
-        >
-          {isEnrolling ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <>
-              <Plus className="w-4 h-4 mr-1" />
-              Enroll
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-};
 
 const LuminaAcademyPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [updates, setUpdates] = useState<TutorUpdate[]>([]);
-  const [classSummaries, setClassSummaries] = useState<ClassSummary[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Course-specific data
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [scheduledClasses, setScheduledClasses] = useState<LiveClass[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasAcademyAccess, setHasAcademyAccess] = useState(false);
+  const [recordings, setRecordings] = useState<LiveClass[]>([]);
+  const [materials, setMaterials] = useState<CourseMaterial[]>([]);
+  const [updates, setUpdates] = useState<TutorUpdate[]>([]);
+  const [loadingCourseData, setLoadingCourseData] = useState(false);
 
   useEffect(() => {
-    loadData();
+    if (user?.id) {
+      loadEnrolledCourses();
+    }
   }, [user?.id]);
 
-  // Separate effect for realtime subscriptions - only run once
   useEffect(() => {
-    if (!user?.id) return;
+    if (selectedCourse) {
+      loadCourseData(selectedCourse.id);
+    }
+  }, [selectedCourse]);
 
-    // Subscribe to real-time updates
+  // Real-time subscriptions for the selected course
+  useEffect(() => {
+    if (!selectedCourse) return;
+
+    const classesChannel = supabase
+      .channel(`course-classes-${selectedCourse.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'live_classes',
+        filter: `course_id=eq.${selectedCourse.id}`
+      }, () => {
+        loadCourseData(selectedCourse.id);
+      })
+      .subscribe();
+
     const updatesChannel = supabase
-      .channel('tutor-updates')
+      .channel(`course-updates-${selectedCourse.id}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'tutor_updates'
-      }, async (payload) => {
-        // Just append the new update instead of refetching everything
+        table: 'tutor_updates',
+        filter: `course_id=eq.${selectedCourse.id}`
+      }, (payload) => {
         const update = payload.new as TutorUpdate;
-        setUpdates(prev => [update, ...prev.slice(0, 49)]);
-        
-        if (Notification.permission === 'granted') {
-          const registration = await navigator.serviceWorker?.ready;
-          if (registration) {
-            registration.showNotification('Lumina Academy', {
-              body: `New update: ${update.title}`,
-              icon: '/pwa-192x192.png',
-              badge: '/pwa-192x192.png',
-              tag: `tutor-update-${update.id}`,
-              data: { url: '/academy' }
-            });
-          }
-        }
-        
+        setUpdates(prev => [update, ...prev]);
         toast({
           title: "New Update",
           description: "Your tutor posted a new update!",
@@ -207,171 +142,115 @@ const LuminaAcademyPage: React.FC = () => {
       })
       .subscribe();
 
-    // Subscribe to live class updates - handle changes incrementally
-    const classesChannel = supabase
-      .channel('live-classes-academy')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'live_classes'
-      }, (payload) => {
-        const newClass = payload.new as LiveClass;
-        if (newClass.status === 'live') {
-          setLiveClasses(prev => [newClass, ...prev]);
-        } else if (newClass.status === 'scheduled') {
-          setScheduledClasses(prev => [newClass, ...prev]);
-        }
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'live_classes'
-      }, (payload) => {
-        const updated = payload.new as LiveClass;
-        // Handle status transitions
-        if (updated.status === 'live') {
-          setScheduledClasses(prev => prev.filter(c => c.id !== updated.id));
-          setLiveClasses(prev => {
-            const exists = prev.some(c => c.id === updated.id);
-            if (exists) return prev.map(c => c.id === updated.id ? updated : c);
-            return [updated, ...prev];
-          });
-        } else if (updated.status === 'ended') {
-          setLiveClasses(prev => prev.filter(c => c.id !== updated.id));
-          setScheduledClasses(prev => prev.filter(c => c.id !== updated.id));
-        } else {
-          setLiveClasses(prev => prev.map(c => c.id === updated.id ? updated : c));
-          setScheduledClasses(prev => prev.map(c => c.id === updated.id ? updated : c));
-        }
-      })
-      .on('postgres_changes', {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'live_classes'
-      }, (payload) => {
-        const deleted = payload.old as LiveClass;
-        setLiveClasses(prev => prev.filter(c => c.id !== deleted.id));
-        setScheduledClasses(prev => prev.filter(c => c.id !== deleted.id));
-      })
-      .subscribe();
-
     return () => {
-      supabase.removeChannel(updatesChannel);
       supabase.removeChannel(classesChannel);
+      supabase.removeChannel(updatesChannel);
     };
-  }, [user?.id, toast]);
+  }, [selectedCourse, toast]);
 
-  const loadData = async () => {
+  const loadEnrolledCourses = async () => {
+    if (!user?.id) return;
     setIsLoading(true);
-    await Promise.all([
-      loadEnrollments(),
-      loadCourses(),
-      loadUpdates(),
-      loadLiveClasses(),
-      loadClassSummaries()
-    ]);
-    setIsLoading(false);
-  };
 
-  const loadEnrollments = async () => {
-    // DEV MODE: Bypass enrollment check - grant access to all users
-    setHasAcademyAccess(true);
-    
-    const { data } = await supabase
-      .from('academy_enrollments')
-      .select('*')
-      .eq('user_id', user?.id)
-      .eq('status', 'active');
+    try {
+      // Get enrollments
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('academy_enrollments')
+        .select('course_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
 
-    if (data && data.length > 0) {
-      setEnrollments(data);
+      if (enrollError) throw enrollError;
+
+      if (enrollments && enrollments.length > 0) {
+        const courseIds = enrollments.map(e => e.course_id);
+        
+        const { data: courses, error: coursesError } = await supabase
+          .from('academy_courses')
+          .select('*')
+          .in('id', courseIds)
+          .eq('is_active', true);
+
+        if (coursesError) throw coursesError;
+
+        setEnrolledCourses(courses || []);
+        
+        // Auto-select first course if available
+        if (courses && courses.length > 0 && !selectedCourse) {
+          setSelectedCourse(courses[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading enrolled courses:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load your courses',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const loadLiveClasses = async () => {
-    // Load live classes
-    const { data: liveData } = await supabase
-      .from('live_classes')
-      .select('*, academy_courses(name)')
-      .eq('status', 'live')
-      .order('started_at', { ascending: false });
+  const loadCourseData = async (courseId: string) => {
+    setLoadingCourseData(true);
 
-    // Only update if data actually changed to prevent flickering
-    if (liveData) {
-      setLiveClasses(prev => {
-        const prevIds = prev.map(c => c.id).join(',');
-        const newIds = liveData.map(c => c.id).join(',');
-        return prevIds !== newIds ? liveData : prev;
-      });
-    }
+    try {
+      // Load live classes
+      const { data: liveData } = await supabase
+        .from('live_classes')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('status', 'live')
+        .order('started_at', { ascending: false });
 
-    // Load scheduled classes
-    const { data: scheduledData } = await supabase
-      .from('live_classes')
-      .select('*, academy_courses(name)')
-      .eq('status', 'scheduled')
-      .gte('scheduled_at', new Date().toISOString())
-      .order('scheduled_at', { ascending: true })
-      .limit(10);
+      setLiveClasses(liveData || []);
 
-    if (scheduledData) {
-      setScheduledClasses(prev => {
-        const prevIds = prev.map(c => c.id).join(',');
-        const newIds = scheduledData.map(c => c.id).join(',');
-        return prevIds !== newIds ? scheduledData : prev;
-      });
-    }
-  };
+      // Load scheduled classes
+      const { data: scheduledData } = await supabase
+        .from('live_classes')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('status', 'scheduled')
+        .gte('scheduled_at', new Date().toISOString())
+        .order('scheduled_at', { ascending: true });
 
-  const loadCourses = async () => {
-    const { data } = await supabase
-      .from('academy_courses')
-      .select('*')
-      .eq('is_active', true);
+      setScheduledClasses(scheduledData || []);
 
-    setCourses(data || []);
-  };
+      // Load recordings (ended classes with recording_url)
+      const { data: recordingsData } = await supabase
+        .from('live_classes')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('status', 'ended')
+        .not('recording_url', 'is', null)
+        .order('ended_at', { ascending: false });
 
-  const loadUpdates = async () => {
-    const { data } = await supabase
-      .from('tutor_updates')
-      .select('*')
-      .eq('is_published', true)
-      .order('created_at', { ascending: false })
-      .limit(50);
+      setRecordings(recordingsData || []);
 
-    // Only update if data actually changed to prevent flickering
-    if (data) {
-      setUpdates(prev => {
-        const prevIds = prev.map(u => u.id).join(',');
-        const newIds = data.map(u => u.id).join(',');
-        return prevIds !== newIds ? data : prev;
-      });
-    }
-  };
+      // Load course materials
+      const { data: materialsData } = await supabase
+        .from('course_materials')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('created_at', { ascending: false });
 
-  const loadClassSummaries = async () => {
-    const { data } = await supabase
-      .from('class_ai_summaries')
-      .select('*, live_classes(title, course_id)')
-      .order('created_at', { ascending: false })
-      .limit(20);
+      setMaterials(materialsData || []);
 
-    if (data) {
-      const mappedData: ClassSummary[] = data.map(item => ({
-        id: item.id,
-        class_id: item.class_id,
-        summary: item.summary,
-        key_points: Array.isArray(item.key_points) ? item.key_points as string[] : null,
-        topics_covered: Array.isArray(item.topics_covered) ? item.topics_covered as string[] : null,
-        created_at: item.created_at,
-        live_classes: item.live_classes,
-      }));
-      setClassSummaries(prev => {
-        const prevIds = prev.map(s => s.id).join(',');
-        const newIds = mappedData.map(s => s.id).join(',');
-        return prevIds !== newIds ? mappedData : prev;
-      });
+      // Load updates
+      const { data: updatesData } = await supabase
+        .from('tutor_updates')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+
+      setUpdates(updatesData || []);
+
+    } catch (error) {
+      console.error('Error loading course data:', error);
+    } finally {
+      setLoadingCourseData(false);
     }
   };
 
@@ -380,21 +259,19 @@ const LuminaAcademyPage: React.FC = () => {
       case 'class': return Video;
       case 'alert': return Bell;
       case 'schedule': return Calendar;
-      case 'summary': return Sparkles;
       default: return BookOpen;
     }
   };
 
-  const getUpdateColor = (type: string) => {
-    switch (type) {
-      case 'class': return 'bg-primary/10 text-primary';
-      case 'alert': return 'bg-destructive/10 text-destructive';
-      case 'schedule': return 'bg-warning/10 text-warning';
-      default: return 'bg-secondary text-foreground';
-    }
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  if (!hasAcademyAccess) {
+  // Course Selection View
+  if (!selectedCourse) {
     return (
       <MobileLayout showNav={true}>
         <div className="flex flex-col min-h-screen py-6 safe-top">
@@ -402,239 +279,314 @@ const LuminaAcademyPage: React.FC = () => {
             <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-secondary transition-colors">
               <ArrowLeft className="w-5 h-5 text-foreground" />
             </button>
-            <h1 className="text-lg font-semibold text-foreground">Lumina Academy</h1>
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">Lumina Academy</h1>
+              <p className="text-xs text-muted-foreground">Select a course to continue</p>
+            </div>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6">
-              <GraduationCap className="w-10 h-10 text-primary" />
+          {isLoading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Lumina Academy</h2>
-            <p className="text-muted-foreground mb-6">
-              Get direct access to your tutors, class schedules, alerts, and learning materials from ZIALE and other institutions.
-            </p>
-            
-            <div className="w-full bg-card rounded-2xl p-4 border border-border/50 mb-6 text-left">
-              <h3 className="font-semibold text-foreground mb-3">What you get:</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-primary" />
-                  Real-time alerts from your tutors
-                </li>
-                <li className="flex items-center gap-2">
-                  <Video className="w-4 h-4 text-primary" />
-                  Direct links to online classes
-                </li>
-                <li className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-primary" />
-                  Class schedules and updates
-                </li>
-                <li className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-primary" />
-                  Course-specific materials
-                </li>
-              </ul>
+          ) : enrolledCourses.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6">
+                <GraduationCap className="w-10 h-10 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-2">No Enrolled Courses</h2>
+              <p className="text-muted-foreground mb-6">
+                You haven't enrolled in any courses yet. Contact your institution to get enrolled.
+              </p>
             </div>
-
-            <Button onClick={() => navigate('/subscription')} className="gradient-primary">
-              <Crown className="w-4 h-4 mr-2" />
-              Subscribe to Academy
-            </Button>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-foreground mb-4">My Courses</h2>
+              {enrolledCourses.map((course) => (
+                <button
+                  key={course.id}
+                  onClick={() => setSelectedCourse(course)}
+                  className="w-full bg-card rounded-2xl p-4 border border-border/50 hover:border-primary/30 transition-all text-left group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                      <GraduationCap className="w-7 h-7 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-foreground">{course.name}</h3>
+                      <p className="text-xs text-muted-foreground">{course.institution}</p>
+                      {course.description && (
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{course.description}</p>
+                      )}
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </MobileLayout>
     );
   }
 
+  // Course Detail View
   return (
     <MobileLayout showNav={true}>
       <div className="flex flex-col min-h-screen py-6 safe-top">
-        <div className="flex items-center gap-4 mb-6">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-secondary transition-colors">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-4">
+          <button 
+            onClick={() => setSelectedCourse(null)} 
+            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+          >
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
-          <div>
-            <h1 className="text-lg font-semibold text-foreground">Lumina Academy</h1>
-            <p className="text-xs text-muted-foreground">{enrollments.length} courses enrolled</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-semibold text-foreground truncate">{selectedCourse.name}</h1>
+            <p className="text-xs text-muted-foreground">{selectedCourse.institution}</p>
           </div>
         </div>
 
-        <Tabs defaultValue="classes" className="flex-1">
-          <TabsList className="w-full mb-4">
-            <TabsTrigger value="classes" className="flex-1 gap-1">
-              <Video className="w-3.5 h-3.5" />
-              Classes
-              {liveClasses.length > 0 && (
-                <span className="ml-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="updates" className="flex-1">Updates</TabsTrigger>
-            <TabsTrigger value="courses" className="flex-1">Courses</TabsTrigger>
-          </TabsList>
-
-          {/* Live Classes Tab */}
-          <TabsContent value="classes" className="space-y-4">
-            {/* Live Now Section */}
-            {liveClasses.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  Live Now
-                </h3>
-                {liveClasses.map((liveClass) => (
-                  <div
-                    key={liveClass.id}
-                    className="bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-2xl p-4 border border-red-500/20"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-foreground">{liveClass.title}</h4>
-                        {liveClass.academy_courses && (
-                          <Badge variant="secondary" className="mt-1 text-xs">
-                            {liveClass.academy_courses.name}
-                          </Badge>
-                        )}
-                        {liveClass.description && (
-                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                            {liveClass.description}
-                          </p>
-                        )}
-                        {liveClass.started_at && (
-                          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Started {formatDistanceToNow(new Date(liveClass.started_at), { addSuffix: true })}
-                          </p>
-                        )}
-                      </div>
-                      <Button
-                        onClick={() => navigate(`/class/${liveClass.id}`)}
-                        size="sm"
-                        className="bg-red-500 hover:bg-red-600 shrink-0"
-                      >
-                        <Play className="w-4 h-4 mr-1" />
-                        Join
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Scheduled Classes Section */}
-            {scheduledClasses.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-primary" />
-                  Upcoming Classes
-                </h3>
-                {scheduledClasses.map((scheduledClass) => (
-                  <div
-                    key={scheduledClass.id}
-                    className="bg-card rounded-2xl p-4 border border-border/50"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-foreground">{scheduledClass.title}</h4>
-                        {scheduledClass.academy_courses && (
-                          <Badge variant="secondary" className="mt-1 text-xs">
-                            {scheduledClass.academy_courses.name}
-                          </Badge>
-                        )}
-                        {scheduledClass.description && (
-                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                            {scheduledClass.description}
-                          </p>
-                        )}
-                        {scheduledClass.scheduled_at && (
-                          <div className="flex items-center gap-2 mt-3 text-sm">
-                            <Calendar className="w-4 h-4 text-primary" />
-                            <span className="text-foreground">
-                              {format(new Date(scheduledClass.scheduled_at), "PPP 'at' p")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/class/${scheduledClass.id}`)}
-                        className="shrink-0"
-                      >
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Empty State */}
-            {liveClasses.length === 0 && scheduledClasses.length === 0 && (
-              <div className="text-center py-12">
-                <Video className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground font-medium">No classes scheduled</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Live and scheduled classes will appear here
-                </p>
+        {/* Live Class Banner */}
+        {liveClasses.length > 0 && (
+          <div className="mb-4 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-2xl p-4 border border-red-500/20">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-sm font-semibold text-red-500">LIVE NOW</span>
+            </div>
+            {liveClasses.map((liveClass) => (
+              <div key={liveClass.id} className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-foreground">{liveClass.title}</h4>
+                  {liveClass.started_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Started {formatDistanceToNow(new Date(liveClass.started_at), { addSuffix: true })}
+                    </p>
+                  )}
+                </div>
                 <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => navigate('/recordings')}
+                  onClick={() => navigate(`/class/${liveClass.id}`)}
+                  size="sm"
+                  className="bg-red-500 hover:bg-red-600 shrink-0"
                 >
-                  View Past Recordings
+                  <Play className="w-4 h-4 mr-1" />
+                  Join
                 </Button>
               </div>
-            )}
-          </TabsContent>
+            ))}
+          </div>
+        )}
 
-          <TabsContent value="updates" className="space-y-3">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <>
-                {/* Class Summaries from Lumina */}
-                {classSummaries.length > 0 && (
-                  <div className="space-y-3 mb-4">
+        {/* Tabs */}
+        <Tabs defaultValue="classes" className="flex-1">
+          <TabsList className="w-full mb-4 grid grid-cols-4">
+            <TabsTrigger value="classes" className="text-xs gap-1">
+              <Video className="w-3.5 h-3.5" />
+              Classes
+            </TabsTrigger>
+            <TabsTrigger value="recordings" className="text-xs gap-1">
+              <Play className="w-3.5 h-3.5" />
+              Recordings
+            </TabsTrigger>
+            <TabsTrigger value="materials" className="text-xs gap-1">
+              <FileText className="w-3.5 h-3.5" />
+              Materials
+            </TabsTrigger>
+            <TabsTrigger value="updates" className="text-xs gap-1">
+              <Bell className="w-3.5 h-3.5" />
+              Updates
+            </TabsTrigger>
+          </TabsList>
+
+          {loadingCourseData ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <>
+              {/* Classes Tab */}
+              <TabsContent value="classes" className="space-y-4">
+                {scheduledClasses.length > 0 ? (
+                  <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-primary" />
-                      Class Summaries from Lumina
+                      <Calendar className="w-4 h-4 text-primary" />
+                      Upcoming Classes
                     </h3>
-                    {classSummaries.map((summary) => {
-                      const course = summary.live_classes?.course_id 
-                        ? courses.find(c => c.id === summary.live_classes?.course_id)
-                        : null;
+                    {scheduledClasses.map((scheduledClass) => (
+                      <div
+                        key={scheduledClass.id}
+                        className="bg-card rounded-2xl p-4 border border-border/50"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-foreground">{scheduledClass.title}</h4>
+                            {scheduledClass.description && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {scheduledClass.description}
+                              </p>
+                            )}
+                            {scheduledClass.scheduled_at && (
+                              <div className="flex items-center gap-2 mt-3 text-sm">
+                                <Clock className="w-4 h-4 text-primary" />
+                                <span className="text-foreground">
+                                  {format(new Date(scheduledClass.scheduled_at), "PPP 'at' p")}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Calendar className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground font-medium">No upcoming classes</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Scheduled classes will appear here
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Recordings Tab */}
+              <TabsContent value="recordings" className="space-y-4">
+                {recordings.length > 0 ? (
+                  <div className="space-y-3">
+                    {recordings.map((recording) => (
+                      <div
+                        key={recording.id}
+                        className="bg-card rounded-2xl p-4 border border-border/50"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                            <Video className="w-6 h-6 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-foreground">{recording.title}</h4>
+                            {recording.ended_at && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Recorded {format(new Date(recording.ended_at), 'PPP')}
+                              </p>
+                            )}
+                          </div>
+                          {recording.recording_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(recording.recording_url!, '_blank')}
+                            >
+                              <Play className="w-4 h-4 mr-1" />
+                              Watch
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Video className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground font-medium">No recordings yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Class recordings will appear here
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Materials Tab */}
+              <TabsContent value="materials" className="space-y-4">
+                {materials.length > 0 ? (
+                  <div className="space-y-3">
+                    {materials.map((material) => (
+                      <div
+                        key={material.id}
+                        className="bg-card rounded-2xl p-4 border border-border/50"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center shrink-0">
+                            <FileText className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-foreground">{material.title}</h4>
+                            {material.description && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                                {material.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                              <span>{material.file_type?.toUpperCase() || 'FILE'}</span>
+                              {material.file_size && (
+                                <>
+                                  <span>•</span>
+                                  <span>{formatFileSize(material.file_size)}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(material.file_url, '_blank')}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FolderOpen className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground font-medium">No materials yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Course materials will appear here
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Updates Tab */}
+              <TabsContent value="updates" className="space-y-4">
+                {updates.length > 0 ? (
+                  <div className="space-y-3">
+                    {updates.map((update) => {
+                      const Icon = getUpdateIcon(update.update_type);
                       
                       return (
-                        <div key={summary.id} className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-4 border border-primary/20">
+                        <div key={update.id} className="bg-card rounded-2xl p-4 border border-border/50">
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                              <Sparkles className="w-5 h-5 text-primary" />
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                              <Icon className="w-5 h-5 text-primary" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <h3 className="font-semibold text-foreground">
-                                    {summary.live_classes?.title || 'Class Summary'}
-                                  </h3>
-                                  {course && (
-                                    <span className="text-xs text-primary">{course.name}</span>
-                                  )}
-                                </div>
-                                <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
-                                  AI Summary
-                                </Badge>
+                                <h3 className="font-semibold text-foreground">{update.title}</h3>
+                                <span className="text-[10px] text-muted-foreground shrink-0">
+                                  {format(new Date(update.created_at), 'MMM d')}
+                                </span>
                               </div>
-                              <p className="text-sm text-muted-foreground mt-2 line-clamp-3">{summary.summary}</p>
-                              {summary.key_points && summary.key_points.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {summary.key_points.slice(0, 3).map((point, idx) => (
-                                    <Badge key={idx} variant="outline" className="text-xs">
-                                      {point}
-                                    </Badge>
-                                  ))}
+                              <p className="text-sm text-muted-foreground mt-2">{update.content}</p>
+                              
+                              {update.class_time && (
+                                <div className="flex items-center gap-2 mt-3 text-sm text-foreground">
+                                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                                  {format(new Date(update.class_time), "PPP 'at' p")}
                                 </div>
+                              )}
+                              
+                              {update.class_link && (
+                                <a
+                                  href={update.class_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 mt-3 text-sm text-primary hover:underline"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                  Join Class
+                                </a>
                               )}
                             </div>
                           </div>
@@ -642,135 +594,19 @@ const LuminaAcademyPage: React.FC = () => {
                       );
                     })}
                   </div>
-                )}
-
-                {/* Tutor Updates */}
-                {updates.length > 0 ? (
-                  updates.map((update) => {
-                    const Icon = getUpdateIcon(update.update_type);
-                    const colorClass = getUpdateColor(update.update_type);
-                    const course = courses.find(c => c.id === update.course_id);
-                    
-                    return (
-                      <div key={update.id} className="bg-card rounded-2xl p-4 border border-border/50">
-                        <div className="flex items-start gap-3">
-                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", colorClass)}>
-                            <Icon className="w-5 h-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <h3 className="font-semibold text-foreground">{update.title}</h3>
-                                {course && (
-                                  <span className="text-xs text-primary">{course.name}</span>
-                                )}
-                              </div>
-                              <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                                {new Date(update.created_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-2">{update.content}</p>
-                            
-                            {update.class_time && (
-                              <div className="flex items-center gap-2 mt-3 text-sm text-foreground">
-                                <Calendar className="w-4 h-4 text-muted-foreground" />
-                                {new Date(update.class_time).toLocaleString()}
-                              </div>
-                            )}
-                            
-                            {update.class_link && (
-                              <a
-                                href={update.class_link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 mt-3 text-sm text-primary hover:underline"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                                Join Class
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : classSummaries.length === 0 && (
+                ) : (
                   <div className="text-center py-12">
-                    <Bell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No updates yet</p>
+                    <Bell className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground font-medium">No updates yet</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Your tutors will post updates here
+                      Tutor updates will appear here
                     </p>
                   </div>
                 )}
-              </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="courses" className="space-y-4">
-            {/* Enrolled Courses */}
-            {enrollments.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  My Enrolled Courses
-                </h3>
-                {enrollments.map((enrollment) => {
-                  const course = courses.find(c => c.id === enrollment.course_id);
-                  if (!course) return null;
-                  
-                  return (
-                    <div key={enrollment.id} className="bg-card rounded-2xl p-4 border border-green-500/20">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
-                          <BookOpen className="w-6 h-6 text-green-500" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-foreground">{course.name}</h3>
-                          <p className="text-xs text-muted-foreground">{course.institution}</p>
-                        </div>
-                        <Badge variant="secondary" className="bg-green-500/10 text-green-600">
-                          Enrolled
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Available Courses to Enroll */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Plus className="w-4 h-4 text-primary" />
-                Available Courses
-              </h3>
-              {courses.filter(c => !enrollments.some(e => e.course_id === c.id)).length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-4" />
-                  <p className="text-muted-foreground">You're enrolled in all available courses!</p>
-                </div>
-              ) : (
-                courses
-                  .filter(c => !enrollments.some(e => e.course_id === c.id))
-                  .map((course) => (
-                    <CourseEnrollCard
-                      key={course.id}
-                      course={course}
-                      userId={user?.id || ''}
-                      onEnrolled={() => loadEnrollments()}
-                    />
-                  ))
-              )}
-            </div>
-          </TabsContent>
+              </TabsContent>
+            </>
+          )}
         </Tabs>
-
-        <div className="mt-4 p-4 bg-secondary/50 rounded-2xl">
-          <p className="text-xs text-muted-foreground text-center">
-            Powered by Lumina Teach • Updates from your tutors appear here in real-time
-          </p>
-        </div>
       </div>
     </MobileLayout>
   );
