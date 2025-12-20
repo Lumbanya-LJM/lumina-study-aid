@@ -4,6 +4,7 @@ import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { MarkdownRenderer } from '@/components/lumina/MarkdownRenderer';
 import { ConversationSidebar } from '@/components/lumina/ConversationSidebar';
 import { ConversationSearch } from '@/components/lumina/ConversationSearch';
+import { ZambiaLiiChatSearch } from '@/components/lumina/ZambiaLiiChatSearch';
 import {
   ArrowLeft,
   Send,
@@ -21,6 +22,7 @@ import {
   Plus,
   Search,
   Globe,
+  Scale,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -48,7 +50,7 @@ const quickPrompts = [
   { icon: FileText, label: 'Summarise a case', action: 'summarise' },
   { icon: Brain, label: 'Create flashcards', action: 'flashcards' },
   { icon: BookOpen, label: 'Quiz me', action: 'quiz' },
-  { icon: Calendar, label: 'Update schedule', action: 'schedule' },
+  { icon: Scale, label: 'Find a case', action: 'zambialii' },
 ];
 
 const ChatPage: React.FC = () => {
@@ -71,6 +73,7 @@ const ChatPage: React.FC = () => {
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [enableWebSearch, setEnableWebSearch] = useState(false);
+  const [isZambiaLiiSearchOpen, setIsZambiaLiiSearchOpen] = useState(false);
 
   // Voice input hook
   const handleVoiceResult = useCallback((transcript: string) => {
@@ -479,6 +482,12 @@ const ChatPage: React.FC = () => {
   };
 
   const handleQuickPrompt = (action: string) => {
+    // Special handling for ZambiaLII search
+    if (action === 'zambialii') {
+      setIsZambiaLiiSearchOpen(true);
+      return;
+    }
+
     const promptMap: Record<string, string> = {
       summarise:
         'Please summarise this Zambian case, focusing on the key facts, issue, holding, and reasoning.',
@@ -486,8 +495,6 @@ const ChatPage: React.FC = () => {
         'Create detailed flashcards from my notes that focus on key principles, definitions, and case law.',
       quiz:
         'Generate a practice quiz based on my recent study topics with multiple choice questions.',
-      schedule:
-        'Help me update my study schedule for this week based on my upcoming classes and exams.',
     };
 
     const prompt = promptMap[action] || '';
@@ -496,6 +503,12 @@ const ChatPage: React.FC = () => {
     setMessage(prompt);
     void handleSend(prompt, action);
   };
+
+  const handleZambiaLiiSearch = useCallback((query: string) => {
+    // Enable web search for ZambiaLII queries
+    setEnableWebSearch(true);
+    void handleSend(query, 'zambialii');
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -527,6 +540,12 @@ const ChatPage: React.FC = () => {
           setCurrentConversationId(id);
           setIsSearchOpen(false);
         }}
+      />
+
+      <ZambiaLiiChatSearch
+        isOpen={isZambiaLiiSearchOpen}
+        onClose={() => setIsZambiaLiiSearchOpen(false)}
+        onSearchWithLumina={handleZambiaLiiSearch}
       />
 
       <div className="flex flex-col h-screen bg-background">
@@ -566,6 +585,15 @@ const ChatPage: React.FC = () => {
             title={enableWebSearch ? "Web Search On" : "Web Search Off"}
           >
             <Globe className="w-5 h-5" />
+          </button>
+          
+          {/* ZambiaLII Button */}
+          <button
+            onClick={() => setIsZambiaLiiSearchOpen(true)}
+            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+            title="Search ZambiaLII Cases"
+          >
+            <Scale className="w-5 h-5 text-muted-foreground" />
           </button>
           
           {/* Search Button */}
