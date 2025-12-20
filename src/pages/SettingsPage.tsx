@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useSoundNotifications } from '@/hooks/useSoundNotifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { useQuickTips } from '@/hooks/useQuickTips';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,9 @@ import {
   Volume2,
   VolumeX,
   Globe,
-  Sparkles
+  Sparkles,
+  Lightbulb,
+  RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -66,6 +69,7 @@ const SettingsPage: React.FC = () => {
   const pushNotifications = usePushNotifications();
   const soundNotifications = useSoundNotifications();
   const offlineSync = useOfflineSync();
+  const { resetAllTips, seenTips } = useQuickTips();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'lumina' | 'appearance' | 'offline' | 'security'>('notifications');
   
@@ -586,6 +590,39 @@ const SettingsPage: React.FC = () => {
                 </div>
                 <ArrowLeft className="w-5 h-5 text-muted-foreground rotate-180" />
               </button>
+
+              {/* Reset Quick Tips */}
+              <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Lightbulb className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="font-semibold text-foreground">Quick Tips</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {seenTips.length > 0 
+                        ? `You've seen ${seenTips.length} tip(s)` 
+                        : 'Contextual hints as you explore'}
+                    </p>
+                  </div>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    resetAllTips();
+                    localStorage.removeItem('luminary_onboarding_complete');
+                    toast({
+                      title: "Tips Reset",
+                      description: "You'll see all quick tips and the tutorial again.",
+                    });
+                  }}
+                  className="w-full"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Reset All Tips & Tutorial
+                </Button>
+              </div>
             </div>
           )}
 

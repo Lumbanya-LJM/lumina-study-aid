@@ -5,6 +5,7 @@ import { MarkdownRenderer } from '@/components/lumina/MarkdownRenderer';
 import { ConversationSidebar } from '@/components/lumina/ConversationSidebar';
 import { ConversationSearch } from '@/components/lumina/ConversationSearch';
 import { ZambiaLiiChatSearch } from '@/components/lumina/ZambiaLiiChatSearch';
+import { FloatingQuickTip } from '@/components/ui/quick-tip';
 import {
   ArrowLeft,
   Send,
@@ -833,6 +834,10 @@ const ChatPage: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* Floating Quick Tips */}
+        <FloatingQuickTip tipId="chat_voice" anchor="bottom-left" />
+        <FloatingQuickTip tipId="chat_zambialii" anchor="bottom-right" />
       </div>
     </MobileLayout>
   );
