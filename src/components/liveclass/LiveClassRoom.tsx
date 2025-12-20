@@ -50,7 +50,7 @@ const LiveClassRoom: React.FC<LiveClassRoomProps> = ({
   onLeave,
 }) => {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [showChat, setShowChat] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
@@ -106,7 +106,7 @@ const LiveClassRoom: React.FC<LiveClassRoomProps> = ({
   } = useDailyCall({
     classId,
     roomName,
-    userName: profile?.full_name || "Student",
+    userName: user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student",
     userId: user?.id || "",
     isHost,
     onTranscript: handleTranscript,
@@ -323,7 +323,7 @@ const LiveClassRoom: React.FC<LiveClassRoomProps> = ({
                         }
                         setChatMessages((prev) => [
                           ...prev,
-                          { sender: profile?.full_name || "You", text: chatInput },
+                          { sender: user?.user_metadata?.full_name || "You", text: chatInput },
                         ]);
                         setChatInput("");
                       }
