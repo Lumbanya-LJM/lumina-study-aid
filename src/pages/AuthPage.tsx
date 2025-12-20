@@ -202,6 +202,9 @@ const AuthPage: React.FC = () => {
           });
         }
 
+        // Clear onboarding flag to ensure new users see the tutorial
+        localStorage.removeItem('luminary_onboarding_complete');
+
         toast({
           title: "Account Created!",
           description: formData.selectedCourses.length > 0 
