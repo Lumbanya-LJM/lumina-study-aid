@@ -44,8 +44,8 @@ export const useDailyCall = (options: UseDailyCallOptions) => {
       id,
       user_id: p.user_id || id,
       user_name: p.user_name || "Guest",
-      audio: !p.audio?.off,
-      video: !p.video?.off,
+      audio: p.audio !== false,
+      video: p.video !== false,
       screen: !!p.screen,
       local: p.local || false,
     }));

@@ -15,7 +15,6 @@ import {
   BookOpen,
   ChevronLeft,
   Search,
-  Filter,
   Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -133,7 +132,7 @@ const ClassRecordingsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <MobileLayout title="Classes" showBack>
+      <MobileLayout>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -142,8 +141,16 @@ const ClassRecordingsPage: React.FC = () => {
   }
 
   return (
-    <MobileLayout title="Classes" showBack>
+    <MobileLayout>
       <div className="p-4 space-y-4">
+        {/* Page Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-bold">Classes</h1>
+        </div>
+
         {/* Live Classes Banner */}
         {liveClasses.length > 0 && (
           <Card className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-500/20">
