@@ -80,9 +80,6 @@ serve(async (req) => {
             user_name: userName || "Participant",
             user_id: userId,
             is_owner: isHost,
-            enable_recording: isHost ? "cloud" : undefined,
-            enable_transcription: true,
-            start_cloud_recording: false,
             exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours
           },
         }),
