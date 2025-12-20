@@ -27,7 +27,8 @@ import {
   Upload,
   BarChart3,
   Users,
-  GraduationCap
+  GraduationCap,
+  Sparkles
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -304,17 +305,17 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
-        {/* StudyLocker Prompt */}
+        {/* LuminaVault Prompt */}
         <button 
           onClick={() => navigate('/locker')}
-          className="w-full bg-secondary rounded-2xl p-5 border border-dashed border-primary/30 flex items-center gap-4 hover:bg-primary/5 transition-colors"
+          className="w-full bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-5 border border-primary/20 flex items-center gap-4 hover:from-primary/10 hover:to-primary/15 transition-all"
         >
           <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-            <Upload className="w-5 h-5 text-primary-foreground" />
+            <Sparkles className="w-5 h-5 text-primary-foreground" />
           </div>
           <div className="flex-1 text-left">
-            <p className="font-semibold text-foreground">StudyLocker</p>
-            <p className="text-xs text-muted-foreground">Your personal vault for notes & materials</p>
+            <p className="font-semibold text-foreground">LuminaVault</p>
+            <p className="text-xs text-muted-foreground">Your AI-powered study vault</p>
           </div>
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </button>

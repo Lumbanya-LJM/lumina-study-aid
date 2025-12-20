@@ -36,7 +36,9 @@ import {
   Wifi,
   WifiOff,
   Volume2,
-  VolumeX
+  VolumeX,
+  Globe,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -65,7 +67,7 @@ const SettingsPage: React.FC = () => {
   const soundNotifications = useSoundNotifications();
   const offlineSync = useOfflineSync();
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'appearance' | 'offline' | 'security'>('notifications');
+  const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'lumina' | 'appearance' | 'offline' | 'security'>('notifications');
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -200,10 +202,17 @@ const SettingsPage: React.FC = () => {
   const tabs = [
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
     { id: 'goals' as const, label: 'Goals', icon: Target },
+    { id: 'lumina' as const, label: 'Lumina', icon: Sparkles },
     { id: 'appearance' as const, label: 'Appearance', icon: Palette },
     { id: 'offline' as const, label: 'Offline', icon: Download },
     { id: 'security' as const, label: 'Security', icon: Shield },
   ];
+
+  // Lumina settings
+  const [deepSearchDefault, setDeepSearchDefault] = useState(() => {
+    const saved = localStorage.getItem('lumina_deep_search_default');
+    return saved === 'true';
+  });
 
   const notificationOptions = [
     { key: 'dailyReminders' as const, label: 'Daily Study Reminders', description: 'Get reminded to study every day' },
@@ -523,6 +532,75 @@ const SettingsPage: React.FC = () => {
                   className="w-full"
                 />
               </div>
+            </div>
+          )}
+
+          {/* Lumina Settings Tab */}
+          {activeTab === 'lumina' && (
+            <div className="space-y-6">
+              {/* Deep Search Settings */}
+              <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Globe className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="font-semibold text-foreground">Deep Search Mode</h2>
+                    <p className="text-xs text-muted-foreground">Let Lumina search the web for answers</p>
+                  </div>
+                  <Switch
+                    checked={deepSearchDefault}
+                    onCheckedChange={(checked) => {
+                      setDeepSearchDefault(checked);
+                      localStorage.setItem('lumina_deep_search_default', String(checked));
+                      toast({
+                        title: checked ? "Deep Search Enabled" : "Deep Search Disabled",
+                        description: checked 
+                          ? "Lumina will search the web by default" 
+                          : "Lumina will use only its knowledge base",
+                      });
+                    }}
+                  />
+                </div>
+                
+                <div className="p-3 bg-secondary/50 rounded-xl">
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, Lumina will search the internet for current information, 
+                    ZambiaLII cases, and statutes to provide more accurate and up-to-date answers.
+                    You can also toggle this per-conversation in the chat header.
+                  </p>
+                </div>
+              </div>
+
+              {/* Lumina Customization Link */}
+              <button
+                onClick={() => navigate('/customize-avatar')}
+                className="w-full bg-card rounded-2xl border border-border/50 shadow-card p-5 flex items-center gap-4 hover:border-primary/30 transition-colors"
+              >
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h2 className="font-semibold text-foreground">Customize Lumina</h2>
+                  <p className="text-xs text-muted-foreground">Change appearance and gender presentation</p>
+                </div>
+                <ArrowLeft className="w-5 h-5 text-muted-foreground rotate-180" />
+              </button>
+
+              {/* LuminaVault Link */}
+              <button
+                onClick={() => navigate('/locker')}
+                className="w-full bg-card rounded-2xl border border-border/50 shadow-card p-5 flex items-center gap-4 hover:border-primary/30 transition-colors"
+              >
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <Lock className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h2 className="font-semibold text-foreground">LuminaVault</h2>
+                  <p className="text-xs text-muted-foreground">Your personal study file vault</p>
+                </div>
+                <ArrowLeft className="w-5 h-5 text-muted-foreground rotate-180" />
+              </button>
             </div>
           )}
 
