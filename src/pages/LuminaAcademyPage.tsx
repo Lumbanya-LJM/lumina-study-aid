@@ -9,15 +9,20 @@ import {
   ExternalLink,
   Lock,
   Crown,
-  BookOpen
+  BookOpen,
+  Users,
+  Play,
+  Clock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { format, formatDistanceToNow } from 'date-fns';
 
 interface Course {
   id: string;
@@ -46,6 +51,19 @@ interface TutorUpdate {
   course_name?: string;
 }
 
+interface LiveClass {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  scheduled_at: string | null;
+  started_at: string | null;
+  daily_room_name: string | null;
+  course_id: string | null;
+  host_id: string;
+  academy_courses?: { name: string } | null;
+}
+
 const LuminaAcademyPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -54,14 +72,16 @@ const LuminaAcademyPage: React.FC = () => {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [updates, setUpdates] = useState<TutorUpdate[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
+  const [scheduledClasses, setScheduledClasses] = useState<LiveClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasAcademyAccess, setHasAcademyAccess] = useState(false);
 
   useEffect(() => {
     loadData();
     
-    // Subscribe to real-time updates with push notifications
-    const channel = supabase
+    // Subscribe to real-time updates
+    const updatesChannel = supabase
       .channel('tutor-updates')
       .on('postgres_changes', {
         event: 'INSERT',
@@ -70,7 +90,6 @@ const LuminaAcademyPage: React.FC = () => {
       }, async (payload) => {
         loadUpdates();
         
-        // Show push notification for new updates
         if (Notification.permission === 'granted' && hasAcademyAccess) {
           const update = payload.new as TutorUpdate;
           const course = courses.find(c => c.id === update.course_id);
@@ -94,8 +113,21 @@ const LuminaAcademyPage: React.FC = () => {
       })
       .subscribe();
 
+    // Subscribe to live class updates
+    const classesChannel = supabase
+      .channel('live-classes-academy')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'live_classes'
+      }, () => {
+        loadLiveClasses();
+      })
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(updatesChannel);
+      supabase.removeChannel(classesChannel);
     };
   }, [hasAcademyAccess, courses]);
 
@@ -104,7 +136,8 @@ const LuminaAcademyPage: React.FC = () => {
     await Promise.all([
       loadEnrollments(),
       loadCourses(),
-      loadUpdates()
+      loadUpdates(),
+      loadLiveClasses()
     ]);
     setIsLoading(false);
   };
@@ -122,6 +155,28 @@ const LuminaAcademyPage: React.FC = () => {
     if (data && data.length > 0) {
       setEnrollments(data);
     }
+  };
+
+  const loadLiveClasses = async () => {
+    // Load live classes
+    const { data: liveData } = await supabase
+      .from('live_classes')
+      .select('*, academy_courses(name)')
+      .eq('status', 'live')
+      .order('started_at', { ascending: false });
+
+    setLiveClasses(liveData || []);
+
+    // Load scheduled classes
+    const { data: scheduledData } = await supabase
+      .from('live_classes')
+      .select('*, academy_courses(name)')
+      .eq('status', 'scheduled')
+      .gte('scheduled_at', new Date().toISOString())
+      .order('scheduled_at', { ascending: true })
+      .limit(10);
+
+    setScheduledClasses(scheduledData || []);
   };
 
   const loadCourses = async () => {
@@ -227,11 +282,133 @@ const LuminaAcademyPage: React.FC = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="updates" className="flex-1">
+        <Tabs defaultValue="classes" className="flex-1">
           <TabsList className="w-full mb-4">
+            <TabsTrigger value="classes" className="flex-1 gap-1">
+              <Video className="w-3.5 h-3.5" />
+              Classes
+              {liveClasses.length > 0 && (
+                <span className="ml-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              )}
+            </TabsTrigger>
             <TabsTrigger value="updates" className="flex-1">Updates</TabsTrigger>
-            <TabsTrigger value="courses" className="flex-1">My Courses</TabsTrigger>
+            <TabsTrigger value="courses" className="flex-1">Courses</TabsTrigger>
           </TabsList>
+
+          {/* Live Classes Tab */}
+          <TabsContent value="classes" className="space-y-4">
+            {/* Live Now Section */}
+            {liveClasses.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  Live Now
+                </h3>
+                {liveClasses.map((liveClass) => (
+                  <div
+                    key={liveClass.id}
+                    className="bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-2xl p-4 border border-red-500/20"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-foreground">{liveClass.title}</h4>
+                        {liveClass.academy_courses && (
+                          <Badge variant="secondary" className="mt-1 text-xs">
+                            {liveClass.academy_courses.name}
+                          </Badge>
+                        )}
+                        {liveClass.description && (
+                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                            {liveClass.description}
+                          </p>
+                        )}
+                        {liveClass.started_at && (
+                          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Started {formatDistanceToNow(new Date(liveClass.started_at), { addSuffix: true })}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        onClick={() => navigate(`/class/${liveClass.id}`)}
+                        size="sm"
+                        className="bg-red-500 hover:bg-red-600 shrink-0"
+                      >
+                        <Play className="w-4 h-4 mr-1" />
+                        Join
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Scheduled Classes Section */}
+            {scheduledClasses.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  Upcoming Classes
+                </h3>
+                {scheduledClasses.map((scheduledClass) => (
+                  <div
+                    key={scheduledClass.id}
+                    className="bg-card rounded-2xl p-4 border border-border/50"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-foreground">{scheduledClass.title}</h4>
+                        {scheduledClass.academy_courses && (
+                          <Badge variant="secondary" className="mt-1 text-xs">
+                            {scheduledClass.academy_courses.name}
+                          </Badge>
+                        )}
+                        {scheduledClass.description && (
+                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                            {scheduledClass.description}
+                          </p>
+                        )}
+                        {scheduledClass.scheduled_at && (
+                          <div className="flex items-center gap-2 mt-3 text-sm">
+                            <Calendar className="w-4 h-4 text-primary" />
+                            <span className="text-foreground">
+                              {format(new Date(scheduledClass.scheduled_at), "PPP 'at' p")}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/class/${scheduledClass.id}`)}
+                        className="shrink-0"
+                      >
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {liveClasses.length === 0 && scheduledClasses.length === 0 && (
+              <div className="text-center py-12">
+                <Video className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground font-medium">No classes scheduled</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Live and scheduled classes will appear here
+                </p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => navigate('/recordings')}
+                >
+                  View Past Recordings
+                </Button>
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="updates" className="space-y-3">
             {isLoading ? (
