@@ -6,6 +6,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useNavigate } from 'react-router-dom';
 import { ZambiaLiiIntegration } from '@/components/library/ZambiaLiiIntegration';
 import { CaseSummarizer } from '@/components/library/CaseSummarizer';
+import { QuickTip } from '@/components/ui/quick-tip';
 import { 
   Search, 
   Filter,
@@ -194,6 +195,11 @@ const LibraryPage: React.FC = () => {
             </button>
           ))}
         </div>
+
+        {/* Quick Tip for AI Summarizer */}
+        {activeTab === 'summarizer' && (
+          <QuickTip tipId="library_summarize" className="mb-4" position="bottom" />
+        )}
 
         {/* Tab Content */}
         {activeTab === 'summarizer' ? (

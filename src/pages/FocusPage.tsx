@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
+import { QuickTip } from '@/components/ui/quick-tip';
 import { ArrowLeft, Play, Pause, RotateCcw, Volume2, Settings, Moon, Shield, Coffee, SkipForward, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -261,6 +262,9 @@ const FocusPage: React.FC = () => {
                 </div>
               </button>
             </div>
+
+            {/* Quick Tip */}
+            <QuickTip tipId="focus_modes" className="w-full mt-6" position="bottom" />
           </div>
         </div>
       </MobileLayout>
