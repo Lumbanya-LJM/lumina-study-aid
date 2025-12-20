@@ -304,17 +304,17 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Upload Prompt */}
+        {/* StudyLocker Prompt */}
         <button 
-          onClick={() => navigate('/upload')}
+          onClick={() => navigate('/locker')}
           className="w-full bg-secondary rounded-2xl p-5 border border-dashed border-primary/30 flex items-center gap-4 hover:bg-primary/5 transition-colors"
         >
           <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
             <Upload className="w-5 h-5 text-primary-foreground" />
           </div>
           <div className="flex-1 text-left">
-            <p className="font-semibold text-foreground">Upload Study Materials</p>
-            <p className="text-xs text-muted-foreground">Past papers, notes, lecture videos</p>
+            <p className="font-semibold text-foreground">StudyLocker</p>
+            <p className="text-xs text-muted-foreground">Your personal vault for notes & materials</p>
           </div>
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </button>

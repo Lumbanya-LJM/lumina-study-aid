@@ -1,9 +1,63 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Helper to perform web search
+async function performWebSearch(query: string): Promise<string> {
+  try {
+    const searchUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1&skip_disambig=1`;
+    const response = await fetch(searchUrl, {
+      headers: { "User-Agent": "Lumina-Study-App/1.0" },
+    });
+    
+    if (!response.ok) return "";
+    
+    const data = await response.json();
+    let result = "";
+    
+    if (data.Abstract) {
+      result += `Source (${data.AbstractSource}): ${data.Abstract}\n`;
+    }
+    if (data.Answer) {
+      result += `Answer: ${data.Answer}\n`;
+    }
+    if (data.Definition) {
+      result += `Definition: ${data.Definition}\n`;
+    }
+    
+    return result || "No direct answer found from web search.";
+  } catch (error) {
+    console.error("Web search error:", error);
+    return "";
+  }
+}
+
+// Helper to get user files for context
+async function getUserFiles(userId: string): Promise<string> {
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const { data: files, error } = await supabase
+      .from('user_files')
+      .select('file_name, category, file_type')
+      .eq('user_id', userId)
+      .limit(20);
+    
+    if (error || !files || files.length === 0) return "";
+    
+    const fileList = files.map(f => `- ${f.file_name} (${f.category || 'other'})`).join('\n');
+    return `\n\n## User's StudyLocker Files:\n${fileList}`;
+  } catch (error) {
+    console.error("Error fetching user files:", error);
+    return "";
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,49 +65,74 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, action } = await req.json();
+    const { messages, action, userId, enableWebSearch, deepSearch } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Get user files if userId is provided
+    let userFilesContext = "";
+    if (userId) {
+      userFilesContext = await getUserFiles(userId);
+    }
+
+    // Perform web search if enabled and there's a query
+    let webSearchContext = "";
+    if (enableWebSearch || deepSearch) {
+      const lastUserMessage = messages.filter((m: any) => m.role === 'user').pop();
+      if (lastUserMessage) {
+        console.log(`Performing ${deepSearch ? 'deep' : 'quick'} web search...`);
+        webSearchContext = await performWebSearch(lastUserMessage.content);
+        if (webSearchContext) {
+          webSearchContext = `\n\n## Web Search Results:\n${webSearchContext}`;
+        }
+      }
+    }
+
     // Build system prompt based on action type
-    let systemPrompt = `You are Lumina, an elite AI study companion for law students at Luminary Innovision Academy (LMV). You are exceptionally intelligent, precise, and articulate.
+    let systemPrompt = `You are Lumina, an elite AI study companion for law students at Luminary Innovision Academy (LMV). You are exceptionally intelligent, precise, articulate, and have access to real-time web information.
 
-## Core Personality
-- Warm but academically rigorous
-- Expert in Zambian law (common law system influenced by English law)
-- Uses clear, well-structured responses with proper formatting
-- Emotionally supportive yet intellectually demanding
+## Core Identity
+You are ${userId ? 'a personalized assistant who knows the student\'s study materials' : 'a knowledgeable legal study companion'}. You combine warmth with academic rigor. You are an expert in Zambian law, including the common law system influenced by English law.
 
-## Response Style Guidelines
-- Use **bold text** for key terms, case names, and important concepts
-- Use *italics* for emphasis on specific words or phrases
-- Structure responses with clear headings using ## or ### when appropriate
-- Use numbered lists (1. 2. 3.) for sequential steps or ranked items
-- Use bullet points for non-sequential information
-- Include relevant Zambian case citations when discussing legal principles
-- Keep paragraphs concise and scannable
-- End complex explanations with a brief summary
+## Response Formatting
+Format your responses for maximum readability:
+- Use **bold** for key terms, case names, and important concepts
+- Use *italics* for emphasis and Latin legal terms
+- Use headings (##) to organize longer responses
+- Use numbered lists for steps or sequences
+- Use bullet points for related items
+- Keep paragraphs short and scannable
+- Always provide citations with links when discussing cases
 
-## Knowledge Base
+## Legal Expertise
+Your knowledge includes:
 - The Constitution of Zambia (Amendment) Act, 2016
-- Zambian common law and statutory interpretation
-- Key Zambian Supreme Court and Constitutional Court decisions
-- Legal reasoning methodologies (IRAC, CREAC)
-- Feynman Technique for explaining complex concepts
-- Active Recall and Spaced Repetition learning methods
+- Zambian Supreme Court and Constitutional Court jurisprudence
+- Common law principles applicable in Zambia
+- Legal reasoning methodologies (IRAC, CREAC, FIRAC)
+- Comparative law from other common law jurisdictions
+
+## Web Search & Citations
+When discussing Zambian cases or statutes:
+- Provide ZambiaLII links when available: https://zambialii.org/
+- For cases, use format: [Case Name] (Year) Citation, available at [ZambiaLII URL]
+- For statutes, link to: https://zambialii.org/legislation
+
+## StudyLocker Integration
+${userFilesContext ? 'The student has uploaded files to their StudyLocker. You can reference these when relevant.' : 'Students can upload study materials to their StudyLocker for you to reference.'}
 
 ## Capabilities
-- Summarise cases with ratio decidendi, obiter dicta, and key holdings
-- Generate study flashcards for efficient revision
-- Create practice quizzes with scenario-based questions
-- Produce comprehensive study guides
-- Schedule revision using spaced repetition principles
-- Provide empathetic support for stressed students
+1. **Case Analysis**: Summarize with ratio decidendi, obiter dicta, material facts, and significance
+2. **Flashcard Generation**: Create effective study cards using active recall principles
+3. **Quiz Creation**: Develop scenario-based multiple choice questions
+4. **Study Guides**: Produce comprehensive topic summaries
+5. **Research Assistance**: Help find relevant cases and statutes
+6. **Emotional Support**: Provide encouragement during stressful study periods
 
-Always aim to build understanding and confidence. Be conversational but maintain academic precision.`;
+Always maintain academic precision while being conversational and supportive.${userFilesContext}${webSearchContext}`;
 
     // Adjust system prompt based on action
     if (action === 'summarise') {
