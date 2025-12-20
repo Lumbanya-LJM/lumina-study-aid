@@ -169,6 +169,114 @@ export type Database = {
         }
         Relationships: []
       }
+      class_ai_summaries: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          key_points: Json | null
+          summary: string
+          topics_covered: Json | null
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          key_points?: Json | null
+          summary: string
+          topics_covered?: Json | null
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          key_points?: Json | null
+          summary?: string
+          topics_covered?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_ai_summaries_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_participants: {
+        Row: {
+          class_id: string
+          duration_seconds: number | null
+          id: string
+          joined_at: string
+          left_at: string | null
+          user_id: string
+        }
+        Insert: {
+          class_id: string
+          duration_seconds?: number | null
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          user_id: string
+        }
+        Update: {
+          class_id?: string
+          duration_seconds?: number | null
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_participants_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_transcripts: {
+        Row: {
+          class_id: string
+          content: string
+          created_at: string
+          id: string
+          speaker_id: string | null
+          speaker_name: string | null
+          timestamp_ms: number | null
+        }
+        Insert: {
+          class_id: string
+          content: string
+          created_at?: string
+          id?: string
+          speaker_id?: string | null
+          speaker_name?: string | null
+          timestamp_ms?: number | null
+        }
+        Update: {
+          class_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          speaker_id?: string | null
+          speaker_name?: string | null
+          timestamp_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_transcripts_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flashcard_decks: {
         Row: {
           cards: Json
@@ -333,6 +441,68 @@ export type Database = {
           year?: string | null
         }
         Relationships: []
+      }
+      live_classes: {
+        Row: {
+          course_id: string | null
+          created_at: string
+          daily_room_name: string | null
+          daily_room_url: string | null
+          description: string | null
+          ended_at: string | null
+          host_id: string
+          id: string
+          recording_duration_seconds: number | null
+          recording_url: string | null
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string
+          daily_room_name?: string | null
+          daily_room_url?: string | null
+          description?: string | null
+          ended_at?: string | null
+          host_id: string
+          id?: string
+          recording_duration_seconds?: number | null
+          recording_url?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string
+          daily_room_name?: string | null
+          daily_room_url?: string | null
+          description?: string | null
+          ended_at?: string | null
+          host_id?: string
+          id?: string
+          recording_duration_seconds?: number | null
+          recording_url?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_classes_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "academy_courses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
