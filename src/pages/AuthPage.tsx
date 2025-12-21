@@ -105,6 +105,26 @@ const AuthPage: React.FC = () => {
               : error.message,
           });
         } else {
+          // Check if user is admin and redirect accordingly
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: adminRole } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', user.id)
+              .eq('role', 'admin')
+              .maybeSingle();
+            
+            if (adminRole) {
+              toast({
+                title: "Welcome back, Admin!",
+                description: "Redirecting to admin dashboard.",
+              });
+              navigate('/admin');
+              return;
+            }
+          }
+          
           toast({
             title: "Welcome back!",
             description: "You've successfully logged in.",
@@ -722,6 +742,25 @@ const AuthPage: React.FC = () => {
             Covering Zambian case law, statutes, and the Constitution of Zambia
           </p>
         </div>
+
+        {/* Subtle Admin Login Link */}
+        {step === 'credentials' && isLogin && (
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                // Just focus the email field - admins use the same login
+                toast({
+                  title: "Admin Login",
+                  description: "Use your admin credentials to sign in above.",
+                });
+              }}
+              className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            >
+              Admin Access
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

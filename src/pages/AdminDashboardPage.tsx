@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { MobileLayout } from '@/components/layout/MobileLayout';
+import { AdminManagement } from '@/components/admin/AdminManagement';
 import { 
   Shield, Users, BookOpen, FileText, GraduationCap, 
   TrendingUp, AlertCircle, CheckCircle, Clock, 
@@ -388,6 +389,9 @@ const AdminDashboardPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Admin Management */}
+        <AdminManagement />
       </div>
     </MobileLayout>
   );
