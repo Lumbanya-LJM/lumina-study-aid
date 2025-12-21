@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { TutorProtectedRoute } from "@/components/auth/TutorProtectedRoute";
 import SplashScreen from "./pages/SplashScreen";
+import RoleSelectionPage from "./pages/RoleSelectionPage";
 import AuthPage from "./pages/AuthPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -36,6 +37,7 @@ import LuminaAcademyPage from "./pages/LuminaAcademyPage";
 import TeachDashboardPage from "./pages/TeachDashboardPage";
 import LiveClassPage from "./pages/LiveClassPage";
 import ClassRecordingsPage from "./pages/ClassRecordingsPage";
+import TutorApplicationsAdminPage from "./pages/TutorApplicationsAdminPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +51,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<SplashScreen />} />
+            <Route path="/welcome" element={<RoleSelectionPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -66,6 +69,7 @@ const App = () => (
             <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
             <Route path="/locker" element={<ProtectedRoute><LuminaVaultPage /></ProtectedRoute>} />
             <Route path="/admin/content" element={<ProtectedRoute><AdminContentPage /></ProtectedRoute>} />
+            <Route path="/admin/tutors" element={<ProtectedRoute><TutorApplicationsAdminPage /></ProtectedRoute>} />
             <Route path="/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
             <Route path="/quiz/:quizId" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
             <Route path="/flashcards" element={<ProtectedRoute><FlashcardsPage /></ProtectedRoute>} />
