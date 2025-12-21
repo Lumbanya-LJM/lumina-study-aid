@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, Video, Link as LinkIcon } from 'lucide-react';
+import { Calendar, Clock, Video, Link as LinkIcon, Play, Loader2 } from 'lucide-react';
 
 interface ScheduleClassFormProps {
   courseId: string;
@@ -17,6 +17,7 @@ interface ScheduleClassFormProps {
 const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId, onSuccess }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [creatingLiveClass, setCreatingLiveClass] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -50,12 +51,30 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
     try {
       const classDateTime = new Date(`${formData.classDate}T${formData.classTime}`);
 
-      const { error } = await supabase
+      // Create a live_classes entry for scheduled class
+      const { data: liveClassData, error: liveClassError } = await supabase
+        .from('live_classes')
+        .insert({
+          title: formData.title.trim(),
+          description: formData.content.trim() || null,
+          host_id: tutorId,
+          course_id: courseId,
+          status: 'scheduled',
+          scheduled_at: classDateTime.toISOString(),
+          daily_room_url: formData.classLink.trim() || null,
+        })
+        .select()
+        .single();
+
+      if (liveClassError) throw liveClassError;
+
+      // Also create a tutor update to notify students
+      const { error: updateError } = await supabase
         .from('tutor_updates')
         .insert({
           course_id: courseId,
           tutor_id: tutorId,
-          title: formData.title.trim(),
+          title: `📅 Class Scheduled: ${formData.title.trim()}`,
           content: formData.content.trim() || `Live class scheduled for ${classDateTime.toLocaleString()}`,
           update_type: 'class',
           class_time: classDateTime.toISOString(),
@@ -63,7 +82,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           is_published: true
         });
 
-      if (error) throw error;
+      if (updateError) console.error('Error creating update:', updateError);
 
       toast({
         title: 'Success',
@@ -84,103 +103,252 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
     }
   };
 
+  const handleStartLiveClass = async () => {
+    if (!courseId) {
+      toast({
+        title: 'Error',
+        description: 'Please select a course first',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!formData.title.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a class title',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setCreatingLiveClass(true);
+    try {
+      // Create Daily room via edge function
+      const { data: roomData, error: roomError } = await supabase.functions.invoke('daily-room', {
+        body: {
+          action: 'create',
+          roomName: `class-${Date.now()}`,
+          properties: {
+            enable_recording: 'local',
+            enable_chat: true,
+            enable_knocking: true,
+            max_participants: 100,
+          }
+        }
+      });
+
+      if (roomError) throw roomError;
+
+      const roomUrl = roomData.url;
+      const roomName = roomData.name;
+
+      // Create live_classes entry
+      const { data: liveClassData, error: liveClassError } = await supabase
+        .from('live_classes')
+        .insert({
+          title: formData.title.trim(),
+          description: formData.content.trim() || null,
+          host_id: tutorId,
+          course_id: courseId,
+          status: 'live',
+          started_at: new Date().toISOString(),
+          daily_room_name: roomName,
+          daily_room_url: roomUrl,
+        })
+        .select()
+        .single();
+
+      if (liveClassError) throw liveClassError;
+
+      // Create tutor update for notification
+      await supabase
+        .from('tutor_updates')
+        .insert({
+          course_id: courseId,
+          tutor_id: tutorId,
+          title: `🔴 Live Now: ${formData.title.trim()}`,
+          content: formData.content.trim() || 'The tutor is now live! Join the class.',
+          update_type: 'class',
+          class_time: new Date().toISOString(),
+          class_link: roomUrl,
+          is_published: true
+        });
+
+      toast({
+        title: 'Live Class Created!',
+        description: 'Redirecting you to the classroom...',
+      });
+
+      // Redirect to live class room
+      window.location.href = `/live-class/${liveClassData.id}`;
+    } catch (error) {
+      console.error('Error creating live class:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create live class. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setCreatingLiveClass(false);
+    }
+  };
+
   // Get minimum date (today)
   const minDate = new Date().toISOString().split('T')[0];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Video className="w-5 h-5" />
-          Schedule Live Class
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-4">
+      {/* Start Live Class Now */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <Play className="w-5 h-5" />
+            Start Live Class Now
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="classTitle">Class Title *</Label>
+            <Label htmlFor="liveTitle">Class Title *</Label>
             <Input
-              id="classTitle"
-              placeholder="e.g., Week 3: Contract Law Fundamentals"
+              id="liveTitle"
+              placeholder="e.g., Constitutional Law Discussion"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               maxLength={100}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="classDate">Date *</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="classDate"
-                  type="date"
-                  className="pl-10"
-                  value={formData.classDate}
-                  onChange={(e) => setFormData({ ...formData, classDate: e.target.value })}
-                  min={minDate}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="classTime">Time *</Label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="classTime"
-                  type="time"
-                  className="pl-10"
-                  value={formData.classTime}
-                  onChange={(e) => setFormData({ ...formData, classTime: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label htmlFor="classLink">Meeting Link (Zoom/Google Meet)</Label>
-            <div className="relative">
-              <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="classLink"
-                type="url"
-                className="pl-10"
-                placeholder="https://zoom.us/j/..."
-                value={formData.classLink}
-                onChange={(e) => setFormData({ ...formData, classLink: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="classContent">Additional Notes</Label>
+            <Label htmlFor="liveNotes">Topic/Notes</Label>
             <Textarea
-              id="classContent"
-              placeholder="Topics to be covered, preparation required, etc."
+              id="liveNotes"
+              placeholder="Brief description for students..."
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              rows={3}
+              rows={2}
               maxLength={500}
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading || !courseId}>
-            {loading ? (
+          <Button 
+            onClick={handleStartLiveClass} 
+            className="w-full gradient-primary" 
+            disabled={creatingLiveClass || !courseId || !formData.title.trim()}
+          >
+            {creatingLiveClass ? (
               <span className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Scheduling...
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Creating Classroom...
               </span>
             ) : (
               <span className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Schedule Class
+                <Video className="w-4 h-4" />
+                Go Live Now
               </span>
             )}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+          <p className="text-xs text-muted-foreground text-center">
+            Students will be notified immediately and can join the live class
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Schedule Future Class */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Schedule Future Class
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="classTitle">Class Title *</Label>
+              <Input
+                id="classTitle"
+                placeholder="e.g., Week 3: Contract Law Fundamentals"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                maxLength={100}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="classDate">Date *</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="classDate"
+                    type="date"
+                    className="pl-10"
+                    value={formData.classDate}
+                    onChange={(e) => setFormData({ ...formData, classDate: e.target.value })}
+                    min={minDate}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="classTime">Time *</Label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="classTime"
+                    type="time"
+                    className="pl-10"
+                    value={formData.classTime}
+                    onChange={(e) => setFormData({ ...formData, classTime: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="classLink">Meeting Link (optional - will auto-generate if empty)</Label>
+              <div className="relative">
+                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="classLink"
+                  type="url"
+                  className="pl-10"
+                  placeholder="https://zoom.us/j/... or leave empty for Lumina class"
+                  value={formData.classLink}
+                  onChange={(e) => setFormData({ ...formData, classLink: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="classContent">Additional Notes</Label>
+              <Textarea
+                id="classContent"
+                placeholder="Topics to be covered, preparation required, etc."
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                rows={3}
+                maxLength={500}
+              />
+            </div>
+
+            <Button type="submit" variant="outline" className="w-full" disabled={loading || !courseId}>
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Scheduling...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Schedule Class
+                </span>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
