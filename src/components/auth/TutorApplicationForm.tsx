@@ -85,7 +85,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           type: 'submitted',
           applicantName: fullName,
           applicantEmail: email,
-          adminEmail: 'admin@lmvacademy.com' // Admin receives notification
+          adminEmail: 'mulengalumbanya@gmail.com'
         }
       });
 
