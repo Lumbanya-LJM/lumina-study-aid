@@ -30,10 +30,7 @@ const RoleSelectionPage: React.FC = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="px-6 py-8">
-        <div className="flex items-center gap-2">
-          <LMVLogo className="w-8 h-8" />
-          <span className="font-bold text-lg text-foreground">Luminary Study</span>
-        </div>
+        <LMVLogo size="sm" variant="full" />
       </div>
 
       {/* Main Content */}
