@@ -327,10 +327,7 @@ const AuthPage: React.FC = () => {
         type="submit"
         disabled={loading}
         className={cn(
-          "w-full py-4 rounded-2xl font-semibold transition-all",
-          selectedRole === 'tutor'
-            ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg shadow-amber-500/20"
-            : "text-primary-foreground gradient-primary shadow-glow",
+          "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
           loading ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
         )}
       >
@@ -542,7 +539,7 @@ const AuthPage: React.FC = () => {
       case 'profile': return 'Almost There!';
       case 'courses': return 'One Last Step!';
       case 'tutor-application': return 'Tutor Application';
-      default: return isLogin ? 'Welcome Back' : (selectedRole === 'tutor' ? 'Join as Tutor' : 'Join Luminary');
+      default: return isLogin ? 'Welcome Back' : 'Create Account';
     }
   };
 
@@ -552,22 +549,15 @@ const AuthPage: React.FC = () => {
       case 'courses': return 'Choose your courses to get started';
       case 'tutor-application': return 'Complete your tutor application';
       default: return isLogin 
-        ? 'Sign in to continue your studies' 
+        ? 'Sign in to continue your learning journey' 
         : (selectedRole === 'tutor' 
           ? 'Apply to share your expertise with students' 
-          : 'Create your account to start excelling');
+          : 'Start your journey to legal excellence');
     }
   };
 
-  const isTutor = selectedRole === 'tutor';
-
   return (
-    <div className={cn(
-      "min-h-screen flex flex-col",
-      isTutor 
-        ? "bg-gradient-to-br from-amber-950/20 via-background to-orange-950/10" 
-        : "bg-background"
-    )}>
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Back to Role Selection */}
       {step === 'credentials' && (
         <div className="px-5 pt-6">
@@ -581,40 +571,30 @@ const AuthPage: React.FC = () => {
         </div>
       )}
 
-      {/* Role Badge */}
-      {step === 'credentials' && (
-        <div className="flex justify-center mt-4">
-          <div className={cn(
-            "px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2",
-            isTutor 
-              ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" 
-              : "bg-primary/20 text-primary border border-primary/30"
-          )}>
-            {isTutor ? (
-              <>
-                <GraduationCap className="w-4 h-4" />
-                Tutor Registration
-              </>
-            ) : (
-              <>
-                <BookOpen className="w-4 h-4" />
-                Student Registration
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Header */}
-      <div className={cn(
-        "px-5 md:px-8 pt-6 pb-6 text-center",
-        isTutor ? "gradient-subtle" : "gradient-subtle"
-      )}>
-        <LMVLogo size="lg" className="justify-center mb-4" />
-        <h1 className={cn(
-          "text-2xl font-bold mb-2",
-          isTutor ? "text-amber-400" : "text-foreground"
-        )}>
+      <div className="gradient-subtle px-5 md:px-8 pt-6 pb-6 text-center">
+        <LMVLogo size="lg" className="justify-center mb-6" />
+        
+        {/* Role Badge */}
+        {step === 'credentials' && (
+          <div className="flex justify-center mb-4">
+            <div className="px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 bg-primary/20 text-primary border border-primary/30">
+              {selectedRole === 'tutor' ? (
+                <>
+                  <GraduationCap className="w-4 h-4" />
+                  Tutor Registration
+                </>
+              ) : (
+                <>
+                  <BookOpen className="w-4 h-4" />
+                  Student Registration
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        
+        <h1 className="text-2xl font-bold text-foreground mb-2">
           {getStepTitle()}
         </h1>
         <p className="text-muted-foreground text-sm max-w-xs mx-auto">
@@ -629,12 +609,8 @@ const AuthPage: React.FC = () => {
                 key={s}
                 className={cn(
                   "w-2 h-2 rounded-full transition-all",
-                  step === s ? "w-6" : "",
-                  step === s 
-                    ? (isTutor ? "bg-amber-500" : "bg-primary")
-                    : ['credentials', 'profile', 'courses'].indexOf(step) > idx 
-                      ? (isTutor ? "bg-amber-500" : "bg-primary") 
-                      : "bg-muted-foreground/30"
+                  step === s ? "w-6 bg-primary" : 
+                  ['credentials', 'profile', 'courses'].indexOf(step) > idx ? "bg-primary" : "bg-muted-foreground/30"
                 )}
               />
             ))}
