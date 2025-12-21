@@ -82,6 +82,11 @@ interface CourseMaterial {
   created_at: string;
 }
 
+interface CourseTutor {
+  user_id: string;
+  full_name: string;
+}
+
 const LuminaAcademyPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -99,6 +104,7 @@ const LuminaAcademyPage: React.FC = () => {
   const [recordings, setRecordings] = useState<LiveClass[]>([]);
   const [materials, setMaterials] = useState<CourseMaterial[]>([]);
   const [updates, setUpdates] = useState<TutorUpdate[]>([]);
+  const [courseTutors, setCourseTutors] = useState<CourseTutor[]>([]);
   const [loadingCourseData, setLoadingCourseData] = useState(false);
 
   // Check if user is a tutor
@@ -265,6 +271,26 @@ const LuminaAcademyPage: React.FC = () => {
 
       setUpdates(updatesData || []);
 
+      // Load tutors for this course (from live_classes hosts)
+      const { data: classHosts } = await supabase
+        .from('live_classes')
+        .select('host_id')
+        .eq('course_id', courseId);
+
+      const uniqueHostIds = [...new Set(classHosts?.map(c => c.host_id) || [])];
+      
+      if (uniqueHostIds.length > 0) {
+        const { data: tutorProfiles } = await supabase
+          .from('tutor_applications')
+          .select('user_id, full_name')
+          .in('user_id', uniqueHostIds)
+          .eq('status', 'approved');
+        
+        setCourseTutors(tutorProfiles || []);
+      } else {
+        setCourseTutors([]);
+      }
+
     } catch (error) {
       console.error('Error loading course data:', error);
     } finally {
@@ -401,6 +427,22 @@ const LuminaAcademyPage: React.FC = () => {
             <p className="text-xs text-muted-foreground">{selectedCourse.institution}</p>
           </div>
         </div>
+
+        {/* Course Tutors */}
+        {courseTutors.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            <span className="text-xs text-muted-foreground">Tutors:</span>
+            {courseTutors.map((tutor) => (
+              <button
+                key={tutor.user_id}
+                onClick={() => navigate(`/tutor/${tutor.user_id}`)}
+                className="text-xs text-primary hover:underline font-medium"
+              >
+                {tutor.full_name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Live Class Banner */}
         {liveClasses.length > 0 && (
