@@ -637,11 +637,15 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           cases_read: number | null
           created_at: string
+          experience: string | null
           full_name: string | null
           id: string
+          qualifications: string | null
           streak_days: number | null
+          subjects: string[] | null
           tasks_completed: number | null
           total_study_hours: number | null
           university: string | null
@@ -651,11 +655,15 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           cases_read?: number | null
           created_at?: string
+          experience?: string | null
           full_name?: string | null
           id?: string
+          qualifications?: string | null
           streak_days?: number | null
+          subjects?: string[] | null
           tasks_completed?: number | null
           total_study_hours?: number | null
           university?: string | null
@@ -665,11 +673,15 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           cases_read?: number | null
           created_at?: string
+          experience?: string | null
           full_name?: string | null
           id?: string
+          qualifications?: string | null
           streak_days?: number | null
+          subjects?: string[] | null
           tasks_completed?: number | null
           total_study_hours?: number | null
           university?: string | null
