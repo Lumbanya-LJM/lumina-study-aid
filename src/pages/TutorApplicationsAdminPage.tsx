@@ -95,7 +95,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
         throw roleError;
       }
 
-      // Send notification
+      // Send push notification
       await supabase.functions.invoke('send-push-notification', {
         body: {
           userId: application.user_id,
@@ -104,6 +104,15 @@ const TutorApplicationsAdminPage: React.FC = () => {
             body: 'Your tutor application has been approved. Welcome to Luminary Teach!',
             tag: 'tutor-approval'
           }
+        }
+      });
+
+      // Send email notification
+      await supabase.functions.invoke('tutor-application-email', {
+        body: {
+          type: 'approved',
+          applicantName: application.full_name,
+          applicantEmail: application.email
         }
       });
 
@@ -142,7 +151,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
 
       if (error) throw error;
 
-      // Send notification
+      // Send notifications
       if (application) {
         await supabase.functions.invoke('send-push-notification', {
           body: {
@@ -154,16 +163,22 @@ const TutorApplicationsAdminPage: React.FC = () => {
             }
           }
         });
+
+        // Send email notification
+        await supabase.functions.invoke('tutor-application-email', {
+          body: {
+            type: 'rejected',
+            applicantName: application.full_name,
+            applicantEmail: application.email,
+            rejectionReason: rejectionReason || undefined
+          }
+        });
       }
 
       toast({
         title: 'Application Rejected',
         description: 'The applicant has been notified',
       });
-
-      setShowRejectModal(null);
-      setRejectionReason('');
-      loadApplications();
     } catch (error: any) {
       console.error('Error rejecting:', error);
       toast({

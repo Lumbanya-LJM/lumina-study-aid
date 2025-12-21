@@ -175,6 +175,28 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           is_published: true
         });
 
+      // Send push notifications to enrolled students
+      const { data: enrollments } = await supabase
+        .from('academy_enrollments')
+        .select('user_id')
+        .eq('course_id', courseId)
+        .eq('status', 'active');
+
+      if (enrollments && enrollments.length > 0) {
+        const userIds = enrollments.map(e => e.user_id);
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            userIds,
+            payload: {
+              title: '🔴 Live Class Started!',
+              body: `${formData.title.trim()} is now live! Join now.`,
+              tag: 'live-class',
+              data: { classId: liveClassData.id, url: `/live-class/${liveClassData.id}` }
+            }
+          }
+        });
+      }
+
       toast({
         title: 'Live Class Created!',
         description: 'Redirecting you to the classroom...',
