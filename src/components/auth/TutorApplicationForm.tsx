@@ -79,12 +79,13 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
 
       if (error) throw error;
 
-      // Send email notification
+      // Send email notification to applicant AND admin
       await supabase.functions.invoke('tutor-application-email', {
         body: {
           type: 'submitted',
           applicantName: fullName,
-          applicantEmail: email
+          applicantEmail: email,
+          adminEmail: 'admin@lmvacademy.com' // Admin receives notification
         }
       });
 

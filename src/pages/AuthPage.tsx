@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { LMVLogo } from '@/components/ui/lmv-logo';
-import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Building, BookOpen, Check, Loader2, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Building, BookOpen, Check, Loader2, ArrowLeft, ChevronLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -554,8 +554,21 @@ const AuthPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Back to Role Selection */}
+      {step === 'credentials' && (
+        <div className="px-5 pt-6">
+          <Link 
+            to="/welcome" 
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Change role selection
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="gradient-subtle px-5 md:px-8 pt-12 pb-8 text-center">
+      <div className="gradient-subtle px-5 md:px-8 pt-8 pb-8 text-center">
         <LMVLogo size="lg" className="justify-center mb-6" />
         <h1 className="text-2xl font-bold text-foreground mb-2">
           {getStepTitle()}
