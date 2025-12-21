@@ -91,6 +91,7 @@ const LuminaAcademyPage: React.FC = () => {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
+  const [isTutor, setIsTutor] = useState(false);
   
   // Course-specific data
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
@@ -99,6 +100,20 @@ const LuminaAcademyPage: React.FC = () => {
   const [materials, setMaterials] = useState<CourseMaterial[]>([]);
   const [updates, setUpdates] = useState<TutorUpdate[]>([]);
   const [loadingCourseData, setLoadingCourseData] = useState(false);
+
+  // Check if user is a tutor
+  useEffect(() => {
+    const checkTutorRole = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .in('role', ['admin', 'moderator']);
+      setIsTutor(data && data.length > 0);
+    };
+    checkTutorRole();
+  }, [user?.id]);
 
   useEffect(() => {
     if (user?.id) {
@@ -288,14 +303,27 @@ const LuminaAcademyPage: React.FC = () => {
                 <p className="text-xs text-muted-foreground">Select a course to continue</p>
               </div>
             </div>
-            <Button
-              onClick={() => setShowAddCourseModal(true)}
-              size="sm"
-              className="gap-1"
-            >
-              <Plus className="w-4 h-4" />
-              Add
-            </Button>
+            <div className="flex items-center gap-2">
+              {isTutor && (
+                <Button
+                  onClick={() => navigate('/teach')}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 border-primary/50 text-primary"
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  Teach
+                </Button>
+              )}
+              <Button
+                onClick={() => setShowAddCourseModal(true)}
+                size="sm"
+                className="gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                Add
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (

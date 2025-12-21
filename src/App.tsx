@@ -79,6 +79,7 @@ const App = () => (
             <Route path="/academy" element={<ProtectedRoute><LuminaAcademyPage /></ProtectedRoute>} />
             <Route path="/teach" element={<TutorProtectedRoute><TeachDashboardPage /></TutorProtectedRoute>} />
             <Route path="/class/:classId" element={<ProtectedRoute><LiveClassPage /></ProtectedRoute>} />
+            <Route path="/live-class/:classId" element={<ProtectedRoute><LiveClassPage /></ProtectedRoute>} />
             <Route path="/recordings" element={<ProtectedRoute><ClassRecordingsPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

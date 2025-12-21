@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Send, Bell, BookOpen, AlertCircle, Info } from 'lucide-react';
+import { Send, Bell, BookOpen, AlertCircle, Info, Users, Loader2 } from 'lucide-react';
 
 interface PostUpdateFormProps {
   courseId: string;
@@ -16,20 +16,54 @@ interface PostUpdateFormProps {
 }
 
 const updateTypes = [
-  { value: 'general', label: 'General Update', icon: Info },
-  { value: 'announcement', label: 'Announcement', icon: Bell },
-  { value: 'resource', label: 'Resource', icon: BookOpen },
-  { value: 'alert', label: 'Important Alert', icon: AlertCircle },
+  { value: 'general', label: 'General Update', icon: Info, color: 'text-primary' },
+  { value: 'announcement', label: 'Announcement', icon: Bell, color: 'text-yellow-500' },
+  { value: 'resource', label: 'New Resource', icon: BookOpen, color: 'text-green-500' },
+  { value: 'alert', label: 'Important Alert', icon: AlertCircle, color: 'text-red-500' },
 ];
 
 const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSuccess }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [enrolledCount, setEnrolledCount] = useState(0);
+  const [courseName, setCourseName] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     content: '',
     updateType: 'general'
   });
+
+  useEffect(() => {
+    if (courseId) {
+      loadCourseInfo();
+    }
+  }, [courseId]);
+
+  const loadCourseInfo = async () => {
+    try {
+      // Get course name
+      const { data: courseData } = await supabase
+        .from('academy_courses')
+        .select('name')
+        .eq('id', courseId)
+        .single();
+      
+      if (courseData) {
+        setCourseName(courseData.name);
+      }
+
+      // Get enrolled students count
+      const { count } = await supabase
+        .from('academy_enrollments')
+        .select('*', { count: 'exact', head: true })
+        .eq('course_id', courseId)
+        .eq('status', 'active');
+
+      setEnrolledCount(count || 0);
+    } catch (error) {
+      console.error('Error loading course info:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,8 +102,8 @@ const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSu
       if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: 'Update posted successfully! Students will be notified.',
+        title: 'Update Posted!',
+        description: `${enrolledCount} student(s) will see this update.`,
       });
 
       setFormData({ title: '', content: '', updateType: 'general' });
@@ -86,6 +120,8 @@ const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSu
     }
   };
 
+  const selectedType = updateTypes.find(t => t.value === formData.updateType);
+
   return (
     <Card>
       <CardHeader>
@@ -93,6 +129,12 @@ const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSu
           <Send className="w-5 h-5" />
           Post Update
         </CardTitle>
+        {courseName && (
+          <CardDescription className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Posting to <span className="font-medium text-foreground">{courseName}</span> • {enrolledCount} enrolled student(s)
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,7 +151,7 @@ const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSu
                 {updateTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     <div className="flex items-center gap-2">
-                      <type.icon className="w-4 h-4" />
+                      <type.icon className={`w-4 h-4 ${type.color}`} />
                       {type.label}
                     </div>
                   </SelectItem>
@@ -130,10 +172,10 @@ const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSu
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Content *</Label>
+            <Label htmlFor="content">Message *</Label>
             <Textarea
               id="content"
-              placeholder="Write your update message here..."
+              placeholder="Write your message to students..."
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               rows={5}
@@ -144,16 +186,38 @@ const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSu
             </p>
           </div>
 
+          {/* Preview */}
+          {formData.title && (
+            <div className="p-4 rounded-lg bg-muted/50 border border-border/50">
+              <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+              <div className="flex items-start gap-3">
+                {selectedType && (
+                  <div className={`p-2 rounded-full bg-background ${selectedType.color}`}>
+                    <selectedType.icon className="w-4 h-4" />
+                  </div>
+                )}
+                <div>
+                  <h4 className="font-medium text-sm">{formData.title}</h4>
+                  {formData.content && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {formData.content}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <Button type="submit" className="w-full" disabled={loading || !courseId}>
             {loading ? (
               <span className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 Posting...
               </span>
             ) : (
               <span className="flex items-center gap-2">
                 <Send className="w-4 h-4" />
-                Post Update
+                Post to {enrolledCount} Student(s)
               </span>
             )}
           </Button>
