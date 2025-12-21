@@ -101,9 +101,30 @@ const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSu
 
       if (error) throw error;
 
+      // Send push notifications to enrolled students
+      const { data: enrollments } = await supabase
+        .from('academy_enrollments')
+        .select('user_id')
+        .eq('course_id', courseId)
+        .eq('status', 'active');
+
+      if (enrollments && enrollments.length > 0) {
+        const userIds = enrollments.map(e => e.user_id);
+        supabase.functions.invoke('send-push-notification', {
+          body: {
+            userIds,
+            payload: {
+              title: `📢 ${formData.title}`,
+              body: formData.content.substring(0, 100) + (formData.content.length > 100 ? '...' : ''),
+              tag: 'tutor-update'
+            }
+          }
+        });
+      }
+
       toast({
         title: 'Update Posted!',
-        description: `${enrolledCount} student(s) will see this update.`,
+        description: `${enrolledCount} student(s) will be notified.`,
       });
 
       setFormData({ title: '', content: '', updateType: 'general' });

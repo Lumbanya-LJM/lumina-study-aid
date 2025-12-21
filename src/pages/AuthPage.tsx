@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { LMVLogo } from '@/components/ui/lmv-logo';
-import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Building, BookOpen, Check, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Building, BookOpen, Check, Loader2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
+import TutorApplicationForm from '@/components/auth/TutorApplicationForm';
 
 const universities = [
   'University of Zambia',
@@ -38,15 +39,18 @@ interface Course {
 
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const selectedRole = searchParams.get('role') || 'student';
   const { signUp, signIn } = useAuth();
   const { toast } = useToast();
   
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'credentials' | 'profile' | 'courses'>('credentials');
+  const [step, setStep] = useState<'credentials' | 'profile' | 'courses' | 'tutor-application'>('credentials');
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
+  const [newUserId, setNewUserId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -164,6 +168,8 @@ const AuthPage: React.FC = () => {
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         
         if (currentUser) {
+          setNewUserId(currentUser.id);
+          
           // Update profile with university and year of study
           const { error: profileError } = await supabase
             .from('profiles')
@@ -200,10 +206,17 @@ const AuthPage: React.FC = () => {
           }).then(({ error }) => {
             if (error) console.error('Welcome email error:', error);
           });
-        }
 
-        // Clear onboarding flag to ensure new users see the tutorial
-        localStorage.removeItem('luminary_onboarding_complete');
+          // Clear onboarding flag to ensure new users see the tutorial
+          localStorage.removeItem('luminary_onboarding_complete');
+
+          // If tutor role selected, show application form
+          if (selectedRole === 'tutor') {
+            setStep('tutor-application');
+            setLoading(false);
+            return;
+          }
+        }
 
         toast({
           title: "Account Created!",
@@ -222,6 +235,14 @@ const AuthPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTutorApplicationSuccess = () => {
+    toast({
+      title: "Application Submitted!",
+      description: "Your tutor application is pending review. You can use the app as a student in the meantime.",
+    });
+    navigate('/home');
   };
 
   const toggleCourse = (courseId: string) => {
@@ -517,7 +538,8 @@ const AuthPage: React.FC = () => {
     switch (step) {
       case 'profile': return 'Almost There!';
       case 'courses': return 'One Last Step!';
-      default: return isLogin ? 'Welcome Back' : 'Join Luminary';
+      case 'tutor-application': return 'Tutor Application';
+      default: return isLogin ? 'Welcome Back' : (selectedRole === 'tutor' ? 'Join as Tutor' : 'Join Luminary');
     }
   };
 
@@ -525,6 +547,7 @@ const AuthPage: React.FC = () => {
     switch (step) {
       case 'profile': return 'Tell us about your studies';
       case 'courses': return 'Choose your courses to get started';
+      case 'tutor-application': return 'Complete your tutor application';
       default: return isLogin ? 'Sign in to continue your studies' : 'Create your account to start excelling';
     }
   };
@@ -563,6 +586,14 @@ const AuthPage: React.FC = () => {
         {step === 'credentials' && renderCredentialsStep()}
         {step === 'profile' && renderProfileStep()}
         {step === 'courses' && renderCoursesStep()}
+        {step === 'tutor-application' && newUserId && (
+          <TutorApplicationForm
+            userId={newUserId}
+            email={formData.email}
+            fullName={formData.fullName}
+            onSuccess={handleTutorApplicationSuccess}
+          />
+        )}
 
         {/* Toggle */}
         {step === 'credentials' && (

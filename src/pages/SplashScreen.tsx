@@ -23,7 +23,7 @@ const SplashScreen: React.FC = () => {
   useEffect(() => {
     if (stage === 'complete' && !loading) {
       const navTimer = setTimeout(() => {
-        navigate(user ? '/home' : '/auth');
+        navigate(user ? '/home' : '/welcome');
       }, 800);
       return () => clearTimeout(navTimer);
     }
