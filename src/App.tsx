@@ -38,6 +38,7 @@ import TeachDashboardPage from "./pages/TeachDashboardPage";
 import LiveClassPage from "./pages/LiveClassPage";
 import ClassRecordingsPage from "./pages/ClassRecordingsPage";
 import TutorApplicationsAdminPage from "./pages/TutorApplicationsAdminPage";
+import TutorProfilePage from "./pages/TutorProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -85,6 +86,7 @@ const App = () => (
             <Route path="/class/:classId" element={<ProtectedRoute><LiveClassPage /></ProtectedRoute>} />
             <Route path="/live-class/:classId" element={<ProtectedRoute><LiveClassPage /></ProtectedRoute>} />
             <Route path="/recordings" element={<ProtectedRoute><ClassRecordingsPage /></ProtectedRoute>} />
+            <Route path="/tutor/:tutorId" element={<ProtectedRoute><TutorProfilePage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

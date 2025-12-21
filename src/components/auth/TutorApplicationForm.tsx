@@ -79,6 +79,15 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
 
       if (error) throw error;
 
+      // Send email notification
+      await supabase.functions.invoke('tutor-application-email', {
+        body: {
+          type: 'submitted',
+          applicantName: fullName,
+          applicantEmail: email
+        }
+      });
+
       toast({
         title: 'Application Submitted!',
         description: 'Your tutor application is pending admin review.',
