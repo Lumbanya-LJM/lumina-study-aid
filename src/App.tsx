@@ -39,6 +39,7 @@ import LiveClassPage from "./pages/LiveClassPage";
 import ClassRecordingsPage from "./pages/ClassRecordingsPage";
 import TutorApplicationsAdminPage from "./pages/TutorApplicationsAdminPage";
 import TutorProfilePage from "./pages/TutorProfilePage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/partner" element={<ProtectedRoute><PartnerPage /></ProtectedRoute>} />
             <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
             <Route path="/locker" element={<ProtectedRoute><LuminaVaultPage /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} />
             <Route path="/admin/content" element={<ProtectedRoute><AdminContentPage /></ProtectedRoute>} />
             <Route path="/admin/tutors" element={<ProtectedRoute><TutorApplicationsAdminPage /></ProtectedRoute>} />
             <Route path="/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />

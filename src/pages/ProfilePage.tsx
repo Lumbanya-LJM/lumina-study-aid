@@ -135,7 +135,7 @@ const ProfilePage: React.FC = () => {
 
   // Add admin option if user is admin
   if (isAdmin) {
-    menuItems.unshift({ icon: Shield, label: 'Admin: Content Manager', path: '/admin/content', highlight: true });
+    menuItems.unshift({ icon: Shield, label: 'Admin Dashboard', path: '/admin', highlight: true });
   }
 
   const stats = [
