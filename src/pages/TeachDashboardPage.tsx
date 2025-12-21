@@ -43,6 +43,8 @@ interface DashboardStats {
   totalUpdates: number;
   upcomingClasses: number;
   totalMaterials: number;
+  totalClassesCompleted: number;
+  avgAttendance: number;
 }
 
 interface EnrolledStudent {
@@ -56,6 +58,22 @@ interface EnrolledStudent {
   };
 }
 
+interface ScheduledClass {
+  id: string;
+  title: string;
+  description: string | null;
+  scheduled_at: string;
+  status: string;
+  course_id: string;
+  course_name?: string;
+}
+
+interface EngagementMetrics {
+  totalClassAttendees: number;
+  totalClassMinutes: number;
+  recentClasses: ScheduledClass[];
+}
+
 const TeachDashboardPage: React.FC = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
@@ -66,8 +84,11 @@ const TeachDashboardPage: React.FC = () => {
     totalStudents: 0,
     totalUpdates: 0,
     upcomingClasses: 0,
-    totalMaterials: 0
+    totalMaterials: 0,
+    totalClassesCompleted: 0,
+    avgAttendance: 0
   });
+  const [scheduledClasses, setScheduledClasses] = useState<ScheduledClass[]>([]);
   const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -117,16 +138,53 @@ const TeachDashboardPage: React.FC = () => {
         .eq('status', 'scheduled')
         .gte('scheduled_at', new Date().toISOString());
 
+      const { count: completedClassesCount } = await supabase
+        .from('live_classes')
+        .select('*', { count: 'exact', head: true })
+        .eq('host_id', user.id)
+        .eq('status', 'ended');
+
       const { count: materialsCount } = await supabase
         .from('library_content')
         .select('*', { count: 'exact', head: true })
         .eq('is_published', true);
 
+      // Get class attendance data
+      const { data: attendanceData } = await supabase
+        .from('class_participants')
+        .select('class_id, duration_seconds, live_classes!inner(host_id)')
+        .eq('live_classes.host_id', user.id);
+
+      const totalAttendees = attendanceData?.length || 0;
+      const avgAttendance = completedClassesCount && completedClassesCount > 0 
+        ? Math.round(totalAttendees / completedClassesCount) 
+        : 0;
+
+      // Load upcoming classes with details
+      const { data: upcomingClassesData } = await supabase
+        .from('live_classes')
+        .select('id, title, description, scheduled_at, status, course_id')
+        .eq('host_id', user.id)
+        .in('status', ['scheduled', 'live'])
+        .gte('scheduled_at', new Date().toISOString())
+        .order('scheduled_at', { ascending: true })
+        .limit(5);
+
+      if (upcomingClassesData) {
+        const classesWithCourseNames = upcomingClassesData.map(cls => ({
+          ...cls,
+          course_name: coursesData?.find(c => c.id === cls.course_id)?.name || 'Unknown Course'
+        }));
+        setScheduledClasses(classesWithCourseNames);
+      }
+
       setStats({
         totalStudents: studentsCount || 0,
         totalUpdates: updatesCount || 0,
         upcomingClasses: classesCount || 0,
-        totalMaterials: materialsCount || 0
+        totalMaterials: materialsCount || 0,
+        totalClassesCompleted: completedClassesCount || 0,
+        avgAttendance
       });
     } catch (error) {
       console.error('Error loading data:', error);
@@ -237,36 +295,99 @@ const TeachDashboardPage: React.FC = () => {
 
       <main className="container mx-auto px-4 py-6 space-y-6 pb-24">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <Card className="bg-card border-border/50">
             <CardContent className="p-4 text-center">
-              <Users className="w-8 h-8 mx-auto mb-2 text-primary" />
+              <Users className="w-6 h-6 mx-auto mb-2 text-blue-500" />
               <p className="text-2xl font-bold">{stats.totalStudents}</p>
               <p className="text-xs text-muted-foreground">Students</p>
             </CardContent>
           </Card>
           <Card className="bg-card border-border/50">
             <CardContent className="p-4 text-center">
-              <Bell className="w-8 h-8 mx-auto mb-2 text-primary" />
+              <Bell className="w-6 h-6 mx-auto mb-2 text-purple-500" />
               <p className="text-2xl font-bold">{stats.totalUpdates}</p>
               <p className="text-xs text-muted-foreground">Updates</p>
             </CardContent>
           </Card>
           <Card className="bg-card border-border/50">
             <CardContent className="p-4 text-center">
-              <Video className="w-8 h-8 mx-auto mb-2 text-primary" />
+              <Video className="w-6 h-6 mx-auto mb-2 text-emerald-500" />
               <p className="text-2xl font-bold">{stats.upcomingClasses}</p>
-              <p className="text-xs text-muted-foreground">Scheduled</p>
+              <p className="text-xs text-muted-foreground">Upcoming</p>
             </CardContent>
           </Card>
           <Card className="bg-card border-border/50">
             <CardContent className="p-4 text-center">
-              <FileText className="w-8 h-8 mx-auto mb-2 text-primary" />
+              <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-green-500" />
+              <p className="text-2xl font-bold">{stats.totalClassesCompleted}</p>
+              <p className="text-xs text-muted-foreground">Completed</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-card border-border/50">
+            <CardContent className="p-4 text-center">
+              <Users className="w-6 h-6 mx-auto mb-2 text-orange-500" />
+              <p className="text-2xl font-bold">{stats.avgAttendance}</p>
+              <p className="text-xs text-muted-foreground">Avg Attendance</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-card border-border/50">
+            <CardContent className="p-4 text-center">
+              <FileText className="w-6 h-6 mx-auto mb-2 text-cyan-500" />
               <p className="text-2xl font-bold">{stats.totalMaterials}</p>
               <p className="text-xs text-muted-foreground">Materials</p>
             </CardContent>
           </Card>
         </div>
+
+        {/* Upcoming Classes Section */}
+        {scheduledClasses.length > 0 && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary" />
+                Upcoming Classes
+              </CardTitle>
+              <CardDescription>Your scheduled live sessions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {scheduledClasses.map((cls) => (
+                  <div
+                    key={cls.id}
+                    className="flex items-center justify-between p-3 bg-background rounded-lg border border-border/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center",
+                        cls.status === 'live' ? "bg-red-500/20" : "bg-primary/10"
+                      )}>
+                        <Video className={cn(
+                          "w-5 h-5",
+                          cls.status === 'live' ? "text-red-500" : "text-primary"
+                        )} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{cls.title}</p>
+                        <p className="text-xs text-muted-foreground">{cls.course_name}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {cls.status === 'live' ? (
+                        <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
+                      ) : (
+                        <Badge variant="secondary">Scheduled</Badge>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {format(new Date(cls.scheduled_at), 'MMM d, h:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Course Selector */}
         {courses.length > 0 && (
@@ -349,6 +470,28 @@ const TeachDashboardPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="students" className="space-y-4">
+            {/* Engagement Summary */}
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold text-blue-500">{enrolledStudents.length}</p>
+                  <p className="text-xs text-muted-foreground">Enrolled</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold text-green-500">{stats.avgAttendance}</p>
+                  <p className="text-xs text-muted-foreground">Avg Attendance</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold text-purple-500">{stats.totalClassesCompleted}</p>
+                  <p className="text-xs text-muted-foreground">Classes Held</p>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
