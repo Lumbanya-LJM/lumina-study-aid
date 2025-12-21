@@ -130,7 +130,12 @@ const AuthPage: React.FC = () => {
         });
         return;
       }
-      setStep('profile');
+      // For tutors, skip profile step and go directly to courses
+      if (selectedRole === 'tutor') {
+        setStep('courses');
+      } else {
+        setStep('profile');
+      }
     }
   };
 
@@ -415,9 +420,13 @@ const AuthPage: React.FC = () => {
     return (
       <form onSubmit={handleCoursesSubmit} className="space-y-4">
         <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-foreground">Select Your Courses</h2>
+          <h2 className="text-xl font-bold text-foreground">
+            {selectedRole === 'tutor' ? 'Select Courses to Tutor' : 'Select Your Courses'}
+          </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Choose the courses you'd like to enroll in (optional)
+            {selectedRole === 'tutor' 
+              ? 'Choose the courses you want to teach (select at least one)'
+              : "Choose the courses you'd like to enroll in (optional)"}
           </p>
         </div>
 
@@ -509,13 +518,16 @@ const AuthPage: React.FC = () => {
 
         <button
           type="submit"
-          disabled={loading || !canSubmit}
+          disabled={loading || !canSubmit || (selectedRole === 'tutor' && formData.selectedCourses.length === 0)}
           className={cn(
             "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
-            (loading || !canSubmit) ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
+            (loading || !canSubmit || (selectedRole === 'tutor' && formData.selectedCourses.length === 0)) ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
           )}
         >
-          {loading ? 'Creating Account...' : formData.selectedCourses.length > 0 ? 'Create Account & Enroll' : 'Create Account'}
+          {loading ? 'Creating Account...' : 
+            selectedRole === 'tutor' 
+              ? 'Continue to Application' 
+              : (formData.selectedCourses.length > 0 ? 'Create Account & Enroll' : 'Create Account')}
         </button>
 
         {!canSubmit && (
@@ -524,9 +536,15 @@ const AuthPage: React.FC = () => {
           </p>
         )}
 
+        {selectedRole === 'tutor' && formData.selectedCourses.length === 0 && canSubmit && (
+          <p className="text-xs text-center text-muted-foreground">
+            Please select at least one course to tutor
+          </p>
+        )}
+
         <button
           type="button"
-          onClick={() => setStep('profile')}
+          onClick={() => setStep(selectedRole === 'tutor' ? 'credentials' : 'profile')}
           className="w-full py-3 text-primary font-medium hover:underline"
         >
           Go Back
@@ -546,8 +564,10 @@ const AuthPage: React.FC = () => {
   const getStepDescription = () => {
     switch (step) {
       case 'profile': return 'Tell us about your studies';
-      case 'courses': return 'Choose your courses to get started';
-      case 'tutor-application': return 'Complete your tutor application';
+      case 'courses': return selectedRole === 'tutor' 
+        ? 'Select the courses you want to teach' 
+        : 'Choose your courses to get started';
+      case 'tutor-application': return 'Tell us about your qualifications';
       default: return isLogin 
         ? 'Sign in to continue your learning journey' 
         : (selectedRole === 'tutor' 
@@ -604,13 +624,16 @@ const AuthPage: React.FC = () => {
         {/* Step indicator for signup */}
         {!isLogin && (
           <div className="flex items-center justify-center gap-2 mt-4">
-            {['credentials', 'profile', 'courses'].map((s, idx) => (
+            {(selectedRole === 'tutor' 
+              ? ['credentials', 'courses', 'tutor-application'] 
+              : ['credentials', 'profile', 'courses']
+            ).map((s, idx, arr) => (
               <div
                 key={s}
                 className={cn(
                   "w-2 h-2 rounded-full transition-all",
                   step === s ? "w-6 bg-primary" : 
-                  ['credentials', 'profile', 'courses'].indexOf(step) > idx ? "bg-primary" : "bg-muted-foreground/30"
+                  arr.indexOf(step) > idx ? "bg-primary" : "bg-muted-foreground/30"
                 )}
               />
             ))}
