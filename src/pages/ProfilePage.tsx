@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { 
   User,
   Users,
@@ -19,7 +20,8 @@ import {
   Flame,
   Shield,
   GraduationCap,
-  Trash2
+  Trash2,
+  Pencil
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -50,30 +52,31 @@ const ProfilePage: React.FC = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+      } else if (data) {
+        setProfile(data);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error('Error fetching profile:', error);
-        } else if (data) {
-          setProfile(data);
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProfile();
   }, [user]);
 
@@ -98,11 +101,10 @@ const ProfilePage: React.FC = () => {
     if (!user) return;
 
     try {
-      // Delete user profile data
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', user.id);
+      // Call the delete_user_data function to completely erase all user data
+      const { error } = await supabase.rpc('delete_user_data', {
+        target_user_id: user.id
+      });
 
       if (error) throw error;
 
@@ -111,7 +113,7 @@ const ProfilePage: React.FC = () => {
 
       toast({
         title: "Account Deleted",
-        description: "Your profile data has been permanently deleted.",
+        description: "All your data has been permanently erased from our system.",
       });
 
       navigate('/auth');
@@ -161,6 +163,15 @@ const ProfilePage: React.FC = () => {
         {/* Profile Card */}
         <div className="gradient-primary rounded-3xl p-6 mb-6 shadow-glow relative overflow-hidden">
           <div className="absolute top-0 right-0 w-40 h-40 bg-primary-foreground/10 rounded-full blur-3xl" />
+          
+          {/* Edit Button */}
+          <button
+            onClick={() => setEditProfileOpen(true)}
+            className="absolute top-4 right-4 z-20 p-2 bg-primary-foreground/20 hover:bg-primary-foreground/30 rounded-xl transition-colors"
+          >
+            <Pencil className="w-4 h-4 text-primary-foreground" />
+          </button>
+          
           <div className="relative z-10 flex items-center gap-4 mb-6">
             <div className="w-20 h-20 rounded-2xl bg-primary-foreground/20 flex items-center justify-center text-3xl font-bold text-primary-foreground">
               {initials}
@@ -266,6 +277,13 @@ const ProfilePage: React.FC = () => {
           Luminary Study v1.0.0
         </p>
       </div>
+      
+      {/* Edit Profile Modal */}
+      <EditProfileModal 
+        open={editProfileOpen} 
+        onOpenChange={setEditProfileOpen}
+        onSuccess={fetchProfile}
+      />
     </MobileLayout>
   );
 };

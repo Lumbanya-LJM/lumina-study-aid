@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { TutorOnboardingTutorial } from '@/components/onboarding/TutorOnboardingTutorial';
 import { 
   GraduationCap, 
   Users, 
@@ -92,6 +93,9 @@ const TeachDashboardPage: React.FC = () => {
   const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('luminary_tutor_onboarding_complete');
+  });
 
   useEffect(() => {
     loadData();
@@ -256,6 +260,11 @@ const TeachDashboardPage: React.FC = () => {
   }
 
   const selectedCourseName = courses.find(c => c.id === selectedCourse)?.name || '';
+
+  // Show tutor onboarding for new tutors
+  if (showOnboarding) {
+    return <TutorOnboardingTutorial onComplete={() => setShowOnboarding(false)} />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
