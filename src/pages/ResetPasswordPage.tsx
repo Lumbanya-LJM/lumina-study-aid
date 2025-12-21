@@ -19,26 +19,37 @@ const ResetPasswordPage: React.FC = () => {
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-    // Check if user arrived via password reset link
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // User should have a session from the reset link
-      if (session) {
-        setIsValidSession(true);
-      }
-      setCheckingSession(false);
-    };
-
-    checkSession();
-
-    // Listen for password recovery event
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    // Set up auth state listener FIRST (before checking session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event, 'Session:', !!session);
       if (event === 'PASSWORD_RECOVERY') {
+        setIsValidSession(true);
+        setCheckingSession(false);
+      } else if (event === 'SIGNED_IN' && session) {
+        // User signed in via recovery link
         setIsValidSession(true);
         setCheckingSession(false);
       }
     });
+
+    // Check URL for recovery tokens (Supabase sends tokens in URL hash)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const type = hashParams.get('type');
+    
+    if (accessToken && type === 'recovery') {
+      // Valid recovery link - session will be established by Supabase
+      setIsValidSession(true);
+      setCheckingSession(false);
+    } else {
+      // Check for existing session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          setIsValidSession(true);
+        }
+        setCheckingSession(false);
+      });
+    }
 
     return () => subscription.unsubscribe();
   }, []);
