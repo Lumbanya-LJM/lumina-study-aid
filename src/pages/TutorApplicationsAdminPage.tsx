@@ -68,9 +68,22 @@ const TutorApplicationsAdminPage: React.FC = () => {
     }
   };
 
+  // Generate a random temporary password
+  const generateTempPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let password = '';
+    for (let i = 0; i < 10; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
   const handleApprove = async (application: TutorApplication) => {
     setProcessingId(application.id);
     try {
+      // Generate temporary password
+      const temporaryPassword = generateTempPassword();
+      
       // Update application status
       const { error: updateError } = await supabase
         .from('tutor_applications')
@@ -101,24 +114,25 @@ const TutorApplicationsAdminPage: React.FC = () => {
           userId: application.user_id,
           payload: {
             title: 'Application Approved! 🎉',
-            body: 'Your tutor application has been approved. Welcome to Luminary Teach!',
+            body: 'Your tutor application has been approved. Check your email for login credentials!',
             tag: 'tutor-approval'
           }
         }
       });
 
-      // Send email notification
+      // Send email notification with temporary password
       await supabase.functions.invoke('tutor-application-email', {
         body: {
           type: 'approved',
           applicantName: application.full_name,
-          applicantEmail: application.email
+          applicantEmail: application.email,
+          temporaryPassword: temporaryPassword
         }
       });
 
       toast({
         title: 'Tutor Approved',
-        description: `${application.full_name} is now a tutor`,
+        description: `${application.full_name} is now a tutor. Login credentials sent via email.`,
       });
 
       loadApplications();

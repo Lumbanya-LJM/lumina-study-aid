@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, BookOpen, Award, Briefcase } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-
 const availableSubjects = [
   'Constitutional Law',
   'Criminal Law',
@@ -19,6 +18,7 @@ const availableSubjects = [
   'Family Law',
   'Evidence Law',
   'Legal Practice',
+  'Other',
 ];
 
 interface TutorApplicationFormProps {
@@ -39,7 +39,8 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
   const [formData, setFormData] = useState({
     qualifications: '',
     experience: '',
-    subjects: [] as string[]
+    subjects: [] as string[],
+    otherSubject: ''
   });
 
   const toggleSubject = (subject: string) => {
@@ -54,13 +55,23 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.subjects.length === 0) {
+    // Check if subjects selected (excluding 'Other' which needs text)
+    const actualSubjects = formData.subjects.filter(s => s !== 'Other');
+    const hasOtherWithText = formData.subjects.includes('Other') && formData.otherSubject.trim();
+    
+    if (actualSubjects.length === 0 && !hasOtherWithText) {
       toast({
         title: 'Select Subjects',
         description: 'Please select at least one subject you can teach',
         variant: 'destructive'
       });
       return;
+    }
+    
+    // Combine subjects - add the custom "Other" subject if specified
+    const finalSubjects = [...actualSubjects];
+    if (hasOtherWithText) {
+      finalSubjects.push(formData.otherSubject.trim());
     }
 
     setLoading(true);
@@ -73,7 +84,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           full_name: fullName,
           qualifications: formData.qualifications,
           experience: formData.experience,
-          subjects: formData.subjects,
+          subjects: finalSubjects,
           status: 'pending'
         });
 
@@ -170,9 +181,22 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
             </div>
           ))}
         </div>
+        
+        {/* Other subject text input */}
+        {formData.subjects.includes('Other') && (
+          <div className="mt-3">
+            <Input
+              placeholder="Enter the subject you'd like to teach..."
+              value={formData.otherSubject}
+              onChange={(e) => setFormData({ ...formData, otherSubject: e.target.value })}
+              className="w-full"
+            />
+          </div>
+        )}
+        
         {formData.subjects.length > 0 && (
           <p className="text-xs text-primary">
-            {formData.subjects.length} subject(s) selected
+            {formData.subjects.filter(s => s !== 'Other').length + (formData.subjects.includes('Other') && formData.otherSubject.trim() ? 1 : 0)} subject(s) selected
           </p>
         )}
       </div>

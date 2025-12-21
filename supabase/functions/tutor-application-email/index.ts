@@ -14,6 +14,7 @@ interface EmailRequest {
   applicantEmail: string;
   adminEmail?: string;
   rejectionReason?: string;
+  temporaryPassword?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -22,7 +23,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { type, applicantName, applicantEmail, adminEmail, rejectionReason }: EmailRequest = await req.json();
+    const { type, applicantName, applicantEmail, adminEmail, rejectionReason, temporaryPassword }: EmailRequest = await req.json();
+    
+    console.log(`Processing ${type} email for ${applicantEmail}`);
 
     let emailResponse;
 
@@ -72,6 +75,16 @@ const handler = async (req: Request): Promise<Response> => {
 
       emailResponse = { success: true, message: 'Submission emails sent' };
     } else if (type === 'approved') {
+      // Include credentials if provided
+      const credentialsSection = temporaryPassword ? `
+        <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #374151;">Your Login Credentials</h3>
+          <p style="margin-bottom: 8px;"><strong>Email/Username:</strong> ${applicantEmail}</p>
+          <p style="margin-bottom: 0;"><strong>Temporary Password:</strong> ${temporaryPassword}</p>
+        </div>
+        <p style="color: #dc2626; font-size: 14px;"><strong>Important:</strong> Please change your password after your first login for security.</p>
+      ` : '';
+      
       emailResponse = await resend.emails.send({
         from: "LMV Academy <onboarding@resend.dev>",
         to: [applicantEmail],
@@ -81,6 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
             <h1 style="color: #22c55e;">🎉 Welcome to Luminary Teach!</h1>
             <p>Dear ${applicantName},</p>
             <p>Congratulations! Your application to become a tutor at LMV Academy has been <strong>approved</strong>!</p>
+            ${credentialsSection}
             <p>You now have access to Luminary Teach where you can:</p>
             <ul>
               <li>Create and manage courses</li>
