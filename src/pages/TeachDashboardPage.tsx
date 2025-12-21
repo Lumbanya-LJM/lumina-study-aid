@@ -29,6 +29,7 @@ import PostUpdateForm from '@/components/teach/PostUpdateForm';
 import ScheduleClassForm from '@/components/teach/ScheduleClassForm';
 import CourseMaterialsManager from '@/components/teach/CourseMaterialsManager';
 import TutorUpdatesList from '@/components/teach/TutorUpdatesList';
+import { TutorProfileEditor } from '@/components/teach/TutorProfileEditor';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -433,7 +434,7 @@ const TeachDashboardPage: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="updates" className="space-y-4">
-          <TabsList className="grid grid-cols-5 w-full">
+          <TabsList className="grid grid-cols-6 w-full">
             <TabsTrigger value="updates" className="text-xs">
               <Bell className="w-4 h-4 mr-1 hidden sm:inline" />
               Updates
@@ -453,6 +454,10 @@ const TeachDashboardPage: React.FC = () => {
             <TabsTrigger value="history" className="text-xs">
               <Clock className="w-4 h-4 mr-1 hidden sm:inline" />
               History
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="text-xs">
+              <GraduationCap className="w-4 h-4 mr-1 hidden sm:inline" />
+              Profile
             </TabsTrigger>
           </TabsList>
 
@@ -564,6 +569,10 @@ const TeachDashboardPage: React.FC = () => {
               courseId={selectedCourse}
               tutorId={user?.id || ''}
             />
+          </TabsContent>
+
+          <TabsContent value="profile" className="space-y-4">
+            <TutorProfileEditor />
           </TabsContent>
         </Tabs>
       </main>
