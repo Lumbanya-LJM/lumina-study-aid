@@ -242,12 +242,30 @@ const AuthPage: React.FC = () => {
     }
   };
 
+  const [showApplicationSuccess, setShowApplicationSuccess] = useState(false);
+
   const handleTutorApplicationSuccess = () => {
-    toast({
-      title: "Application Submitted!",
-      description: "Your tutor application is pending review. You can use the app as a student in the meantime.",
+    setShowApplicationSuccess(true);
+  };
+
+  const handleReturnToAuth = async () => {
+    // Sign out the user so they can log back in after approval
+    await supabase.auth.signOut();
+    setShowApplicationSuccess(false);
+    setStep('credentials');
+    setIsLogin(true);
+    setFormData({
+      fullName: '',
+      email: '',
+      password: '',
+      university: 'University of Zambia',
+      customUniversity: '',
+      yearOfStudy: 1,
+      selectedCourses: [],
+      agreePrivacyPolicy: false,
+      agreeDataConsent: false,
     });
-    navigate('/home');
+    setNewUserId(null);
   };
 
   const toggleCourse = (courseId: string) => {
@@ -643,20 +661,45 @@ const AuthPage: React.FC = () => {
 
       {/* Form */}
       <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
-        {step === 'credentials' && renderCredentialsStep()}
-        {step === 'profile' && renderProfileStep()}
-        {step === 'courses' && renderCoursesStep()}
-        {step === 'tutor-application' && newUserId && (
-          <TutorApplicationForm
-            userId={newUserId}
-            email={formData.email}
-            fullName={formData.fullName}
-            onSuccess={handleTutorApplicationSuccess}
-          />
+        {showApplicationSuccess ? (
+          <div className="flex flex-col items-center text-center py-8">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+              <Check className="w-10 h-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-3">Application Submitted!</h2>
+            <p className="text-muted-foreground mb-6 max-w-sm">
+              Thank you for applying to become a Luminary tutor. Our team will review your application and get back to you within <strong>24-48 hours</strong>.
+            </p>
+            <p className="text-sm text-muted-foreground mb-8">
+              You'll receive an email notification with your login credentials once approved.
+            </p>
+            <button
+              onClick={handleReturnToAuth}
+              className={cn(
+                "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all hover:opacity-90"
+              )}
+            >
+              Return to Login
+            </button>
+          </div>
+        ) : (
+          <>
+            {step === 'credentials' && renderCredentialsStep()}
+            {step === 'profile' && renderProfileStep()}
+            {step === 'courses' && renderCoursesStep()}
+            {step === 'tutor-application' && newUserId && (
+              <TutorApplicationForm
+                userId={newUserId}
+                email={formData.email}
+                fullName={formData.fullName}
+                onSuccess={handleTutorApplicationSuccess}
+              />
+            )}
+          </>
         )}
 
         {/* Toggle */}
-        {step === 'credentials' && (
+        {step === 'credentials' && !showApplicationSuccess && (
           <div className="mt-6 text-center">
             <p className="text-muted-foreground text-sm">
               {isLogin ? "Don't have an account?" : "Already have an account?"}
