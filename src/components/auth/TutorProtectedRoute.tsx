@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import lmvLogo from '@/assets/lmv-logo.png';
+import { GraduationCap } from 'lucide-react';
 
 interface TutorProtectedRouteProps {
   children: React.ReactNode;
@@ -9,6 +11,7 @@ interface TutorProtectedRouteProps {
 
 export const TutorProtectedRoute: React.FC<TutorProtectedRouteProps> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
+  const location = useLocation();
   const [isTutor, setIsTutor] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -43,17 +46,24 @@ export const TutorProtectedRoute: React.FC<TutorProtectedRouteProps> = ({ childr
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground">Verifying access...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <img 
+          src={lmvLogo} 
+          alt="Loading..." 
+          className="w-16 h-16 object-contain mb-4 animate-pulse"
+        />
+        <div className="flex items-center gap-2 text-primary mb-4">
+          <GraduationCap className="w-5 h-5" />
+          <span className="font-semibold">Luminary Teach</span>
         </div>
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-muted-foreground mt-4 text-sm">Verifying tutor access...</p>
       </div>
     );
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
   if (!isTutor) {
