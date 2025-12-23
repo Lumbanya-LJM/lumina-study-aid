@@ -23,14 +23,13 @@ export const TutorProtectedRoute: React.FC<TutorProtectedRouteProps> = ({ childr
       }
 
       try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .in('role', ['admin', 'moderator']);
+        // Use backend role check function (more reliable than selecting user_roles under RLS)
+        const [isAdminRes, isTutorRes] = await Promise.all([
+          supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
+          supabase.rpc('has_role', { _user_id: user.id, _role: 'moderator' }),
+        ]);
 
-        if (error) throw error;
-        setIsTutor(data && data.length > 0);
+        setIsTutor(Boolean(isAdminRes.data || isTutorRes.data));
       } catch (error) {
         console.error('Error checking tutor role:', error);
         setIsTutor(false);
