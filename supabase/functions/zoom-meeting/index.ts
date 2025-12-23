@@ -44,8 +44,11 @@ serve(async (req) => {
   }
 
   try {
-    const { action, topic, startTime, duration, classId } = await req.json();
-    console.log(`Zoom meeting action: ${action}`);
+    // Parse body once and extract all possible parameters
+    const body = await req.json();
+    const { action, topic, startTime, duration, classId, meetingId } = body;
+    
+    console.log(`Zoom meeting action: ${action}`, { meetingId, classId });
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     const accessToken = await getZoomAccessToken();
@@ -105,7 +108,9 @@ serve(async (req) => {
 
     if (action === "get-meeting") {
       // Get meeting details
-      const { meetingId } = await req.json();
+      if (!meetingId) {
+        throw new Error("meetingId is required for get-meeting action");
+      }
       
       const response = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
         headers: {
@@ -126,7 +131,9 @@ serve(async (req) => {
 
     if (action === "end-meeting") {
       // End a meeting
-      const { meetingId } = await req.json();
+      if (!meetingId) {
+        throw new Error("meetingId is required for end-meeting action");
+      }
       
       const response = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}/status`, {
         method: "PUT",
@@ -153,7 +160,9 @@ serve(async (req) => {
 
     if (action === "get-recordings") {
       // Get cloud recordings for a meeting
-      const { meetingId } = await req.json();
+      if (!meetingId) {
+        throw new Error("meetingId is required for get-recordings action");
+      }
       
       const response = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}/recordings`, {
         headers: {
