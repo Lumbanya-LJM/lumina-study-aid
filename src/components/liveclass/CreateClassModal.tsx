@@ -77,17 +77,20 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
     setLoading(true);
 
     try {
-      // Create Daily.co room
-      const roomName = `class-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      const { data: roomData, error: roomError } = await supabase.functions.invoke(
-        "daily-room",
+      // Create Zoom meeting
+      const { data: meetingData, error: meetingError } = await supabase.functions.invoke(
+        "zoom-meeting",
         {
-          body: { action: "create", roomName },
+          body: { 
+            action: "create", 
+            topic: formData.title,
+            duration: 60,
+          },
         }
       );
 
-      if (roomError || !roomData?.roomUrl) {
-        throw new Error(roomError?.message || "Failed to create room");
+      if (meetingError || !meetingData?.joinUrl) {
+        throw new Error(meetingError?.message || "Failed to create Zoom meeting");
       }
 
       // Calculate scheduled datetime
@@ -107,8 +110,8 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
           description: formData.description,
           course_id: formData.courseId || null,
           host_id: user?.id,
-          daily_room_name: roomData.roomName,
-          daily_room_url: roomData.roomUrl,
+          daily_room_name: meetingData.meetingId,
+          daily_room_url: meetingData.joinUrl,
           status: scheduledAt ? "scheduled" : "live",
           scheduled_at: scheduledAt,
           started_at: scheduledAt ? null : new Date().toISOString(),
@@ -127,7 +130,7 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
           : "Your class is now live!",
       });
 
-      onCreated(classData.id, roomData.roomName);
+      onCreated(classData.id, meetingData.meetingId);
     } catch (error) {
       console.error("Create class error:", error);
       toast({

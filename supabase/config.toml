@@ -30,7 +30,7 @@ verify_jwt = false
 [functions.check-zambialii]
 verify_jwt = false
 
-[functions.daily-room]
+[functions.zoom-meeting]
 verify_jwt = false
 
 [functions.generate-class-summary]

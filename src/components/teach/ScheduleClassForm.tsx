@@ -124,24 +124,19 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
     setCreatingLiveClass(true);
     try {
-      // Create Daily room via edge function
-      const { data: roomData, error: roomError } = await supabase.functions.invoke('daily-room', {
+      // Create Zoom meeting via edge function
+      const { data: meetingData, error: meetingError } = await supabase.functions.invoke('zoom-meeting', {
         body: {
           action: 'create',
-          roomName: `class-${Date.now()}`,
-          properties: {
-            enable_recording: 'local',
-            enable_chat: true,
-            enable_knocking: true,
-            max_participants: 100,
-          }
+          topic: formData.title.trim(),
+          duration: 60,
         }
       });
 
-      if (roomError) throw roomError;
+      if (meetingError) throw meetingError;
 
-      const roomUrl = roomData.url;
-      const roomName = roomData.name;
+      const zoomUrl = meetingData.joinUrl;
+      const meetingId = meetingData.meetingId;
 
       // Create live_classes entry
       const { data: liveClassData, error: liveClassError } = await supabase
@@ -153,8 +148,8 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           course_id: courseId,
           status: 'live',
           started_at: new Date().toISOString(),
-          daily_room_name: roomName,
-          daily_room_url: roomUrl,
+          daily_room_name: meetingId,
+          daily_room_url: zoomUrl,
         })
         .select()
         .single();
@@ -171,7 +166,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           content: formData.content.trim() || 'The tutor is now live! Join the class.',
           update_type: 'class',
           class_time: new Date().toISOString(),
-          class_link: roomUrl,
+          class_link: zoomUrl,
           is_published: true
         });
 
