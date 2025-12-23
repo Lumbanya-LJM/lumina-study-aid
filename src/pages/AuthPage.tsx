@@ -105,17 +105,18 @@ const AuthPage: React.FC = () => {
               : error.message,
           });
         } else {
-          // Check if user is admin and redirect accordingly
+          // Check user role and redirect accordingly
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
-            const { data: adminRole } = await supabase
+            const { data: userRoles } = await supabase
               .from('user_roles')
               .select('role')
-              .eq('user_id', user.id)
-              .eq('role', 'admin')
-              .maybeSingle();
+              .eq('user_id', user.id);
             
-            if (adminRole) {
+            const roles = userRoles?.map(r => r.role) || [];
+            
+            // Admin goes to admin dashboard
+            if (roles.includes('admin')) {
               toast({
                 title: "Welcome back, Admin!",
                 description: "Redirecting to admin dashboard.",
@@ -123,8 +124,19 @@ const AuthPage: React.FC = () => {
               navigate('/admin');
               return;
             }
+            
+            // Tutor/Moderator goes to teach dashboard
+            if (roles.includes('moderator')) {
+              toast({
+                title: "Welcome back, Tutor!",
+                description: "Redirecting to your teaching dashboard.",
+              });
+              navigate('/teach');
+              return;
+            }
           }
           
+          // Default: students go to home
           toast({
             title: "Welcome back!",
             description: "You've successfully logged in.",
