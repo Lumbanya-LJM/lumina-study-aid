@@ -2,7 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { LMVLogo } from '@/components/ui/lmv-logo';
-import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Building, BookOpen, Check, Loader2, ArrowLeft, ChevronLeft, Award } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User,
+  GraduationCap,
+  Building,
+  BookOpen,
+  Check,
+  Loader2,
+  ArrowLeft,
+  ChevronLeft,
+  Award,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -66,15 +80,14 @@ const AuthPage: React.FC = () => {
   });
 
   const resolvePortalPath = async (userId: string) => {
-    const { data: rolesData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
+    // Use the backend role-check function (more reliable than selecting user_roles under RLS)
+    const [isAdminRes, isTutorRes] = await Promise.all([
+      supabase.rpc('has_role', { _user_id: userId, _role: 'admin' }),
+      supabase.rpc('has_role', { _user_id: userId, _role: 'moderator' }),
+    ]);
 
-    const roles = rolesData?.map((r) => r.role) ?? [];
-
-    if (roles.includes('admin')) return '/admin';
-    if (roles.includes('moderator')) return '/teach';
+    if (isAdminRes.data) return '/admin';
+    if (isTutorRes.data) return '/teach';
     return '/home';
   };
 

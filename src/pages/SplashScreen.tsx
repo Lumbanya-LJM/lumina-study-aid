@@ -21,15 +21,13 @@ const SplashScreen: React.FC = () => {
   }, []);
 
   const resolvePortalPath = async (userId: string) => {
-    const { data: rolesData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
+    const [isAdminRes, isTutorRes] = await Promise.all([
+      supabase.rpc('has_role', { _user_id: userId, _role: 'admin' }),
+      supabase.rpc('has_role', { _user_id: userId, _role: 'moderator' }),
+    ]);
 
-    const roles = rolesData?.map((r) => r.role) ?? [];
-
-    if (roles.includes('admin')) return '/admin';
-    if (roles.includes('moderator')) return '/teach';
+    if (isAdminRes.data) return '/admin';
+    if (isTutorRes.data) return '/teach';
     return '/home';
   };
 
