@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Building, BookOpen, Check, Loader2, ArrowLeft, ChevronLeft, Award } from 'lucide-react';
@@ -39,11 +39,12 @@ interface Course {
 
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const selectedRole = searchParams.get('role') || 'student';
   const { signUp, signIn } = useAuth();
   const { toast } = useToast();
-  
+
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,7 @@ const AuthPage: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -63,6 +64,19 @@ const AuthPage: React.FC = () => {
     agreePrivacyPolicy: false,
     agreeDataConsent: false,
   });
+
+  const resolvePortalPath = async (userId: string) => {
+    const { data: rolesData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    const roles = rolesData?.map((r) => r.role) ?? [];
+
+    if (roles.includes('admin')) return '/admin';
+    if (roles.includes('moderator')) return '/teach';
+    return '/home';
+  };
 
   // Load available courses when reaching the courses step
   useEffect(() => {
@@ -78,7 +92,7 @@ const AuthPage: React.FC = () => {
         .from('academy_courses')
         .select('id, name, description, institution')
         .eq('is_active', true);
-      
+
       if (error) throw error;
       setCourses(data || []);
     } catch (error) {
@@ -90,7 +104,7 @@ const AuthPage: React.FC = () => {
 
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isLogin) {
       // Login flow
       setLoading(true);
@@ -98,56 +112,54 @@ const AuthPage: React.FC = () => {
         const { error } = await signIn(formData.email, formData.password);
         if (error) {
           toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: error.message === 'Invalid login credentials' 
-              ? "Incorrect email or password. Please try again."
-              : error.message,
+            variant: 'destructive',
+            title: 'Login Failed',
+            description:
+              error.message === 'Invalid login credentials'
+                ? 'Incorrect email or password. Please try again.'
+                : error.message,
           });
         } else {
-          // Check user role and redirect accordingly
           const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: userRoles } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', user.id);
-            
-            const roles = userRoles?.map(r => r.role) || [];
-            
-            // Admin goes to admin dashboard
-            if (roles.includes('admin')) {
-              toast({
-                title: "Welcome back, Admin!",
-                description: "Redirecting to admin dashboard.",
-              });
-              navigate('/admin');
-              return;
-            }
-            
-            // Tutor/Moderator goes to teach dashboard
-            if (roles.includes('moderator')) {
-              toast({
-                title: "Welcome back, Tutor!",
-                description: "Redirecting to your teaching dashboard.",
-              });
-              navigate('/teach');
-              return;
-            }
+
+          // If user attempted to visit a page before login, honor it first.
+          // TutorProtectedRoute/ProtectedRoute will still enforce permissions.
+          const fromPath = (location.state as any)?.from?.pathname as string | undefined;
+          if (fromPath && fromPath !== '/auth' && fromPath !== '/welcome' && fromPath !== '/') {
+            navigate(fromPath, { replace: true });
+            return;
           }
-          
-          // Default: students go to home
-          toast({
-            title: "Welcome back!",
-            description: "You've successfully logged in.",
-          });
-          navigate('/home');
+
+          if (user) {
+            const path = await resolvePortalPath(user.id);
+
+            toast({
+              title:
+                path === '/admin'
+                  ? 'Welcome back, Admin!'
+                  : path === '/teach'
+                    ? 'Welcome back, Tutor!'
+                    : 'Welcome back!',
+              description:
+                path === '/admin'
+                  ? 'Redirecting to admin dashboard.'
+                  : path === '/teach'
+                    ? 'Redirecting to your teaching dashboard.'
+                    : "You've successfully logged in.",
+            });
+
+            navigate(path, { replace: true });
+            return;
+          }
+
+          // Fallback
+          navigate('/home', { replace: true });
         }
-      } catch (error) {
+      } catch {
         toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Something went wrong. Please try again.",
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Something went wrong. Please try again.',
         });
       } finally {
         setLoading(false);
@@ -156,9 +168,9 @@ const AuthPage: React.FC = () => {
       // Signup flow - move to profile step
       if (formData.password.length < 6) {
         toast({
-          variant: "destructive",
-          title: "Password Too Short",
-          description: "Password must be at least 6 characters long.",
+          variant: 'destructive',
+          title: 'Password Too Short',
+          description: 'Password must be at least 6 characters long.',
         });
         return;
       }

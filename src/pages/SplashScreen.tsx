@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 const SplashScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -19,14 +20,44 @@ const SplashScreen: React.FC = () => {
     };
   }, []);
 
+  const resolvePortalPath = async (userId: string) => {
+    const { data: rolesData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    const roles = rolesData?.map((r) => r.role) ?? [];
+
+    if (roles.includes('admin')) return '/admin';
+    if (roles.includes('moderator')) return '/teach';
+    return '/home';
+  };
+
   // Navigate after loading is complete and animation finishes
   useEffect(() => {
-    if (stage === 'complete' && !loading) {
-      const navTimer = setTimeout(() => {
-        navigate(user ? '/home' : '/welcome');
-      }, 800);
-      return () => clearTimeout(navTimer);
-    }
+    if (stage !== 'complete' || loading) return;
+
+    let cancelled = false;
+
+    const navTimer = setTimeout(() => {
+      if (!user) {
+        navigate('/welcome');
+        return;
+      }
+
+      resolvePortalPath(user.id)
+        .then((path) => {
+          if (!cancelled) navigate(path);
+        })
+        .catch(() => {
+          if (!cancelled) navigate('/home');
+        });
+    }, 800);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(navTimer);
+    };
   }, [stage, loading, user, navigate]);
 
   return (
