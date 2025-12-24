@@ -681,8 +681,8 @@ const AuthPage: React.FC = () => {
       <div className="gradient-subtle px-5 md:px-8 pt-6 pb-6 text-center">
         <LMVLogo size="lg" className="justify-center mb-6" />
         
-        {/* Role Toggle - Only show on credentials step during SIGNUP */}
-        {step === 'credentials' && !isLogin && (
+        {/* Role Toggle - Show on credentials step */}
+        {step === 'credentials' && (
           <div className="flex justify-center mb-6">
             <div className="inline-flex rounded-full p-1 bg-secondary border border-border/50">
               <button
