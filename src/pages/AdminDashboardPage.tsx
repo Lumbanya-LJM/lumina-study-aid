@@ -4,6 +4,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { AdminManagement } from '@/components/admin/AdminManagement';
+import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { 
   Shield, Users, BookOpen, FileText, GraduationCap, 
   TrendingUp, AlertCircle, CheckCircle, Clock, 
@@ -263,12 +264,15 @@ const AdminDashboardPage: React.FC = () => {
   return (
     <MobileLayout>
       <div className="p-5 space-y-6 pb-24">
-        {/* Back Button */}
-        <div className="flex items-center gap-2">
-          <Link to="/profile" className="text-muted-foreground hover:text-foreground">
-            <ChevronRight className="w-5 h-5 rotate-180" />
-          </Link>
-          <h1 className="text-lg font-bold">Admin Dashboard</h1>
+        {/* Back Button and Role Switcher */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Link to="/profile" className="text-muted-foreground hover:text-foreground">
+              <ChevronRight className="w-5 h-5 rotate-180" />
+            </Link>
+            <h1 className="text-lg font-bold">Admin Dashboard</h1>
+          </div>
+          <RoleSwitcher />
         </div>
         {/* Header Banner */}
         <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-background rounded-2xl p-5 border border-primary/20">
