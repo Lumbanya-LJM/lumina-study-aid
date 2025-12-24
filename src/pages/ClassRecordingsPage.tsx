@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileLayout } from "@/components/layout/MobileLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Video,
   Play,
   Clock,
   Calendar,
-  Users,
-  BookOpen,
   ChevronLeft,
   Search,
   Loader2,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 
 interface ClassRecording {
@@ -32,6 +32,7 @@ interface ClassRecording {
   course_id: string | null;
   host_id: string;
   status?: string;
+  daily_room_name?: string | null;
   academy_courses?: { name: string } | null;
 }
 
@@ -49,86 +50,16 @@ interface UpcomingClass {
 const ClassRecordingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [recordings, setRecordings] = useState<ClassRecording[]>([]);
+  const [pendingRecordings, setPendingRecordings] = useState<ClassRecording[]>([]);
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
   const [liveClasses, setLiveClasses] = useState<UpcomingClass[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    loadClasses();
-
-    // Subscribe to live class updates - handle incrementally
-    const channel = supabase
-      .channel("live-classes-recordings")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "live_classes",
-        },
-        (payload) => {
-          const newClass = payload.new as ClassRecording & UpcomingClass;
-          if (newClass.status === 'live') {
-            setLiveClasses(prev => [newClass as UpcomingClass, ...prev]);
-          } else if (newClass.status === 'scheduled') {
-            setUpcomingClasses(prev => [newClass as UpcomingClass, ...prev]);
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "live_classes",
-        },
-        (payload) => {
-          const updated = payload.new as ClassRecording & UpcomingClass & { status: string };
-          if (updated.status === 'ended' && updated.recording_url) {
-            // Add to recordings, remove from live/upcoming
-            setRecordings(prev => {
-              const exists = prev.some(r => r.id === updated.id);
-              if (exists) return prev;
-              return [updated as ClassRecording, ...prev];
-            });
-            setLiveClasses(prev => prev.filter(c => c.id !== updated.id));
-            setUpcomingClasses(prev => prev.filter(c => c.id !== updated.id));
-          } else if (updated.status === 'live') {
-            setUpcomingClasses(prev => prev.filter(c => c.id !== updated.id));
-            setLiveClasses(prev => {
-              const exists = prev.some(c => c.id === updated.id);
-              if (exists) return prev.map(c => c.id === updated.id ? updated as UpcomingClass : c);
-              return [updated as UpcomingClass, ...prev];
-            });
-          } else if (updated.status === 'ended') {
-            setLiveClasses(prev => prev.filter(c => c.id !== updated.id));
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "live_classes",
-        },
-        (payload) => {
-          const deleted = payload.old as { id: string };
-          setRecordings(prev => prev.filter(r => r.id !== deleted.id));
-          setLiveClasses(prev => prev.filter(c => c.id !== deleted.id));
-          setUpcomingClasses(prev => prev.filter(c => c.id !== deleted.id));
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const loadClasses = async () => {
+  const loadClasses = useCallback(async () => {
     try {
       // Load recordings (ended classes with recordings)
       const { data: recordingsData } = await supabase
@@ -139,6 +70,17 @@ const ClassRecordingsPage: React.FC = () => {
         .order("ended_at", { ascending: false });
 
       setRecordings(recordingsData || []);
+
+      // Load pending recordings (ended classes without recordings)
+      const { data: pendingData } = await supabase
+        .from("live_classes")
+        .select("*, academy_courses(name)")
+        .eq("status", "ended")
+        .is("recording_url", null)
+        .not("daily_room_name", "is", null)
+        .order("ended_at", { ascending: false });
+
+      setPendingRecordings(pendingData || []);
 
       // Load upcoming scheduled classes
       const { data: upcomingData } = await supabase
@@ -162,6 +104,94 @@ const ClassRecordingsPage: React.FC = () => {
       console.error("Error loading classes:", error);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadClasses();
+
+    // Subscribe to live class updates
+    const channel = supabase
+      .channel("live-classes-recordings")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "live_classes",
+        },
+        () => {
+          // Reload all data on any change
+          loadClasses();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadClasses]);
+
+  // Poll for pending recordings every 30 seconds
+  useEffect(() => {
+    if (pendingRecordings.length === 0) return;
+
+    const interval = setInterval(async () => {
+      console.log("Checking for pending recordings...");
+      
+      for (const pending of pendingRecordings) {
+        try {
+          const { data } = await supabase.functions.invoke("zoom-meeting", {
+            body: {
+              action: "check-recording-status",
+              classId: pending.id,
+            },
+          });
+
+          if (data?.status === "available") {
+            console.log(`Recording now available for class ${pending.id}`);
+            loadClasses();
+            break;
+          }
+        } catch (error) {
+          console.error("Error checking recording status:", error);
+        }
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [pendingRecordings, loadClasses]);
+
+  const handleSyncRecordings = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-zoom-recordings");
+      
+      if (error) throw error;
+
+      const synced = data?.synced?.filter((r: { status: string }) => r.status === "synced") || [];
+      
+      if (synced.length > 0) {
+        toast({
+          title: "Recordings Synced",
+          description: `${synced.length} new recording(s) are now available.`,
+        });
+        loadClasses();
+      } else {
+        toast({
+          title: "No New Recordings",
+          description: "All recordings are up to date or still processing.",
+        });
+      }
+    } catch (error) {
+      console.error("Error syncing recordings:", error);
+      toast({
+        title: "Sync Failed",
+        description: "Could not sync recordings. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -195,11 +225,26 @@ const ClassRecordingsPage: React.FC = () => {
     <MobileLayout>
       <div className="p-4 space-y-4">
         {/* Page Header */}
-        <div className="flex items-center gap-3 mb-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ChevronLeft className="h-5 w-5" />
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-bold">Classes</h1>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSyncRecordings}
+            disabled={syncing}
+          >
+            {syncing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            <span className="ml-2 hidden sm:inline">Sync</span>
           </Button>
-          <h1 className="text-xl font-bold">Classes</h1>
         </div>
 
         {/* Live Classes Banner */}
@@ -226,7 +271,7 @@ const ClassRecordingsPage: React.FC = () => {
                     )}
                   </div>
                   <Button
-                    onClick={() => navigate(`/class/${liveClass.id}`)}
+                    onClick={() => navigate(`/live-class/${liveClass.id}`)}
                     size="sm"
                     className="bg-red-500 hover:bg-red-600"
                   >
@@ -238,16 +283,56 @@ const ClassRecordingsPage: React.FC = () => {
           </Card>
         )}
 
+        {/* Pending Recordings Banner */}
+        {pendingRecordings.length > 0 && (
+          <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/20">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <span className="font-medium text-yellow-600 dark:text-yellow-400">
+                  Processing Recordings
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-2">
+                {pendingRecordings.length} recording(s) are being processed by Zoom.
+                They will appear automatically when ready.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {pendingRecordings.slice(0, 3).map((pending) => (
+                  <Badge key={pending.id} variant="outline" className="text-xs">
+                    {pending.title}
+                  </Badge>
+                ))}
+                {pendingRecordings.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{pendingRecordings.length - 3} more
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Tabs */}
         <Tabs defaultValue="recordings" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="recordings" className="gap-2">
               <Video className="h-4 w-4" />
               Recordings
+              {recordings.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {recordings.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="upcoming" className="gap-2">
               <Calendar className="h-4 w-4" />
               Upcoming
+              {upcomingClasses.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {upcomingClasses.length}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -368,7 +453,7 @@ const ClassRecordingsPage: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            navigate(`/class/${upcomingClass.id}`)
+                            navigate(`/live-class/${upcomingClass.id}`)
                           }
                         >
                           View
