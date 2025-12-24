@@ -331,6 +331,31 @@ serve(async (req) => {
   }
 
   try {
+    // Authentication check - verify the user is authenticated
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    // Create client with user's auth token to verify authentication
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { messages, action, userId, enableWebSearch, deepSearch } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -338,14 +363,16 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    // Use authenticated user's ID for operations
+    const authenticatedUserId = user.id;
+
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user files if userId is provided
+    // Get user files using authenticated user's ID
     let userFilesContext = "";
-    if (userId) {
-      userFilesContext = await getUserFiles(userId);
+    if (authenticatedUserId) {
+      userFilesContext = await getUserFiles(authenticatedUserId);
     }
 
     // Get the last user message for analysis
@@ -356,7 +383,7 @@ serve(async (req) => {
     let researchSources = "";
     const needsResearch = detectResearchMode(lastUserMessage) || deepSearch;
     
-    if (needsResearch && userId) {
+    if (needsResearch && authenticatedUserId) {
       console.log("Research mode detected for query:", lastUserMessage.substring(0, 50));
       
       // Extract topic and jurisdiction
@@ -378,7 +405,7 @@ serve(async (req) => {
         console.log("Cache MISS. Performing live research...");
         
         // Check rate limit before doing external research
-        const { allowed, remaining } = await checkAndUpdateRateLimit(supabase, userId);
+        const { allowed, remaining } = await checkAndUpdateRateLimit(supabase, authenticatedUserId);
         
         if (!allowed) {
           console.log("Rate limit exceeded for user:", userId);
