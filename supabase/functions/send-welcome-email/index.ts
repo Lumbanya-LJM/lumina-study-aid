@@ -29,9 +29,9 @@ serve(async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Luminary Study <onboarding@resend.dev>",
+        from: "LMV Academy <admin@lmvacademy.com>",
         to: [email],
-        subject: "Welcome to Luminary Study! 🎓",
+        subject: "Welcome to LMV Academy! 🎓",
         html: `
           <!DOCTYPE html>
           <html>
@@ -42,7 +42,7 @@ serve(async (req: Request): Promise<Response> => {
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
             <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
               <div style="background: linear-gradient(135deg, #0d5c63 0%, #1a7a82 100%); border-radius: 16px 16px 0 0; padding: 40px 30px; text-align: center;">
-                <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Welcome to Luminary Study</h1>
+                <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Welcome to LMV Academy</h1>
                 <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your AI-powered study companion</p>
               </div>
               
@@ -50,7 +50,7 @@ serve(async (req: Request): Promise<Response> => {
                 <h2 style="color: #1a1a1a; margin: 0 0 20px 0; font-size: 22px;">Hi ${fullName || 'there'}! 👋</h2>
                 
                 <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 20px 0;">
-                  Thank you for joining Luminary Study! We're excited to help you excel in your academic journey.
+                  Thank you for joining LMV Academy! We're excited to help you excel in your academic journey.
                 </p>
                 
                 <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 20px 0;">
@@ -67,12 +67,12 @@ serve(async (req: Request): Promise<Response> => {
                 
                 <p style="color: #888; font-size: 14px; text-align: center; margin: 30px 0 0 0;">
                   Happy studying! 📖<br>
-                  <strong>The Luminary Study Team</strong>
+                  <strong>The LMV Academy Team</strong>
                 </p>
               </div>
               
               <p style="color: #999; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
-                © 2025 Luminary Study. All rights reserved.
+                © 2025 LMV Academy. All rights reserved.
               </p>
             </div>
           </body>

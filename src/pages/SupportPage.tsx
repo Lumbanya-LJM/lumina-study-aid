@@ -16,8 +16,8 @@ const SupportPage: React.FC = () => {
     {
       icon: Mail,
       title: 'Email Support',
-      description: 'support@luminarystudy.com',
-      action: () => window.open('mailto:support@luminarystudy.com'),
+      description: 'admin@lmvacademy.com',
+      action: () => window.open('mailto:admin@lmvacademy.com'),
     },
     {
       icon: FileText,
@@ -87,7 +87,7 @@ const SupportPage: React.FC = () => {
 
         {/* App Version */}
         <p className="text-center text-xs text-muted-foreground mt-8">
-          Luminary Study v1.0.0
+          LMV Academy v1.0.0
         </p>
       </div>
     </MobileLayout>
