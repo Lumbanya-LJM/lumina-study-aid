@@ -206,7 +206,7 @@ const handler = async (req: Request): Promise<Response> => {
               </p>
               
               <div style="text-align: center; margin-top: 30px;">
-                <a href="https://ljvegutwzhamkkjrsipf.lovable.app/class/${notification.classId}" 
+                <a href="https://app.lmvacademy.com/class/${notification.classId}" 
                    style="background: #2A5A6A; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
                   Join Class Now
                 </a>

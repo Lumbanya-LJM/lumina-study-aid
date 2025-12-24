@@ -107,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, fullName: string) => {
     // Use the canonical custom domain for email redirects
-    const redirectUrl = 'https://luminarystudy.com/home';
+    const redirectUrl = 'https://app.lmvacademy.com/home';
     
     const { error } = await supabase.auth.signUp({
       email,
