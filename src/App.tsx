@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { TutorProtectedRoute } from "@/components/auth/TutorProtectedRoute";
+import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 import SplashScreen from "./pages/SplashScreen";
 import RoleSelectionPage from "./pages/RoleSelectionPage";
 import AuthPage from "./pages/AuthPage";
@@ -52,43 +53,52 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<SplashScreen />} />
             <Route path="/welcome" element={<RoleSelectionPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-            <Route path="/planner" element={<ProtectedRoute><PlannerPage /></ProtectedRoute>} />
-            <Route path="/library" element={<ProtectedRoute><LibraryPage /></ProtectedRoute>} />
-            <Route path="/focus" element={<ProtectedRoute><FocusPage /></ProtectedRoute>} />
-            <Route path="/journal" element={<ProtectedRoute><JournalPage /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboardPage /></ProtectedRoute>} />
-            
-            <Route path="/partner" element={<ProtectedRoute><PartnerPage /></ProtectedRoute>} />
-            <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
-            <Route path="/locker" element={<ProtectedRoute><LuminaVaultPage /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} />
-            <Route path="/admin/content" element={<ProtectedRoute><AdminContentPage /></ProtectedRoute>} />
-            <Route path="/admin/tutors" element={<ProtectedRoute><TutorApplicationsAdminPage /></ProtectedRoute>} />
-            <Route path="/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
-            <Route path="/quiz/:quizId" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
-            <Route path="/flashcards" element={<ProtectedRoute><FlashcardsPage /></ProtectedRoute>} />
-            <Route path="/flashcards/:deckId" element={<ProtectedRoute><FlashcardsPage /></ProtectedRoute>} />
-            <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
             <Route path="/install" element={<InstallPage />} />
+            
+            {/* Student routes - redirects tutors/admins to their dashboards */}
+            <Route path="/home" element={<ProtectedRoute studentOnly><HomePage /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute studentOnly><ChatPage /></ProtectedRoute>} />
+            <Route path="/planner" element={<ProtectedRoute studentOnly><PlannerPage /></ProtectedRoute>} />
+            <Route path="/library" element={<ProtectedRoute studentOnly><LibraryPage /></ProtectedRoute>} />
+            <Route path="/focus" element={<ProtectedRoute studentOnly><FocusPage /></ProtectedRoute>} />
+            <Route path="/journal" element={<ProtectedRoute studentOnly><JournalPage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute studentOnly><ProfilePage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute studentOnly><AnalyticsDashboardPage /></ProtectedRoute>} />
+            <Route path="/partner" element={<ProtectedRoute studentOnly><PartnerPage /></ProtectedRoute>} />
+            <Route path="/upload" element={<ProtectedRoute studentOnly><UploadPage /></ProtectedRoute>} />
+            <Route path="/locker" element={<ProtectedRoute studentOnly><LuminaVaultPage /></ProtectedRoute>} />
+            <Route path="/quiz" element={<ProtectedRoute studentOnly><QuizPage /></ProtectedRoute>} />
+            <Route path="/quiz/:quizId" element={<ProtectedRoute studentOnly><QuizPage /></ProtectedRoute>} />
+            <Route path="/flashcards" element={<ProtectedRoute studentOnly><FlashcardsPage /></ProtectedRoute>} />
+            <Route path="/flashcards/:deckId" element={<ProtectedRoute studentOnly><FlashcardsPage /></ProtectedRoute>} />
+            <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
             <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-            <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
-            <Route path="/community" element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
-            <Route path="/academy" element={<ProtectedRoute><LuminaAcademyPage /></ProtectedRoute>} />
+            <Route path="/achievements" element={<ProtectedRoute studentOnly><AchievementsPage /></ProtectedRoute>} />
+            <Route path="/community" element={<ProtectedRoute studentOnly><CommunityPage /></ProtectedRoute>} />
+            <Route path="/academy" element={<ProtectedRoute studentOnly><LuminaAcademyPage /></ProtectedRoute>} />
+            
+            {/* Tutor routes */}
             <Route path="/teach" element={<TutorProtectedRoute><TeachDashboardPage /></TutorProtectedRoute>} />
+            
+            {/* Admin routes */}
+            <Route path="/admin" element={<AdminProtectedRoute><AdminDashboardPage /></AdminProtectedRoute>} />
+            <Route path="/admin/content" element={<AdminProtectedRoute><AdminContentPage /></AdminProtectedRoute>} />
+            <Route path="/admin/tutors" element={<AdminProtectedRoute><TutorApplicationsAdminPage /></AdminProtectedRoute>} />
+            
+            {/* Shared routes (accessible by all authenticated users) */}
             <Route path="/class/:classId" element={<ProtectedRoute><LiveClassPage /></ProtectedRoute>} />
             <Route path="/live-class/:classId" element={<ProtectedRoute><LiveClassPage /></ProtectedRoute>} />
             <Route path="/recordings" element={<ProtectedRoute><ClassRecordingsPage /></ProtectedRoute>} />
             <Route path="/tutor/:tutorId" element={<ProtectedRoute><TutorProfilePage /></ProtectedRoute>} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
