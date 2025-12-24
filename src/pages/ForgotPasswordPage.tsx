@@ -19,8 +19,8 @@ const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Use custom domain for password reset to avoid Lovable domain issues
-      const redirectUrl = 'https://luminarystudy.com/reset-password';
+      // Use custom domain for password reset
+      const redirectUrl = 'https://app.lmvacademy.com/reset-password';
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
