@@ -46,7 +46,7 @@ const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSu
         .from('academy_courses')
         .select('name')
         .eq('id', courseId)
-        .single();
+        .maybeSingle();
       
       if (courseData) {
         setCourseName(courseData.name);

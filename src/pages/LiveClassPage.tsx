@@ -43,7 +43,7 @@ const LiveClassPage: React.FC = () => {
           .from("live_classes")
           .select("*")
           .eq("id", classId)
-          .single();
+          .maybeSingle();
 
         if (error || !data) {
           toast({
