@@ -36,18 +36,22 @@ const handler = async (req: Request): Promise<Response> => {
         to: [applicantEmail],
         subject: "Tutor Application Received - LMV Academy",
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #7c3aed;">Application Received!</h1>
-            <p>Dear ${applicantName},</p>
-            <p>Thank you for applying to become a tutor at LMV Academy! We have received your application and our team will review it shortly.</p>
-            <p>You will be notified via email and push notification once a decision has been made.</p>
-            <p>What to expect:</p>
-            <ul>
-              <li>Our team will review your qualifications and experience</li>
-              <li>This typically takes 2-5 business days</li>
-              <li>You'll receive an email with the outcome</li>
-            </ul>
-            <p>Best regards,<br>The LMV Academy Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #7c3aed; margin-bottom: 10px;">Application Received!</h1>
+            </div>
+            <p style="color: #374151; font-size: 16px;">Dear ${applicantName},</p>
+            <p style="color: #374151; font-size: 16px;">Thank you for applying to become a tutor at LMV Academy! We have received your application and our team will review it shortly.</p>
+            <p style="color: #374151; font-size: 16px;">You will be notified via email and push notification once a decision has been made.</p>
+            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="color: #374151; font-weight: bold; margin-bottom: 10px;">What to expect:</p>
+              <ul style="color: #6b7280; margin: 0; padding-left: 20px;">
+                <li style="margin-bottom: 8px;">Our team will review your qualifications and experience</li>
+                <li style="margin-bottom: 8px;">This typically takes 2-5 business days</li>
+                <li style="margin-bottom: 8px;">You'll receive an email with the outcome</li>
+              </ul>
+            </div>
+            <p style="color: #374151; font-size: 16px;">Best regards,<br><strong>The LMV Academy Team</strong></p>
           </div>
         `,
       });
@@ -59,15 +63,15 @@ const handler = async (req: Request): Promise<Response> => {
           to: [adminEmail],
           subject: `New Tutor Application: ${applicantName}`,
           html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
               <h1 style="color: #7c3aed;">New Tutor Application</h1>
-              <p>A new tutor application has been submitted:</p>
-              <ul>
-                <li><strong>Name:</strong> ${applicantName}</li>
-                <li><strong>Email:</strong> ${applicantEmail}</li>
-              </ul>
-              <p>Please review the application in the admin dashboard.</p>
-              <p>Best regards,<br>LMV Academy System</p>
+              <p style="color: #374151;">A new tutor application has been submitted:</p>
+              <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 8px 0;"><strong>Name:</strong> ${applicantName}</p>
+                <p style="margin: 8px 0;"><strong>Email:</strong> ${applicantEmail}</p>
+              </div>
+              <p style="color: #374151;">Please review the application in the admin dashboard.</p>
+              <p style="color: #374151;">Best regards,<br>LMV Academy System</p>
             </div>
           `,
         });
@@ -77,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
     } else if (type === 'approved') {
       // Include credentials if provided
       const credentialsSection = temporaryPassword ? `
-        <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0; color: #374151;">Your Login Credentials</h3>
           <p style="margin-bottom: 8px;"><strong>Email/Username:</strong> ${applicantEmail}</p>
           <p style="margin-bottom: 0;"><strong>Temporary Password:</strong> ${temporaryPassword}</p>
@@ -88,24 +92,45 @@ const handler = async (req: Request): Promise<Response> => {
       emailResponse = await resend.emails.send({
         from: "LMV Academy <onboarding@resend.dev>",
         to: [applicantEmail],
-        subject: "Congratulations! Your Tutor Application is Approved - LMV Academy",
+        subject: "🎉 Congratulations! Your Tutor Application is Approved - LMV Academy",
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #22c55e;">🎉 Welcome to Luminary Teach!</h1>
-            <p>Dear ${applicantName},</p>
-            <p>Congratulations! Your application to become a tutor at LMV Academy has been <strong>approved</strong>!</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-radius: 16px; margin-bottom: 30px;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 32px;">🎉 Congratulations!</h1>
+              <p style="color: #e9d5ff; margin-top: 10px; font-size: 18px;">Welcome to Luminary Teach</p>
+            </div>
+            
+            <p style="color: #374151; font-size: 16px;">Dear ${applicantName},</p>
+            
+            <p style="color: #374151; font-size: 16px;">We are thrilled to inform you that your application to become a tutor at LMV Academy has been <strong style="color: #22c55e;">approved</strong>!</p>
+            
+            <div style="background-color: #f0fdf4; border: 1px solid #22c55e; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="color: #166534; margin: 0; font-weight: bold;">🌟 You're now part of our elite teaching team!</p>
+            </div>
+            
             ${credentialsSection}
-            <p>You now have access to Luminary Teach where you can:</p>
-            <ul>
-              <li>Create and manage courses</li>
-              <li>Host live classes with video conferencing</li>
-              <li>Upload course materials</li>
-              <li>Post updates for your students</li>
-              <li>Track student enrollment and progress</li>
-            </ul>
-            <p>To get started, log in to your account and look for the "Teach" button in the Academy section.</p>
-            <p>Welcome to the team!</p>
-            <p>Best regards,<br>The LMV Academy Team</p>
+            
+            <p style="color: #374151; font-size: 16px;">As a Luminary Tutor, you now have access to:</p>
+            <div style="background-color: #faf5ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <ul style="color: #6b7280; margin: 0; padding-left: 20px;">
+                <li style="margin-bottom: 10px;"><strong>Create and manage courses</strong> - Design comprehensive law courses for students</li>
+                <li style="margin-bottom: 10px;"><strong>Host live classes</strong> - Conduct interactive video sessions with students</li>
+                <li style="margin-bottom: 10px;"><strong>Upload course materials</strong> - Share notes, case summaries, and resources</li>
+                <li style="margin-bottom: 10px;"><strong>Post updates</strong> - Keep your students informed with announcements</li>
+                <li style="margin-bottom: 10px;"><strong>Track student progress</strong> - Monitor enrollment and engagement</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <p style="color: #374151; font-size: 16px; margin-bottom: 15px;">To get started, log in to your account and look for the <strong>"Teach"</strong> button in the Academy section.</p>
+            </div>
+            
+            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+              <p style="color: #7c3aed; font-weight: bold; margin: 0; font-size: 18px;">Welcome to the team! 🚀</p>
+              <p style="color: #6b7280; margin-top: 10px; margin-bottom: 0;">We're excited to have you help shape the future of legal education.</p>
+            </div>
+            
+            <p style="color: #374151; font-size: 16px;">Best regards,<br><strong>The LMV Academy Team</strong></p>
           </div>
         `,
       });
@@ -115,15 +140,22 @@ const handler = async (req: Request): Promise<Response> => {
         to: [applicantEmail],
         subject: "Tutor Application Update - LMV Academy",
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #7c3aed;">Application Update</h1>
-            <p>Dear ${applicantName},</p>
-            <p>Thank you for your interest in becoming a tutor at LMV Academy.</p>
-            <p>After careful review, we regret to inform you that we are unable to approve your application at this time.</p>
-            ${rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : ''}
-            <p>You are welcome to apply again in the future if your circumstances change.</p>
-            <p>Thank you for your understanding.</p>
-            <p>Best regards,<br>The LMV Academy Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #7c3aed;">Application Update</h1>
+            </div>
+            <p style="color: #374151; font-size: 16px;">Dear ${applicantName},</p>
+            <p style="color: #374151; font-size: 16px;">Thank you for your interest in becoming a tutor at LMV Academy.</p>
+            <p style="color: #374151; font-size: 16px;">After careful review, we regret to inform you that we are unable to approve your application at this time.</p>
+            ${rejectionReason ? `
+              <div style="background-color: #fef2f2; border: 1px solid #fecaca; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                <p style="color: #991b1b; font-weight: bold; margin-bottom: 8px;">Reason:</p>
+                <p style="color: #7f1d1d; margin: 0;">${rejectionReason}</p>
+              </div>
+            ` : ''}
+            <p style="color: #374151; font-size: 16px;">You are welcome to apply again in the future if your circumstances change.</p>
+            <p style="color: #374151; font-size: 16px;">Thank you for your understanding.</p>
+            <p style="color: #374151; font-size: 16px;">Best regards,<br><strong>The LMV Academy Team</strong></p>
           </div>
         `,
       });

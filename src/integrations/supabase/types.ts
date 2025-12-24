@@ -997,49 +997,70 @@ export type Database = {
       }
       tutor_applications: {
         Row: {
+          called_to_bar: boolean | null
           created_at: string
+          documents: Json | null
           email: string
           experience: string | null
           full_name: string
           id: string
+          is_employed: boolean | null
+          motivation: string | null
+          preferred_teaching_times: string | null
           qualifications: string | null
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
           subjects: string[] | null
+          time_flexibility: string | null
           updated_at: string
           user_id: string
+          years_at_bar: number | null
         }
         Insert: {
+          called_to_bar?: boolean | null
           created_at?: string
+          documents?: Json | null
           email: string
           experience?: string | null
           full_name: string
           id?: string
+          is_employed?: boolean | null
+          motivation?: string | null
+          preferred_teaching_times?: string | null
           qualifications?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
           subjects?: string[] | null
+          time_flexibility?: string | null
           updated_at?: string
           user_id: string
+          years_at_bar?: number | null
         }
         Update: {
+          called_to_bar?: boolean | null
           created_at?: string
+          documents?: Json | null
           email?: string
           experience?: string | null
           full_name?: string
           id?: string
+          is_employed?: boolean | null
+          motivation?: string | null
+          preferred_teaching_times?: string | null
           qualifications?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
           subjects?: string[] | null
+          time_flexibility?: string | null
           updated_at?: string
           user_id?: string
+          years_at_bar?: number | null
         }
         Relationships: []
       }

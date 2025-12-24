@@ -7,6 +7,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
+import TutorApplicationStatus from '@/components/profile/TutorApplicationStatus';
 import { 
   User,
   Users,
@@ -202,6 +203,8 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
+        {/* Tutor Application Status */}
+        <TutorApplicationStatus />
 
         {/* Menu Items */}
         <div className="bg-card rounded-2xl border border-border/50 shadow-card overflow-hidden mb-6">
