@@ -715,10 +715,10 @@ const AuthPage: React.FC = () => {
           </div>
         )}
         
-        {/* Tutor login helper message */}
-        {step === 'credentials' && isLogin && (
+        {/* Tutor login helper message - only show for tutor role on login */}
+        {step === 'credentials' && isLogin && selectedRole === 'tutor' && (
           <p className="text-xs text-muted-foreground mb-4 max-w-xs mx-auto">
-            Tutors: Use your approved credentials. New tutors must{' '}
+            Use your approved credentials. New tutors must{' '}
             <button 
               type="button"
               onClick={() => setIsLogin(false)}
