@@ -276,8 +276,9 @@ const AuthPage: React.FC = () => {
             if (error) console.error('Welcome email error:', error);
           });
 
-          // Clear onboarding flag to ensure new users see the tutorial
+          // Clear onboarding flags to ensure new users see the tutorial
           localStorage.removeItem('luminary_onboarding_complete');
+          localStorage.removeItem('luminary_tutor_onboarding_complete');
 
           // If tutor role selected, show application form
           if (selectedRole === 'tutor') {
