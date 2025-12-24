@@ -681,8 +681,8 @@ const AuthPage: React.FC = () => {
       <div className="gradient-subtle px-5 md:px-8 pt-6 pb-6 text-center">
         <LMVLogo size="lg" className="justify-center mb-6" />
         
-        {/* Role Toggle - Only show on credentials step */}
-        {step === 'credentials' && (
+        {/* Role Toggle - Only show on credentials step during SIGNUP */}
+        {step === 'credentials' && !isLogin && (
           <div className="flex justify-center mb-6">
             <div className="inline-flex rounded-full p-1 bg-secondary border border-border/50">
               <button
@@ -713,6 +713,21 @@ const AuthPage: React.FC = () => {
               </button>
             </div>
           </div>
+        )}
+        
+        {/* Tutor login helper message */}
+        {step === 'credentials' && isLogin && (
+          <p className="text-xs text-muted-foreground mb-4 max-w-xs mx-auto">
+            Tutors: Use your approved credentials. New tutors must{' '}
+            <button 
+              type="button"
+              onClick={() => setIsLogin(false)}
+              className="text-primary hover:underline"
+            >
+              sign up and apply
+            </button>{' '}
+            first.
+          </p>
         )}
         
         <h1 className="text-2xl font-bold text-foreground mb-2">
