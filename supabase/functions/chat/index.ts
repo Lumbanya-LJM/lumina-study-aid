@@ -6,7 +6,273 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Helper to perform web search
+// Research keywords to detect research mode
+const RESEARCH_KEYWORDS = [
+  "what does the law say",
+  "statute",
+  "act",
+  "cases",
+  "authorities", 
+  "sources",
+  "research",
+  "latest position",
+  "legal position",
+  "case law",
+  "jurisprudence",
+  "precedent",
+  "find me cases",
+  "what are the cases",
+  "leading case",
+];
+
+// Helper to create slugified cache key
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '_')
+    .substring(0, 50);
+}
+
+// Helper to detect if query requires research
+function detectResearchMode(query: string): boolean {
+  const lowerQuery = query.toLowerCase();
+  return RESEARCH_KEYWORDS.some(keyword => lowerQuery.includes(keyword));
+}
+
+// Helper to extract topic and jurisdiction using Lovable AI
+async function extractTopicAndJurisdiction(query: string, apiKey: string): Promise<{ topic: string; jurisdiction: string }> {
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { 
+            role: "system", 
+            content: "Extract the legal topic and jurisdiction from the user query. Return ONLY a JSON object with no markdown formatting. If jurisdiction is not specified, default to 'Zambia'." 
+          },
+          { 
+            role: "user", 
+            content: `USER QUERY:\n${query}\n\nReturn JSON:\n{"topic": "", "jurisdiction": ""}` 
+          }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Topic extraction failed:", response.status);
+      return { topic: query.substring(0, 100), jurisdiction: "Zambia" };
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    
+    // Parse JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        topic: parsed.topic || query.substring(0, 100),
+        jurisdiction: parsed.jurisdiction || "Zambia"
+      };
+    }
+    
+    return { topic: query.substring(0, 100), jurisdiction: "Zambia" };
+  } catch (error) {
+    console.error("Topic extraction error:", error);
+    return { topic: query.substring(0, 100), jurisdiction: "Zambia" };
+  }
+}
+
+// Helper to perform Tavily web search
+async function performTavilySearch(topic: string, jurisdiction: string): Promise<any> {
+  const TAVILY_API_KEY = Deno.env.get("TAVILY_API_KEY");
+  
+  if (!TAVILY_API_KEY) {
+    console.log("Tavily API key not configured, skipping research");
+    return null;
+  }
+
+  try {
+    const searchQuery = `${topic} ${jurisdiction} law site:gov OR site:judiciary OR site:zamlii.org OR site:zambialii.org`;
+    console.log("Performing Tavily search:", searchQuery);
+    
+    const response = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${TAVILY_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: searchQuery,
+        search_depth: "advanced",
+        max_results: 8,
+        include_answer: true,
+        include_raw_content: false,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Tavily search failed:", response.status);
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Tavily search error:", error);
+    return null;
+  }
+}
+
+// Helper to synthesize research from search results
+async function synthesizeResearch(tavilyResults: any, topic: string, jurisdiction: string, apiKey: string): Promise<{ researchOutput: string; sources: string }> {
+  try {
+    const resultsText = JSON.stringify(tavilyResults, null, 2);
+    
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { 
+            role: "system", 
+            content: "You are a legal research assistant. Use ONLY the provided search results. Do not speculate or add information not found in the sources. Be precise and cite sources." 
+          },
+          { 
+            role: "user", 
+            content: `Using the search results below, extract and organize:
+1. Direct legal position on "${topic}" in ${jurisdiction}
+2. Relevant statutes (with full names and sections if available)
+3. Leading cases with citations
+4. Key principles established
+5. Source links for verification
+
+SEARCH RESULTS:
+${resultsText}
+
+Format as a comprehensive research brief suitable for law students.` 
+          }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Research synthesis failed:", response.status);
+      return { researchOutput: "", sources: "" };
+    }
+
+    const data = await response.json();
+    const researchOutput = data.choices?.[0]?.message?.content || "";
+    
+    // Extract sources from Tavily results
+    const sources = tavilyResults.results
+      ?.map((r: any) => r.url)
+      ?.filter(Boolean)
+      ?.join("\n") || "";
+    
+    return { researchOutput, sources };
+  } catch (error) {
+    console.error("Research synthesis error:", error);
+    return { researchOutput: "", sources: "" };
+  }
+}
+
+// Helper to check and update rate limits
+async function checkAndUpdateRateLimit(supabase: any, userId: string): Promise<{ allowed: boolean; remaining: number }> {
+  const today = new Date().toISOString().split('T')[0];
+  const dailyLimit = 5;
+  
+  try {
+    // Check current usage
+    const { data: existing } = await supabase
+      .from('user_research_limits')
+      .select('query_count')
+      .eq('user_id', userId)
+      .eq('query_date', today)
+      .single();
+    
+    const currentCount = existing?.query_count || 0;
+    
+    if (currentCount >= dailyLimit) {
+      return { allowed: false, remaining: 0 };
+    }
+    
+    // Update or insert count
+    if (existing) {
+      await supabase
+        .from('user_research_limits')
+        .update({ query_count: currentCount + 1 })
+        .eq('user_id', userId)
+        .eq('query_date', today);
+    } else {
+      await supabase
+        .from('user_research_limits')
+        .insert({ user_id: userId, query_date: today, query_count: 1 });
+    }
+    
+    return { allowed: true, remaining: dailyLimit - currentCount - 1 };
+  } catch (error) {
+    console.error("Rate limit check error:", error);
+    return { allowed: true, remaining: dailyLimit }; // Allow on error
+  }
+}
+
+// Helper to lookup research cache
+async function lookupCache(supabase: any, cacheKey: string): Promise<any | null> {
+  try {
+    const { data, error } = await supabase
+      .from('research_cache')
+      .select('*')
+      .eq('cache_key', cacheKey)
+      .single();
+    
+    if (error || !data) return null;
+    
+    // Update access count
+    await supabase
+      .from('research_cache')
+      .update({ access_count: (data.access_count || 0) + 1 })
+      .eq('cache_key', cacheKey);
+    
+    return data;
+  } catch (error) {
+    console.error("Cache lookup error:", error);
+    return null;
+  }
+}
+
+// Helper to save to research cache
+async function saveToCache(supabase: any, cacheKey: string, topic: string, jurisdiction: string, researchOutput: string, sources: string): Promise<void> {
+  try {
+    await supabase
+      .from('research_cache')
+      .upsert({
+        cache_key: cacheKey,
+        topic,
+        jurisdiction,
+        research_output: researchOutput,
+        sources,
+        last_verified_date: new Date().toISOString().split('T')[0],
+        access_count: 1
+      }, { onConflict: 'cache_key' });
+    
+    console.log("Research saved to cache:", cacheKey);
+  } catch (error) {
+    console.error("Cache save error:", error);
+  }
+}
+
+// Legacy web search helper (DuckDuckGo fallback)
 async function performWebSearch(query: string): Promise<string> {
   try {
     const searchUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1&skip_disambig=1`;
@@ -29,7 +295,7 @@ async function performWebSearch(query: string): Promise<string> {
       result += `Definition: ${data.Definition}\n`;
     }
     
-    return result || "No direct answer found from web search.";
+    return result || "";
   } catch (error) {
     console.error("Web search error:", error);
     return "";
@@ -72,27 +338,82 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     // Get user files if userId is provided
     let userFilesContext = "";
     if (userId) {
       userFilesContext = await getUserFiles(userId);
     }
 
-    // Perform web search if enabled and there's a query
-    let webSearchContext = "";
-    if (enableWebSearch || deepSearch) {
-      const lastUserMessage = messages.filter((m: any) => m.role === 'user').pop();
-      if (lastUserMessage) {
-        console.log(`Performing ${deepSearch ? 'deep' : 'quick'} web search...`);
-        webSearchContext = await performWebSearch(lastUserMessage.content);
-        if (webSearchContext) {
-          webSearchContext = `\n\n## Web Search Results:\n${webSearchContext}`;
+    // Get the last user message for analysis
+    const lastUserMessage = messages.filter((m: any) => m.role === 'user').pop()?.content || "";
+    
+    // Check if this query needs research mode
+    let researchContext = "";
+    let researchSources = "";
+    const needsResearch = detectResearchMode(lastUserMessage) || deepSearch;
+    
+    if (needsResearch && userId) {
+      console.log("Research mode detected for query:", lastUserMessage.substring(0, 50));
+      
+      // Extract topic and jurisdiction
+      const { topic, jurisdiction } = await extractTopicAndJurisdiction(lastUserMessage, LOVABLE_API_KEY);
+      console.log("Extracted topic:", topic, "| Jurisdiction:", jurisdiction);
+      
+      // Generate cache key
+      const cacheKey = `${slugify(topic)}_${slugify(jurisdiction)}`;
+      console.log("Cache key:", cacheKey);
+      
+      // Check cache first
+      const cached = await lookupCache(supabase, cacheKey);
+      
+      if (cached) {
+        console.log("Cache HIT! Using cached research.");
+        researchContext = cached.research_output;
+        researchSources = cached.sources;
+      } else {
+        console.log("Cache MISS. Performing live research...");
+        
+        // Check rate limit before doing external research
+        const { allowed, remaining } = await checkAndUpdateRateLimit(supabase, userId);
+        
+        if (!allowed) {
+          console.log("Rate limit exceeded for user:", userId);
+          researchContext = "\n\n⚠️ **Daily Research Limit Reached**\nYou've used your 5 research queries for today. This limit helps us keep Lumina free for everyone. Your limit resets tomorrow.\n\nI can still help with general explanations using my knowledge base!";
+        } else {
+          // Perform Tavily search
+          const tavilyResults = await performTavilySearch(topic, jurisdiction);
+          
+          if (tavilyResults && tavilyResults.results?.length > 0) {
+            // Synthesize research
+            const { researchOutput, sources } = await synthesizeResearch(tavilyResults, topic, jurisdiction, LOVABLE_API_KEY);
+            
+            if (researchOutput) {
+              researchContext = researchOutput;
+              researchSources = sources;
+              
+              // Save to cache for future users
+              await saveToCache(supabase, cacheKey, topic, jurisdiction, researchOutput, sources);
+              
+              console.log(`Research complete. ${remaining} queries remaining for today.`);
+            }
+          }
         }
+      }
+    } else if (enableWebSearch && !needsResearch) {
+      // Fall back to DuckDuckGo for simple web search
+      console.log("Simple web search mode...");
+      const webResult = await performWebSearch(lastUserMessage);
+      if (webResult) {
+        researchContext = `\n\n## Web Search Results:\n${webResult}`;
       }
     }
 
-    // Build system prompt based on action type
-    let systemPrompt = `You are Lumina, an elite AI study companion for law students at Luminary Innovision Academy (LMV). You are exceptionally intelligent, precise, articulate, and have access to real-time web information.
+    // Build system prompt
+    let systemPrompt = `You are Lumina, an elite AI study companion for law students at Luminary Innovision Academy (LMV). You are exceptionally intelligent, precise, articulate, and have access to verified legal research.
 
 ## Core Identity
 You are ${userId ? 'a personalized assistant who knows the student\'s study materials' : 'a knowledgeable legal study companion'}. You combine warmth with academic rigor. You are an expert in Zambian law, including the common law system influenced by English law.
@@ -130,12 +451,6 @@ You have direct access to ZambiaLII (Zambia Legal Information Institute). When d
 - For cases: **[Case Name]** (Year) [Citation], [View on ZambiaLII](https://zambialii.org/search/?q=[case name encoded])
 - For statutes: **[Act Name]**, Cap [Number] of the Laws of Zambia, [View on ZambiaLII](https://zambialii.org/legislation)
 
-**When asked to find or search for cases:**
-1. Provide the most relevant cases with full citations
-2. Include a clickable ZambiaLII link for each case
-3. Briefly explain why each case is relevant
-4. Suggest related cases if applicable
-
 ## StudyLocker Integration
 ${userFilesContext ? 'The student has uploaded files to their StudyLocker. You can reference these when relevant.' : 'Students can upload study materials to their StudyLocker for you to reference.'}
 
@@ -144,10 +459,12 @@ ${userFilesContext ? 'The student has uploaded files to their StudyLocker. You c
 2. **Flashcard Generation**: Create effective study cards using active recall principles
 3. **Quiz Creation**: Develop scenario-based multiple choice questions
 4. **Study Guides**: Produce comprehensive topic summaries
-5. **Research Assistance**: Help find relevant cases and statutes
+5. **Research Assistance**: Help find relevant cases and statutes with verified sources
 6. **Emotional Support**: Provide encouragement during stressful study periods
 
-Always maintain academic precision while being conversational and supportive.${userFilesContext}${webSearchContext}`;
+${researchContext ? `\n## Verified Research Results\nThe following research has been retrieved from authoritative legal sources. Use this information to provide accurate, citation-backed responses:\n\n${researchContext}${researchSources ? `\n\n### Sources:\n${researchSources}` : ''}` : ''}
+
+Always maintain academic precision while being conversational and supportive.${userFilesContext}`;
 
     // Adjust system prompt based on action
     if (action === 'summarise') {
@@ -233,7 +550,7 @@ The student is sharing their thoughts or feelings. Respond with:
 - Reminder that challenges are part of growth`;
     }
 
-    console.log("Sending request to AI Gateway with action:", action || "general chat");
+    console.log("Sending request to AI Gateway with action:", action || "general chat", "| Research mode:", needsResearch);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
