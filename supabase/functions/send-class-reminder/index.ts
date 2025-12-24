@@ -67,7 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
             .from("profiles")
             .select("full_name")
             .eq("user_id", enrollment.user_id)
-            .single();
+            .maybeSingle();
 
           // Get user email - we need to use admin API
           const { data: { user: userData } } = await supabase.auth.admin.getUserById(enrollment.user_id);
@@ -117,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
             .from("profiles")
             .select("full_name")
             .eq("user_id", enrollment.user_id)
-            .single();
+            .maybeSingle();
 
           const { data: { user: userData } } = await supabase.auth.admin.getUserById(enrollment.user_id);
 

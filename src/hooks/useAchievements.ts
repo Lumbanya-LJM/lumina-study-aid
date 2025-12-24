@@ -81,12 +81,12 @@ export const useAchievements = (): UseAchievementsReturn => {
       if (earnedError) throw earnedError;
       setEarnedAchievements(earned as unknown as UserAchievement[] || []);
 
-      // Fetch user stats from profile
+      // Fetch user stats from profile (profile row may not exist yet)
       const { data: profile } = await supabase
         .from('profiles')
         .select('streak_days, total_study_hours, tasks_completed, cases_read')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       // Fetch quiz count
       const { count: quizCount } = await supabase

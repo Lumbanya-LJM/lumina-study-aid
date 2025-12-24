@@ -84,7 +84,7 @@ export function useStudyReminders() {
       .from('profiles')
       .select('streak_days')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (!profile) return [];
 

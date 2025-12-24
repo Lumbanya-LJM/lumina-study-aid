@@ -58,16 +58,22 @@ const TutorProfilePage: React.FC = () => {
         .select('*')
         .eq('user_id', tutorId)
         .eq('status', 'approved')
-        .single();
+        .maybeSingle();
 
       if (appError) throw appError;
+      if (!application) {
+        setTutor(null);
+        setCourses([]);
+        setLiveClassCount(0);
+        return;
+      }
 
       // Get tutor's profile for avatar
       const { data: profile } = await supabase
         .from('profiles')
         .select('avatar_url')
         .eq('user_id', tutorId)
-        .single();
+        .maybeSingle();
 
       setTutor({
         ...application,

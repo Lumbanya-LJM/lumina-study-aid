@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -7,6 +7,8 @@ export type UserRole = 'admin' | 'tutor' | 'student';
 interface UseUserRoleResult {
   role: UserRole | null;
   loading: boolean;
+  error: string | null;
+  refresh: () => void;
   isAdmin: boolean;
   isTutor: boolean;
   isStudent: boolean;
@@ -17,15 +19,24 @@ export const useUserRole = (): UseUserRoleResult => {
   const { user, loading: authLoading } = useAuth();
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshIndex, setRefreshIndex] = useState(0);
 
-  useEffect(() => {
-    const checkRoles = async () => {
-      if (!user) {
-        setRole(null);
-        setLoading(false);
-        return;
-      }
+  const refresh = useCallback(() => setRefreshIndex((x) => x + 1), []);
 
+  const checkRoles = useCallback(async () => {
+    if (!user) {
+      setRole(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const maxAttempts = 3;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         const [isAdminRes, isTutorRes] = await Promise.all([
           supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
@@ -39,18 +50,29 @@ export const useUserRole = (): UseUserRoleResult => {
         } else {
           setRole('student');
         }
-      } catch (error) {
-        console.error('Error checking roles:', error);
-        setRole('student'); // Default to student on error
-      } finally {
+
+        setLoading(false);
+        return;
+      } catch (e) {
+        // Retry transient network errors instead of defaulting to "student".
+        if (attempt < maxAttempts - 1) {
+          await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+          continue;
+        }
+
+        console.error('Error checking roles:', e);
+        setRole(null);
+        setError('Unable to verify your access right now. Please retry.');
         setLoading(false);
       }
-    };
+    }
+  }, [user]);
 
+  useEffect(() => {
     if (!authLoading) {
       checkRoles();
     }
-  }, [user, authLoading]);
+  }, [authLoading, checkRoles, refreshIndex]);
 
   const isAdmin = role === 'admin';
   const isTutor = role === 'tutor' || role === 'admin'; // Admins can access tutor features
@@ -61,6 +83,8 @@ export const useUserRole = (): UseUserRoleResult => {
   return {
     role,
     loading: authLoading || loading,
+    error,
+    refresh,
     isAdmin,
     isTutor,
     isStudent,

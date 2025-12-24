@@ -199,7 +199,7 @@ async function checkAndUpdateRateLimit(supabase: any, userId: string): Promise<{
       .select('query_count')
       .eq('user_id', userId)
       .eq('query_date', today)
-      .single();
+      .maybeSingle();
     
     const currentCount = existing?.query_count || 0;
     
@@ -234,7 +234,7 @@ async function lookupCache(supabase: any, cacheKey: string): Promise<any | null>
       .from('research_cache')
       .select('*')
       .eq('cache_key', cacheKey)
-      .single();
+      .maybeSingle();
     
     if (error || !data) return null;
     
