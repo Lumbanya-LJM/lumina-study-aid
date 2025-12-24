@@ -31,6 +31,7 @@ import {
   AlertCircle,
   Shield,
   Lock,
+  Mail,
   Eye,
   EyeOff,
   Download,
@@ -73,6 +74,10 @@ const SettingsPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'lumina' | 'appearance' | 'offline' | 'security'>('notifications');
   
+  // Email change state
+  const [newEmail, setNewEmail] = useState('');
+  const [changingEmail, setChangingEmail] = useState(false);
+
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -200,6 +205,45 @@ const SettingsPage: React.FC = () => {
       });
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  const handleChangeEmail = async () => {
+    if (!newEmail || !newEmail.includes('@')) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+      });
+      return;
+    }
+
+    setChangingEmail(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({ email: newEmail });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Failed to Update Email",
+          description: error.message,
+        });
+      } else {
+        toast({
+          title: "Verification Email Sent",
+          description: "Please check your new email address to confirm the change.",
+        });
+        setNewEmail('');
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+      });
+    } finally {
+      setChangingEmail(false);
     }
   };
 
@@ -723,70 +767,129 @@ const SettingsPage: React.FC = () => {
 
           {/* Security Tab */}
           {activeTab === 'security' && (
-            <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5 space-y-5">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <Shield className="w-5 h-5 text-primary" />
+            <div className="space-y-5">
+              {/* Change Email Card */}
+              <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5 space-y-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Mail className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-foreground">Change Email</h2>
+                    <p className="text-xs text-muted-foreground">Update your login email address</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-semibold text-foreground">Change Password</h2>
-                  <p className="text-xs text-muted-foreground">Update your account password</p>
+
+                <div className="p-3 bg-secondary/50 rounded-xl">
+                  <p className="text-xs text-muted-foreground">Current email</p>
+                  <p className="text-sm font-medium text-foreground">{user?.email}</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">New Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        placeholder="Enter new email address"
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleChangeEmail}
+                    disabled={changingEmail || !newEmail}
+                    className="w-full"
+                  >
+                    {changingEmail ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        Sending verification...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        Update Email
+                      </span>
+                    )}
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground text-center">
+                    A verification email will be sent to your new address
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">New Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type={showPasswords ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password (min. 6 chars)"
-                      className="pl-10 pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPasswords(!showPasswords)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+              {/* Change Password Card */}
+              <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5 space-y-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Shield className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-foreground">Change Password</h2>
+                    <p className="text-xs text-muted-foreground">Update your account password</p>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Confirm New Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type={showPasswords ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm your new password"
-                      className="pl-10"
-                    />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">New Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type={showPasswords ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password (min. 6 chars)"
+                        className="pl-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(!showPasswords)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <Button
-                  onClick={handleChangePassword}
-                  disabled={changingPassword || !newPassword || !confirmPassword}
-                  className="w-full"
-                >
-                  {changingPassword ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                      Updating...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <Lock className="w-4 h-4" />
-                      Change Password
-                    </span>
-                  )}
-                </Button>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Confirm New Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type={showPasswords ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm your new password"
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleChangePassword}
+                    disabled={changingPassword || !newPassword || !confirmPassword}
+                    className="w-full"
+                  >
+                    {changingPassword ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        Updating...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Lock className="w-4 h-4" />
+                        Change Password
+                      </span>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
