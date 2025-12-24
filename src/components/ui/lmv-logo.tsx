@@ -22,19 +22,11 @@ export const LMVLogo: React.FC<LMVLogoProps> = ({
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      {/* Clean circular container with white background to hide logo artifacts */}
-      <div 
-        className={cn(
-          "relative flex items-center justify-center rounded-xl bg-white shadow-sm border border-border/30",
-          sizes[size].container
-        )}
-      >
-        <img 
-          src={lmvLogo} 
-          alt="Luminary Innovision Academy" 
-          className={cn("object-contain", sizes[size].icon)}
-        />
-      </div>
+      <img 
+        src={lmvLogo} 
+        alt="Luminary Innovision Academy" 
+        className={cn("object-contain", sizes[size].container)}
+      />
       {variant === 'full' && (
         <div className="flex flex-col">
           <span className={cn("font-display font-semibold text-foreground leading-tight", sizes[size].text)}>
