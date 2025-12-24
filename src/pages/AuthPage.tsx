@@ -54,8 +54,8 @@ interface Course {
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const selectedRole = searchParams.get('role') || 'student';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialRole = searchParams.get('role') || 'student';
   const { signUp, signIn } = useAuth();
   const { toast } = useToast();
 
@@ -66,6 +66,13 @@ const AuthPage: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<'student' | 'tutor'>(initialRole as 'student' | 'tutor');
+
+  // Update URL when role changes
+  const handleRoleChange = (role: 'student' | 'tutor') => {
+    setSelectedRole(role);
+    setSearchParams({ role });
+  };
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -661,7 +668,7 @@ const AuthPage: React.FC = () => {
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            Change role selection
+            Back to welcome
           </Link>
         </div>
       )}
@@ -670,21 +677,36 @@ const AuthPage: React.FC = () => {
       <div className="gradient-subtle px-5 md:px-8 pt-6 pb-6 text-center">
         <LMVLogo size="lg" className="justify-center mb-6" />
         
-        {/* Role Badge */}
+        {/* Role Toggle - Only show on credentials step */}
         {step === 'credentials' && (
-          <div className="flex justify-center mb-4">
-            <div className="px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 bg-primary/20 text-primary border border-primary/30">
-              {selectedRole === 'tutor' ? (
-                <>
-                  <GraduationCap className="w-4 h-4" />
-                  Tutor Registration
-                </>
-              ) : (
-                <>
-                  <BookOpen className="w-4 h-4" />
-                  Student Registration
-                </>
-              )}
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex rounded-full p-1 bg-secondary border border-border/50">
+              <button
+                type="button"
+                onClick={() => handleRoleChange('student')}
+                className={cn(
+                  "px-5 py-2.5 rounded-full text-sm font-medium flex items-center gap-2 transition-all",
+                  selectedRole === 'student'
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <BookOpen className="w-4 h-4" />
+                Student
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRoleChange('tutor')}
+                className={cn(
+                  "px-5 py-2.5 rounded-full text-sm font-medium flex items-center gap-2 transition-all",
+                  selectedRole === 'tutor'
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <GraduationCap className="w-4 h-4" />
+                Tutor
+              </button>
             </div>
           </div>
         )}
