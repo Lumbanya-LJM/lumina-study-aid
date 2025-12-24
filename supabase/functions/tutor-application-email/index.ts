@@ -32,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (type === 'submitted') {
       // Email to applicant
       await resend.emails.send({
-        from: "LMV Academy <onboarding@resend.dev>",
+        from: "LMV Academy <admin@lmvacademy.com>",
         to: [applicantEmail],
         subject: "Tutor Application Received - LMV Academy",
         html: `
@@ -59,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Email to admin if provided
       if (adminEmail) {
         await resend.emails.send({
-          from: "LMV Academy <onboarding@resend.dev>",
+          from: "LMV Academy <admin@lmvacademy.com>",
           to: [adminEmail],
           subject: `New Tutor Application: ${applicantName}`,
           html: `
@@ -90,7 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
       ` : '';
       
       emailResponse = await resend.emails.send({
-        from: "LMV Academy <onboarding@resend.dev>",
+        from: "LMV Academy <admin@lmvacademy.com>",
         to: [applicantEmail],
         subject: "🎉 Congratulations! Your Tutor Application is Approved - LMV Academy",
         html: `
@@ -136,7 +136,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
     } else if (type === 'rejected') {
       emailResponse = await resend.emails.send({
-        from: "LMV Academy <onboarding@resend.dev>",
+        from: "LMV Academy <admin@lmvacademy.com>",
         to: [applicantEmail],
         subject: "Tutor Application Update - LMV Academy",
         html: `

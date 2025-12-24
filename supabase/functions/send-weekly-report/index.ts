@@ -161,7 +161,7 @@ const handler = async (req: Request): Promise<Response> => {
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f5;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
               <div style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); border-radius: 16px; padding: 32px; color: white; text-align: center; margin-bottom: 24px;">
-                <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">📚 Luminary Study</h1>
+                <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">📚 LMV Academy</h1>
                 <p style="margin: 0; opacity: 0.9; font-size: 14px;">Weekly Progress Report</p>
               </div>
               
@@ -211,7 +211,7 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
               
               <div style="text-align: center; color: #a1a1aa; font-size: 12px;">
-                <p style="margin: 0;">Sent from Luminary Study</p>
+                <p style="margin: 0;">Sent from LMV Academy</p>
                 <p style="margin: 4px 0 0 0;">Empowering Zambian students to excel</p>
               </div>
             </div>
@@ -226,7 +226,7 @@ const handler = async (req: Request): Promise<Response> => {
             Authorization: `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: "Luminary Study <onboarding@resend.dev>",
+            from: "LMV Academy <admin@lmvacademy.com>",
             to: [partner.partner_email],
             subject: `📊 Weekly Progress Report for ${studentName}`,
             html: emailHtml,

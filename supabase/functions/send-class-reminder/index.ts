@@ -171,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
         await resend.emails.send({
-          from: "LMV Academy <onboarding@resend.dev>",
+          from: "LMV Academy <admin@lmvacademy.com>",
           to: [notification.email],
           subject: notification.minutesUntil === 5 
             ? `🔴 ${notification.classTitle} is starting in 5 minutes!`
