@@ -754,6 +754,45 @@ export type Database = {
         }
         Relationships: []
       }
+      research_cache: {
+        Row: {
+          access_count: number
+          cache_key: string
+          created_at: string
+          id: string
+          jurisdiction: string
+          last_verified_date: string
+          research_output: string
+          sources: string | null
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          access_count?: number
+          cache_key: string
+          created_at?: string
+          id?: string
+          jurisdiction: string
+          last_verified_date?: string
+          research_output: string
+          sources?: string | null
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          access_count?: number
+          cache_key?: string
+          created_at?: string
+          id?: string
+          jurisdiction?: string
+          last_verified_date?: string
+          research_output?: string
+          sources?: string | null
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       study_group_members: {
         Row: {
           group_id: string
@@ -1141,6 +1180,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_research_limits: {
+        Row: {
+          created_at: string
+          id: string
+          query_count: number
+          query_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          query_count?: number
+          query_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          query_count?: number
+          query_date?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
