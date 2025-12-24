@@ -33,6 +33,12 @@ verify_jwt = false
 [functions.zoom-meeting]
 verify_jwt = false
 
+[functions.zoom-webhook]
+verify_jwt = false
+
+[functions.sync-zoom-recordings]
+verify_jwt = false
+
 [functions.generate-class-summary]
 verify_jwt = false
 
@@ -40,4 +46,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.web-search]
+verify_jwt = false
+
+[functions.send-class-reminder]
+verify_jwt = false
+
+[functions.tutor-application-email]
 verify_jwt = false

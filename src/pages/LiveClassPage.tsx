@@ -5,15 +5,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Video, ExternalLink, ArrowLeft, Users, Clock } from "lucide-react";
+import { Loader2, Video, ExternalLink, ArrowLeft, Clock, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface LiveClass {
   id: string;
   title: string;
   description: string | null;
-  daily_room_name: string | null; // This now stores Zoom meeting ID
-  daily_room_url: string | null; // This now stores Zoom join URL
+  daily_room_name: string | null;
+  daily_room_url: string | null;
   host_id: string;
   status: string;
   course_id: string | null;
@@ -29,6 +29,7 @@ const LiveClassPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [liveClass, setLiveClass] = useState<LiveClass | null>(null);
   const [joining, setJoining] = useState(false);
+  const [ending, setEnding] = useState(false);
 
   useEffect(() => {
     const loadClass = async () => {
@@ -59,7 +60,7 @@ const LiveClassPage: React.FC = () => {
             title: "Class Ended",
             description: "This class has already ended.",
           });
-          navigate("/academy");
+          navigate("/recordings");
           return;
         }
 
@@ -74,6 +75,8 @@ const LiveClassPage: React.FC = () => {
               started_at: new Date().toISOString(),
             })
             .eq("id", classId);
+          
+          setLiveClass(prev => prev ? { ...prev, status: "live", started_at: new Date().toISOString() } : null);
         }
       } catch (error) {
         console.error("Error loading class:", error);
@@ -127,19 +130,27 @@ const LiveClassPage: React.FC = () => {
   const handleEndClass = async () => {
     if (!liveClass) return;
 
+    setEnding(true);
+
     try {
       // End the Zoom meeting
       if (liveClass.daily_room_name) {
-        await supabase.functions.invoke("zoom-meeting", {
+        console.log("Ending Zoom meeting:", liveClass.daily_room_name);
+        
+        const { error: endError } = await supabase.functions.invoke("zoom-meeting", {
           body: {
             action: "end-meeting",
             meetingId: liveClass.daily_room_name,
           },
         });
+
+        if (endError) {
+          console.error("Error ending Zoom meeting:", endError);
+        }
       }
 
       // Update class status
-      await supabase
+      const { error: updateError } = await supabase
         .from("live_classes")
         .update({
           status: "ended",
@@ -147,30 +158,55 @@ const LiveClassPage: React.FC = () => {
         })
         .eq("id", liveClass.id);
 
-      // Try to get recordings
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Try to get recordings (will likely return "processing" status)
       if (liveClass.daily_room_name) {
-        await supabase.functions.invoke("zoom-meeting", {
+        const { data: recordingData } = await supabase.functions.invoke("zoom-meeting", {
           body: {
             action: "get-recordings",
             meetingId: liveClass.daily_room_name,
             classId: liveClass.id,
           },
         });
+
+        console.log("Recording status:", recordingData);
+
+        if (recordingData?.status === "pending" || recordingData?.status === "processing") {
+          toast({
+            title: "Class Ended Successfully",
+            description: "The recording is being processed and will be available shortly.",
+          });
+        } else if (recordingData?.status === "available") {
+          toast({
+            title: "Class Ended",
+            description: "Recording saved successfully!",
+          });
+        } else {
+          toast({
+            title: "Class Ended",
+            description: "Recording will be available once Zoom finishes processing.",
+          });
+        }
+      } else {
+        toast({
+          title: "Class Ended",
+          description: "The class has been ended successfully.",
+        });
       }
 
-      toast({
-        title: "Class Ended",
-        description: "The class has been ended successfully.",
-      });
-
-      navigate("/academy");
+      navigate("/recordings");
     } catch (error) {
       console.error("Error ending class:", error);
       toast({
         title: "Error",
-        description: "Failed to end class properly.",
+        description: "Failed to end class properly. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setEnding(false);
     }
   };
 
@@ -240,7 +276,7 @@ const LiveClassPage: React.FC = () => {
                 size="lg"
                 className="w-full max-w-sm gradient-primary"
                 onClick={handleJoinMeeting}
-                disabled={joining}
+                disabled={joining || !liveClass.daily_room_url}
               >
                 {joining ? (
                   <>
@@ -254,6 +290,12 @@ const LiveClassPage: React.FC = () => {
                   </>
                 )}
               </Button>
+
+              {!liveClass.daily_room_url && (
+                <p className="text-xs text-destructive text-center">
+                  No meeting link available. Please contact the host.
+                </p>
+              )}
 
               <p className="text-xs text-muted-foreground text-center">
                 The meeting will open in a new tab. Make sure you have Zoom installed.
@@ -270,9 +312,20 @@ const LiveClassPage: React.FC = () => {
                   variant="destructive"
                   className="w-full"
                   onClick={handleEndClass}
+                  disabled={ending}
                 >
-                  End Class
+                  {ending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Ending Class...
+                    </>
+                  ) : (
+                    "End Class"
+                  )}
                 </Button>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Recording will be automatically saved after class ends
+                </p>
               </div>
             )}
           </CardContent>
@@ -288,6 +341,20 @@ const LiveClassPage: React.FC = () => {
               <li>If you don't have Zoom installed, you can join from browser</li>
               <li>Turn on your camera and microphone when ready</li>
             </ol>
+          </CardContent>
+        </Card>
+
+        {/* Recording Info Card */}
+        <Card className="mt-4 border-green-500/20 bg-green-500/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <h3 className="font-medium">Auto-Recording Enabled</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This class is being recorded automatically. The recording will be available 
+              in the Class Recordings section shortly after the class ends.
+            </p>
           </CardContent>
         </Card>
       </div>
