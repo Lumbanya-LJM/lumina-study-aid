@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { useUserRole } from '@/hooks/useUserRole';
 import lmvLogo from '@/assets/lmv-logo.png';
 import { GraduationCap } from 'lucide-react';
 
@@ -10,40 +10,11 @@ interface TutorProtectedRouteProps {
 }
 
 export const TutorProtectedRoute: React.FC<TutorProtectedRouteProps> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
-  const [isTutor, setIsTutor] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { isTutor, loading } = useUserRole();
 
-  useEffect(() => {
-    const checkTutorRole = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Use backend role check function (more reliable than selecting user_roles under RLS)
-        const [isAdminRes, isTutorRes] = await Promise.all([
-          supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
-          supabase.rpc('has_role', { _user_id: user.id, _role: 'moderator' }),
-        ]);
-
-        setIsTutor(Boolean(isAdminRes.data || isTutorRes.data));
-      } catch (error) {
-        console.error('Error checking tutor role:', error);
-        setIsTutor(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (!authLoading) {
-      checkTutorRole();
-    }
-  }, [user, authLoading]);
-
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <img 
@@ -62,7 +33,7 @@ export const TutorProtectedRoute: React.FC<TutorProtectedRouteProps> = ({ childr
   }
 
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    return <Navigate to="/auth?role=tutor" state={{ from: location }} replace />;
   }
 
   if (!isTutor) {

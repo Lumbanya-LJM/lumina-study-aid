@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const SplashScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { portalPath, loading: roleLoading } = useUserRole();
   const [stage, setStage] = useState<'logo' | 'lumina' | 'complete'>('logo');
 
   useEffect(() => {
@@ -20,43 +21,20 @@ const SplashScreen: React.FC = () => {
     };
   }, []);
 
-  const resolvePortalPath = async (userId: string) => {
-    const [isAdminRes, isTutorRes] = await Promise.all([
-      supabase.rpc('has_role', { _user_id: userId, _role: 'admin' }),
-      supabase.rpc('has_role', { _user_id: userId, _role: 'moderator' }),
-    ]);
-
-    if (isAdminRes.data) return '/admin';
-    if (isTutorRes.data) return '/teach';
-    return '/home';
-  };
-
   // Navigate after loading is complete and animation finishes
   useEffect(() => {
-    if (stage !== 'complete' || loading) return;
-
-    let cancelled = false;
+    if (stage !== 'complete' || authLoading || roleLoading) return;
 
     const navTimer = setTimeout(() => {
       if (!user) {
         navigate('/welcome');
-        return;
+      } else {
+        navigate(portalPath);
       }
-
-      resolvePortalPath(user.id)
-        .then((path) => {
-          if (!cancelled) navigate(path);
-        })
-        .catch(() => {
-          if (!cancelled) navigate('/home');
-        });
     }, 800);
 
-    return () => {
-      cancelled = true;
-      clearTimeout(navTimer);
-    };
-  }, [stage, loading, user, navigate]);
+    return () => clearTimeout(navTimer);
+  }, [stage, authLoading, roleLoading, user, navigate, portalPath]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
