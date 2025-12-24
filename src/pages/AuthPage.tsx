@@ -156,10 +156,10 @@ const AuthPage: React.FC = () => {
             toast({
               title:
                 path === '/admin'
-                  ? 'Welcome back, Admin!'
+                  ? 'Welcome, Admin!'
                   : path === '/teach'
-                    ? 'Welcome back, Tutor!'
-                    : 'Welcome back!',
+                    ? 'Welcome, Tutor!'
+                    : 'Welcome!',
               description:
                 path === '/admin'
                   ? 'Redirecting to admin dashboard.'
@@ -643,7 +643,7 @@ const AuthPage: React.FC = () => {
       case 'profile': return 'Almost There!';
       case 'courses': return 'One Last Step!';
       case 'tutor-application': return 'Tutor Application';
-      default: return isLogin ? 'Welcome Back' : 'Create Account';
+      default: return isLogin ? 'Welcome!' : 'Create Account';
     }
   };
 
@@ -655,7 +655,7 @@ const AuthPage: React.FC = () => {
         : 'Choose your courses to get started';
       case 'tutor-application': return 'Tell us about your qualifications';
       default: return isLogin 
-        ? 'Sign in to continue your learning journey' 
+        ? 'Sign in to access your account' 
         : (selectedRole === 'tutor' 
           ? 'Apply to share your expertise with students' 
           : 'Start your journey to legal excellence');
