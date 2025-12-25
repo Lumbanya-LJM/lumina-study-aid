@@ -74,8 +74,10 @@ serve(async (req: Request): Promise<Response> => {
       </html>
     `;
 
+    const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
+    
     const emailResponse = await resend.emails.send({
-      from: "LMV Academy <onboarding@resend.dev>",
+      from: `LMV Academy <${fromEmail}>`,
       to: [email],
       subject: "Welcome to LMV Academy! 🎓",
       html: emailHtml,

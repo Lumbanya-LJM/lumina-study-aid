@@ -173,8 +173,10 @@ serve(async (req: Request) => {
     const userName = user_metadata?.full_name || "";
     const template = getEmailTemplate(type, token, userName);
 
+    const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
+    
     const emailResponse = await resend.emails.send({
-      from: "LMV Academy <onboarding@resend.dev>",
+      from: `LMV Academy <${fromEmail}>`,
       to: [email],
       subject: template.subject,
       html: template.html,
