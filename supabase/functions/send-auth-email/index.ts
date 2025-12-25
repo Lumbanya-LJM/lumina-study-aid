@@ -1,26 +1,10 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface AuthEmailPayload {
-  user: {
-    email: string;
-    user_metadata?: {
-      full_name?: string;
-    };
-  };
-  email_data: {
-    token: string;
-    token_hash: string;
-    redirect_to: string;
-    email_action_type: string;
-    site_url: string;
-  };
-}
 
 const getEmailTemplate = (type: string, confirmationUrl: string, userName: string) => {
   const baseStyles = `
@@ -33,7 +17,6 @@ const getEmailTemplate = (type: string, confirmationUrl: string, userName: strin
     h1 { color: #ffffff; font-size: 24px; margin: 0 0 20px 0; }
     p { color: #b8b8b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; }
     .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
-    .button:hover { opacity: 0.9; }
     .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
     .footer p { color: #666; font-size: 12px; margin: 0; }
     .warning { background: rgba(255, 193, 7, 0.1); border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }
@@ -74,7 +57,7 @@ const getEmailTemplate = (type: string, confirmationUrl: string, userName: strin
       `,
     },
     recovery: {
-      subject: "Reset Your LMV Academy Password",
+      subject: "Reset Your Password — Luminary Innovision Academy",
       html: `
         <!DOCTYPE html>
         <html>
@@ -93,7 +76,7 @@ const getEmailTemplate = (type: string, confirmationUrl: string, userName: strin
                 <a href="${confirmationUrl}" class="button">Reset Password</a>
               </div>
               <div class="warning">
-                <p>⚠️ This link expires in 1 hour. If you didn't request a password reset, please ignore this email or contact support if you're concerned about your account security.</p>
+                <p>⚠️ This link expires in 1 hour. If you didn't request a password reset, please ignore this email.</p>
               </div>
             </div>
             <div class="footer">
@@ -125,7 +108,7 @@ const getEmailTemplate = (type: string, confirmationUrl: string, userName: strin
                 <a href="${confirmationUrl}" class="button">Log In to LMV Academy</a>
               </div>
               <div class="warning">
-                <p>⏰ This link expires in 1 hour and can only be used once. If you didn't request this link, please ignore this email.</p>
+                <p>⏰ This link expires in 1 hour and can only be used once.</p>
               </div>
             </div>
             <div class="footer">
@@ -152,12 +135,12 @@ const getEmailTemplate = (type: string, confirmationUrl: string, userName: strin
             <div class="content">
               <h1>Email Change Confirmation 📧</h1>
               <p>Hello${userName ? ` ${userName}` : ''},</p>
-              <p>You've requested to change your email address for your LMV Academy account. Please confirm this change:</p>
+              <p>You've requested to change your email address. Please confirm this change:</p>
               <div style="text-align: center;">
                 <a href="${confirmationUrl}" class="button">Confirm New Email</a>
               </div>
               <div class="warning">
-                <p>⚠️ If you didn't request this change, please contact our support team immediately at admin@lmvacademy.com</p>
+                <p>⚠️ If you didn't request this change, please contact support immediately.</p>
               </div>
             </div>
             <div class="footer">
@@ -174,78 +157,52 @@ const getEmailTemplate = (type: string, confirmationUrl: string, userName: strin
   return templates[type] || templates.signup;
 };
 
-const handler = async (req: Request): Promise<Response> => {
+serve(async (req: Request) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const payload: AuthEmailPayload = await req.json();
-    console.log("Auth email hook received:", payload.email_data.email_action_type);
+    const { email, token, type, user_metadata } = await req.json();
+    
+    console.log(`Processing ${type} email for: ${email}`);
 
-    const { user, email_data } = payload;
-    const { token_hash, redirect_to, email_action_type, site_url } = email_data;
-
-    // Build the confirmation URL
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || site_url;
-    const confirmationUrl = `${supabaseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`;
-
-    const userName = user.user_metadata?.full_name || "";
-    const template = getEmailTemplate(email_action_type, confirmationUrl, userName);
-
-    // Get SMTP configuration from secrets
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPass = Deno.env.get("SMTP_PASS");
-    const smtpFrom = Deno.env.get("SMTP_FROM");
-
-    if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
-      throw new Error("SMTP configuration incomplete. Please check SMTP_HOST, SMTP_USER, SMTP_PASS, and SMTP_FROM secrets.");
-    }
-
-    console.log(`Connecting to SMTP server: ${smtpHost}:${smtpPort}`);
-
-    // Create SMTP client with Zoho configuration
     const client = new SMTPClient({
       connection: {
-        hostname: smtpHost,
-        port: smtpPort,
+        hostname: Deno.env.get("SMTP_HOST")!,
+        port: Number(Deno.env.get("SMTP_PORT")!),
         tls: true,
         auth: {
-          username: smtpUser,
-          password: smtpPass,
+          username: Deno.env.get("SMTP_USER")!,
+          password: Deno.env.get("SMTP_PASS")!,
         },
       },
     });
 
-    // Send email using SMTP
+    const userName = user_metadata?.full_name || "";
+    const template = getEmailTemplate(type, token, userName);
+
     await client.send({
-      from: smtpFrom,
-      to: user.email,
+      from: Deno.env.get("SMTP_FROM")!,
+      to: email,
       subject: template.subject,
-      content: "Please view this email in an HTML-compatible email client.",
       html: template.html,
     });
 
     await client.close();
 
-    console.log("Auth email sent successfully via SMTP to:", user.email);
+    console.log(`${type} email sent successfully to: ${email}`);
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true }), { 
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...corsHeaders }
     });
   } catch (error: any) {
-    console.error("Error in send-auth-email function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    console.error("Error sending email:", error);
+    return new Response(JSON.stringify({ error: error.message }), { 
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders }
+    });
   }
-};
-
-serve(handler);
+});
