@@ -152,11 +152,14 @@ serve(async (req: Request) => {
     const userName = profile?.full_name || "";
 
     // Send email via Zoho SMTP
+    const smtpPort = Number(Deno.env.get("SMTP_PORT") || "465");
     const client = new SMTPClient({
       connection: {
         hostname: Deno.env.get("SMTP_HOST")!,
-        port: Number(Deno.env.get("SMTP_PORT")!),
-        tls: true,
+        port: smtpPort,
+        // For port 465, use tls: true (implicit TLS/SSL)
+        // For port 587, use tls: false with starttls
+        tls: smtpPort === 465,
         auth: {
           username: Deno.env.get("SMTP_USER")!,
           password: Deno.env.get("SMTP_PASS")!,
