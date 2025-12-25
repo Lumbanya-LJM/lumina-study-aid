@@ -101,9 +101,26 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
 
       if (error) throw error;
 
+      // Get user profile for name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', user.id)
+        .single();
+
+      // Send confirmation email
+      await supabase.functions.invoke('send-enrollment-confirmation', {
+        body: {
+          userId: user.id,
+          studentEmail: user.email,
+          studentName: profile?.full_name || 'Student',
+          courseIds: selectedCourses
+        }
+      });
+
       toast({
         title: 'Enrolled Successfully!',
-        description: `You've been enrolled in ${selectedCourses.length} course${selectedCourses.length > 1 ? 's' : ''}`,
+        description: `You've been enrolled in ${selectedCourses.length} course${selectedCourses.length > 1 ? 's' : ''}. Check your email for confirmation.`,
       });
 
       setSelectedCourses([]);

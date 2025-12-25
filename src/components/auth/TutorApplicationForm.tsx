@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, BookOpen, Award, Briefcase, Clock, Scale, Upload, FileText, X, Users, Check } from 'lucide-react';
+import { Loader2, BookOpen, Award, Briefcase, Clock, Scale, Upload, FileText, X, Users, Check, Calendar, User } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -69,7 +69,10 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
     yearsAtBar: '',
     motivation: '',
     targetStudents: [] as ('university' | 'ziale')[],
-    selectedCourses: [] as string[],
+    selectedUndergraduateCourses: [] as string[],
+    selectedZialeCourses: [] as string[],
+    dateOfBirth: '',
+    sex: '' as 'male' | 'female' | '',
     agreePrivacyPolicy: false,
     agreeDataConsent: false,
   });
@@ -105,13 +108,76 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
     }
   };
 
-  const toggleCourse = (courseId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedCourses: prev.selectedCourses.includes(courseId)
-        ? prev.selectedCourses.filter(id => id !== courseId)
-        : [...prev.selectedCourses, courseId]
-    }));
+  // Calculate age from date of birth
+  const calculateAge = (dob: string): number | null => {
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const age = calculateAge(formData.dateOfBirth);
+
+  // Course selection with constraints
+  const undergraduateCourses = courses.filter(c => c.institution !== 'ZIALE');
+  const zialeCourses = courses.filter(c => c.institution === 'ZIALE');
+
+  const selectedUndergradCount = formData.selectedUndergraduateCourses.length;
+  const selectedZialeCount = formData.selectedZialeCourses.length;
+  const hasMixedSelection = selectedUndergradCount > 0 && selectedZialeCount > 0;
+
+  // Determine max allowed based on selection pattern
+  const getMaxUndergrad = () => {
+    if (selectedZialeCount > 0) return 2; // Mixed: max 2 undergrad
+    return 3; // Only undergrad: max 3
+  };
+
+  const getMaxZiale = () => {
+    if (selectedUndergradCount > 0) return 1; // Mixed: max 1 ZIALE
+    return 3; // Only ZIALE: max 3
+  };
+
+  const canSelectUndergrad = (courseId: string) => {
+    if (formData.selectedUndergraduateCourses.includes(courseId)) return true;
+    return selectedUndergradCount < getMaxUndergrad();
+  };
+
+  const canSelectZiale = (courseId: string) => {
+    if (formData.selectedZialeCourses.includes(courseId)) return true;
+    return selectedZialeCount < getMaxZiale();
+  };
+
+  const toggleUndergraduateCourse = (courseId: string) => {
+    if (formData.selectedUndergraduateCourses.includes(courseId)) {
+      setFormData(prev => ({
+        ...prev,
+        selectedUndergraduateCourses: prev.selectedUndergraduateCourses.filter(id => id !== courseId)
+      }));
+    } else if (canSelectUndergrad(courseId)) {
+      setFormData(prev => ({
+        ...prev,
+        selectedUndergraduateCourses: [...prev.selectedUndergraduateCourses, courseId]
+      }));
+    }
+  };
+
+  const toggleZialeCourse = (courseId: string) => {
+    if (formData.selectedZialeCourses.includes(courseId)) {
+      setFormData(prev => ({
+        ...prev,
+        selectedZialeCourses: prev.selectedZialeCourses.filter(id => id !== courseId)
+      }));
+    } else if (canSelectZiale(courseId)) {
+      setFormData(prev => ({
+        ...prev,
+        selectedZialeCourses: [...prev.selectedZialeCourses, courseId]
+      }));
+    }
   };
 
   const toggleSubject = (subject: string) => {
@@ -191,8 +257,30 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
       return;
     }
 
+    // Validate DOB
+    if (!formData.dateOfBirth) {
+      toast({
+        title: 'Date of Birth Required',
+        description: 'Please enter your date of birth',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate sex
+    if (!formData.sex) {
+      toast({
+        title: 'Sex Required',
+        description: 'Please select your sex',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const totalSelectedCourses = formData.selectedUndergraduateCourses.length + formData.selectedZialeCourses.length;
+
     // Validate course selection
-    if (formData.selectedCourses.length === 0) {
+    if (totalSelectedCourses === 0) {
       toast({
         title: 'Select Courses',
         description: 'Please select at least one course you want to teach',
@@ -212,7 +300,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
     }
 
     // Validate bar admission for ZIALE tutors
-    if (formData.targetStudents.includes('ziale') && formData.calledToBar !== 'yes') {
+    if ((formData.targetStudents.includes('ziale') || formData.selectedZialeCourses.length > 0) && formData.calledToBar !== 'yes') {
       toast({
         title: 'Bar Admission Required',
         description: 'You must be called to the bar to teach ZIALE students',
@@ -259,6 +347,9 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
       finalSubjects.push(formData.otherSubject.trim());
     }
 
+    // Combine all selected courses
+    const allSelectedCourses = [...formData.selectedUndergraduateCourses, ...formData.selectedZialeCourses];
+
     setLoading(true);
     try {
       // Upload all documents
@@ -300,7 +391,10 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           years_at_bar: formData.calledToBar === 'yes' && formData.yearsAtBar ? parseInt(formData.yearsAtBar) : null,
           motivation: formData.motivation,
           documents: uploadedDocs,
-          target_students: formData.targetStudents
+          target_students: formData.targetStudents,
+          selected_courses: allSelectedCourses,
+          date_of_birth: formData.dateOfBirth,
+          sex: formData.sex
         })
         .select('id')
         .single();
@@ -338,10 +432,6 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
     }
   };
 
-  // Group courses by institution
-  const undergraduateCourses = courses.filter(c => c.institution !== 'ZIALE');
-  const zialeCourses = courses.filter(c => c.institution === 'ZIALE');
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
       <div className="text-center mb-6">
@@ -354,13 +444,63 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
         </p>
       </div>
 
+      {/* Personal Information */}
+      <div className="space-y-4 p-4 rounded-xl bg-secondary/30 border border-border/50">
+        <Label className="flex items-center gap-2 text-sm font-semibold">
+          <User className="w-4 h-4" />
+          Personal Information
+        </Label>
+        
+        {/* Date of Birth */}
+        <div className="space-y-2">
+          <Label htmlFor="dateOfBirth" className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Date of Birth
+          </Label>
+          <Input
+            id="dateOfBirth"
+            type="date"
+            value={formData.dateOfBirth}
+            onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+            max={new Date().toISOString().split('T')[0]}
+            required
+          />
+          {age !== null && (
+            <p className="text-xs text-muted-foreground">
+              Age: {age} years old
+            </p>
+          )}
+        </div>
+
+        {/* Sex */}
+        <div className="space-y-2">
+          <Label>Sex</Label>
+          <RadioGroup
+            value={formData.sex}
+            onValueChange={(value: 'male' | 'female') => setFormData({ ...formData, sex: value })}
+            className="flex gap-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="male" id="sex-male" />
+              <Label htmlFor="sex-male" className="cursor-pointer">Male</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="female" id="sex-female" />
+              <Label htmlFor="sex-female" className="cursor-pointer">Female</Label>
+            </div>
+          </RadioGroup>
+        </div>
+      </div>
+
       {/* Courses to Teach */}
       <div className="space-y-3">
         <Label className="flex items-center gap-2">
           <BookOpen className="w-4 h-4" />
           Select Courses to Teach
         </Label>
-        <p className="text-xs text-muted-foreground">Choose the courses you want to teach (select at least one)</p>
+        <p className="text-xs text-muted-foreground">
+          Choose up to 3 courses from one category, or 1 ZIALE + 2 Undergraduate courses
+        </p>
         
         {loadingCourses ? (
           <div className="flex items-center justify-center py-4">
@@ -368,22 +508,30 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Undergraduate Courses */}
+            {/* Undergraduate Courses Dropdown */}
             {undergraduateCourses.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-foreground">Undergraduate Courses</p>
-                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground">Undergraduate Courses</p>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedUndergradCount}/{getMaxUndergrad()} selected
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 rounded-lg border border-border/50 bg-secondary/20">
                   {undergraduateCourses.map((course) => {
-                    const isSelected = formData.selectedCourses.includes(course.id);
+                    const isSelected = formData.selectedUndergraduateCourses.includes(course.id);
+                    const canSelect = canSelectUndergrad(course.id);
                     return (
                       <div
                         key={course.id}
-                        onClick={() => toggleCourse(course.id)}
+                        onClick={() => canSelect && toggleUndergraduateCourse(course.id)}
                         className={cn(
-                          "p-3 rounded-lg border cursor-pointer transition-all",
+                          "p-3 rounded-lg border transition-all",
                           isSelected 
-                            ? "bg-primary/10 border-primary/50" 
-                            : "bg-secondary/50 border-border/50 hover:border-primary/30"
+                            ? "bg-primary/10 border-primary/50 cursor-pointer" 
+                            : canSelect
+                              ? "bg-secondary/50 border-border/50 hover:border-primary/30 cursor-pointer"
+                              : "bg-muted/30 border-border/30 opacity-50 cursor-not-allowed"
                         )}
                       >
                         <div className="flex items-center gap-3">
@@ -402,23 +550,33 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
               </div>
             )}
 
-            {/* ZIALE Courses */}
+            {/* ZIALE Courses Dropdown */}
             {zialeCourses.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-foreground">ZIALE Courses</p>
-                <p className="text-xs text-muted-foreground">Requires bar admission to teach</p>
-                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">ZIALE Courses</p>
+                    <p className="text-xs text-muted-foreground">Requires bar admission to teach</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedZialeCount}/{getMaxZiale()} selected
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 rounded-lg border border-border/50 bg-secondary/20">
                   {zialeCourses.map((course) => {
-                    const isSelected = formData.selectedCourses.includes(course.id);
+                    const isSelected = formData.selectedZialeCourses.includes(course.id);
+                    const canSelect = canSelectZiale(course.id);
                     return (
                       <div
                         key={course.id}
-                        onClick={() => toggleCourse(course.id)}
+                        onClick={() => canSelect && toggleZialeCourse(course.id)}
                         className={cn(
-                          "p-3 rounded-lg border cursor-pointer transition-all",
+                          "p-3 rounded-lg border transition-all",
                           isSelected 
-                            ? "bg-primary/10 border-primary/50" 
-                            : "bg-secondary/50 border-border/50 hover:border-primary/30"
+                            ? "bg-primary/10 border-primary/50 cursor-pointer" 
+                            : canSelect
+                              ? "bg-secondary/50 border-border/50 hover:border-primary/30 cursor-pointer"
+                              : "bg-muted/30 border-border/30 opacity-50 cursor-not-allowed"
                         )}
                       >
                         <div className="flex items-center gap-3">
@@ -439,9 +597,10 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           </div>
         )}
         
-        {formData.selectedCourses.length > 0 && (
+        {(selectedUndergradCount + selectedZialeCount) > 0 && (
           <p className="text-xs text-primary font-medium">
-            {formData.selectedCourses.length} course(s) selected
+            {selectedUndergradCount + selectedZialeCount} course(s) selected
+            {hasMixedSelection && " (Mixed selection: 1 ZIALE + 2 Undergrad max)"}
           </p>
         )}
       </div>
@@ -491,7 +650,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
             </label>
           </div>
         </div>
-        {formData.targetStudents.includes('ziale') && formData.calledToBar !== 'yes' && (
+        {(formData.targetStudents.includes('ziale') || formData.selectedZialeCourses.length > 0) && formData.calledToBar !== 'yes' && (
           <p className="text-xs text-destructive flex items-center gap-1">
             <Scale className="w-3 h-3" />
             You must be called to the bar to teach ZIALE students
@@ -793,7 +952,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
       <Button 
         type="submit" 
         className="w-full" 
-        disabled={loading || !formData.agreePrivacyPolicy || !formData.agreeDataConsent || formData.selectedCourses.length === 0}
+        disabled={loading || !formData.agreePrivacyPolicy || !formData.agreeDataConsent || (formData.selectedUndergraduateCourses.length + formData.selectedZialeCourses.length) === 0}
       >
         {loading ? (
           <span className="flex items-center gap-2">
