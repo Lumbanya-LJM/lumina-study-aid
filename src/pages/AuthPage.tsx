@@ -36,12 +36,17 @@ const universities = [
   'Other',
 ];
 
-const years = [
+const universityYears = [
   { value: 1, label: 'Year 1' },
   { value: 2, label: 'Year 2' },
   { value: 3, label: 'Year 3' },
   { value: 4, label: 'Year 4' },
   { value: 5, label: 'Year 5 (LLM/Masters)' },
+];
+
+const zialeOptions = [
+  { value: 1, label: 'First Attempt' },
+  { value: 2, label: 'Repeater' },
 ];
 
 interface Course {
@@ -502,7 +507,9 @@ const AuthPage: React.FC = () => {
       </div>
 
       <div>
-        <label className="text-sm font-medium text-foreground mb-2 block">Year of Study</label>
+        <label className="text-sm font-medium text-foreground mb-2 block">
+          {formData.university === 'Zambia Institute of Advanced Legal Education (ZIALE)' ? 'Attempt Status' : 'Year of Study'}
+        </label>
         <div className="relative">
           <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <select
@@ -510,8 +517,8 @@ const AuthPage: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, yearOfStudy: parseInt(e.target.value) })}
             className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground appearance-none"
           >
-            {years.map((year) => (
-              <option key={year.value} value={year.value}>{year.label}</option>
+            {(formData.university === 'Zambia Institute of Advanced Legal Education (ZIALE)' ? zialeOptions : universityYears).map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
         </div>
