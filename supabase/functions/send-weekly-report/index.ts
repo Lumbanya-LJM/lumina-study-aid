@@ -245,8 +245,10 @@ const handler = async (req: Request): Promise<Response> => {
           weekEndStr
         );
 
+        const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
+        
         await resend.emails.send({
-          from: "LMV Academy <noreply@lmvacademy.com>",
+          from: `LMV Academy <${fromEmail}>`,
           to: [partner.partner_email],
           subject: `📊 Weekly Progress Report for ${studentName}`,
           html: emailHtml,
