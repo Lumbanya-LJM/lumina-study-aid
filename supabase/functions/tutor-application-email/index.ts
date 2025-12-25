@@ -15,6 +15,7 @@ interface EmailRequest {
   adminEmail?: string;
   rejectionReason?: string;
   temporaryPassword?: string;
+  applicationId?: string;
 }
 
 const baseStyles = `
@@ -40,7 +41,7 @@ const baseStyles = `
   .credentials p { margin: 8px 0; color: #4ecdc4; }
 `;
 
-const getSubmittedEmail = (applicantName: string) => `
+const getSubmittedEmail = (applicantName: string, applicationId?: string) => `
   <!DOCTYPE html>
   <html>
   <head><style>${baseStyles}</style></head>
@@ -54,6 +55,13 @@ const getSubmittedEmail = (applicantName: string) => `
         <h1>Application Received! 📋</h1>
         <p>Dear ${applicantName},</p>
         <p>Thank you for applying to become a tutor at LMV Academy! We have received your application and our team will review it shortly.</p>
+        ${applicationId ? `
+          <div class="credentials">
+            <p style="font-weight: bold; margin-bottom: 10px;">Your Application ID:</p>
+            <p style="font-size: 24px; letter-spacing: 2px; text-align: center;">${applicationId}</p>
+          </div>
+          <p style="font-size: 12px; color: #888;">Please keep this ID for your records. You may reference it in future communications.</p>
+        ` : ''}
         <p>You will be notified via email and push notification once a decision has been made.</p>
         <div class="info-box">
           <p style="color: #ffffff; font-weight: bold; margin-bottom: 15px;">What to expect:</p>
@@ -194,17 +202,17 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { type, applicantName, applicantEmail, adminEmail, rejectionReason, temporaryPassword }: EmailRequest = await req.json();
+    const { type, applicantName, applicantEmail, adminEmail, rejectionReason, temporaryPassword, applicationId }: EmailRequest = await req.json();
     
-    console.log(`Processing ${type} email for ${applicantEmail}`);
+    console.log(`Processing ${type} email for ${applicantEmail}${applicationId ? ` (Application ID: ${applicationId})` : ''}`);
 
     if (type === 'submitted') {
       // Email to applicant
       await resend.emails.send({
         from: "LMV Academy <noreply@lmvacademy.com>",
         to: [applicantEmail],
-        subject: "Tutor Application Received - LMV Academy",
-        html: getSubmittedEmail(applicantName),
+        subject: `Tutor Application Received${applicationId ? ` - ID: ${applicationId}` : ''} - LMV Academy`,
+        html: getSubmittedEmail(applicantName, applicationId),
       });
 
       // Email to admin if provided
@@ -212,7 +220,7 @@ const handler = async (req: Request): Promise<Response> => {
         await resend.emails.send({
           from: "LMV Academy <noreply@lmvacademy.com>",
           to: [adminEmail],
-          subject: `New Tutor Application: ${applicantName}`,
+          subject: `New Tutor Application: ${applicantName}${applicationId ? ` (ID: ${applicationId})` : ''}`,
           html: getAdminNotificationEmail(applicantName, applicantEmail),
         });
       }

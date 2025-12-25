@@ -194,9 +194,47 @@ const AuthPage: React.FC = () => {
         });
         return;
       }
-      // For tutors, skip profile step and go directly to courses
+      // For tutors, skip profile and courses step, go directly to account creation then application
       if (selectedRole === 'tutor') {
-        setStep('courses');
+        // Create the account and go to tutor application
+        setLoading(true);
+        try {
+          const result = await signUp(formData.email, formData.password, formData.fullName);
+          
+          if (result.error) {
+            if (result.error.message.includes('already registered')) {
+              toast({
+                variant: "destructive",
+                title: "Account Exists",
+                description: "This email is already registered. Please log in instead.",
+              });
+              setStep('credentials');
+              setIsLogin(true);
+            } else {
+              toast({
+                variant: "destructive",
+                title: "Sign Up Failed",
+                description: result.error.message,
+              });
+            }
+          } else {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            
+            if (currentUser) {
+              setNewUserId(currentUser.id);
+              localStorage.removeItem('luminary_tutor_onboarding_complete');
+              setStep('tutor-application');
+            }
+          }
+        } catch (error) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Something went wrong. Please try again.",
+          });
+        } finally {
+          setLoading(false);
+        }
       } else {
         setStep('profile');
       }
@@ -506,13 +544,9 @@ const AuthPage: React.FC = () => {
     return (
       <form onSubmit={handleCoursesSubmit} className="space-y-4">
         <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-foreground">
-            {selectedRole === 'tutor' ? 'Select Courses to Tutor' : 'Select Your Courses'}
-          </h2>
+          <h2 className="text-xl font-bold text-foreground">Select Your Courses</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {selectedRole === 'tutor' 
-              ? 'Choose the courses you want to teach (select at least one)'
-              : "Choose the courses you'd like to enroll in (optional)"}
+            Choose the courses you'd like to enroll in (optional)
           </p>
         </div>
 
@@ -604,16 +638,13 @@ const AuthPage: React.FC = () => {
 
         <button
           type="submit"
-          disabled={loading || !canSubmit || (selectedRole === 'tutor' && formData.selectedCourses.length === 0)}
+          disabled={loading || !canSubmit}
           className={cn(
             "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
-            (loading || !canSubmit || (selectedRole === 'tutor' && formData.selectedCourses.length === 0)) ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
+            (loading || !canSubmit) ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
           )}
         >
-          {loading ? 'Creating Account...' : 
-            selectedRole === 'tutor' 
-              ? 'Continue to Application' 
-              : (formData.selectedCourses.length > 0 ? 'Create Account & Enroll' : 'Create Account')}
+          {loading ? 'Creating Account...' : (formData.selectedCourses.length > 0 ? 'Create Account & Enroll' : 'Create Account')}
         </button>
 
         {!canSubmit && (
@@ -622,15 +653,9 @@ const AuthPage: React.FC = () => {
           </p>
         )}
 
-        {selectedRole === 'tutor' && formData.selectedCourses.length === 0 && canSubmit && (
-          <p className="text-xs text-center text-muted-foreground">
-            Please select at least one course to tutor
-          </p>
-        )}
-
         <button
           type="button"
-          onClick={() => setStep(selectedRole === 'tutor' ? 'credentials' : 'profile')}
+          onClick={() => setStep('profile')}
           className="w-full py-3 text-primary font-medium hover:underline"
         >
           Go Back
@@ -741,7 +766,7 @@ const AuthPage: React.FC = () => {
         {!isLogin && (
           <div className="flex items-center justify-center gap-2 mt-4">
             {(selectedRole === 'tutor' 
-              ? ['credentials', 'courses', 'tutor-application'] 
+              ? ['credentials', 'tutor-application'] 
               : ['credentials', 'profile', 'courses']
             ).map((s, idx, arr) => (
               <div
