@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Clock, Video, Link as LinkIcon, Play, Loader2 } from 'lucide-react';
-
+import { fromZonedTime } from 'date-fns-tz';
 interface ScheduleClassFormProps {
   courseId: string;
   tutorId: string;
@@ -49,13 +49,16 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
     setLoading(true);
     try {
-      // Parse date and time in Zambia timezone (CAT - UTC+2)
+      // Parse date and time as Zambia timezone (CAT - Africa/Lusaka, UTC+2)
+      // The user inputs the time they want in Zambia, so we convert that to UTC for storage
       const dateTimeStr = `${formData.classDate}T${formData.classTime}:00`;
-      const localDate = new Date(dateTimeStr);
-      const zambiaOffset = 2 * 60; // minutes
-      const localOffset = localDate.getTimezoneOffset();
-      const classDateTime = new Date(localDate.getTime() + (localOffset + zambiaOffset) * 60 * 1000);
-
+      const classDateTime = fromZonedTime(dateTimeStr, 'Africa/Lusaka');
+      
+      console.log('Scheduling class:', { 
+        inputDateTime: dateTimeStr, 
+        utcDateTime: classDateTime.toISOString(),
+        zambiaTime: classDateTime.toLocaleString('en-ZM', { timeZone: 'Africa/Lusaka' })
+      });
       // Auto-generate Zoom meeting link if not provided
       let zoomUrl = formData.classLink.trim();
       let meetingId = null;

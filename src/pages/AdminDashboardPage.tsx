@@ -4,6 +4,9 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { AdminManagement } from '@/components/admin/AdminManagement';
+import CourseManagement from '@/components/admin/CourseManagement';
+import TutorPerformance from '@/components/admin/TutorPerformance';
+import StudentManagement from '@/components/admin/StudentManagement';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { 
   Shield, Users, BookOpen, FileText, GraduationCap, 
@@ -14,6 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 interface DashboardStats {
@@ -34,6 +38,7 @@ interface RecentActivity {
 
 const AdminDashboardPage: React.FC = () => {
   const { isAdmin, loading: adminLoading } = useAdmin();
+  const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalCourses: 0,
@@ -263,7 +268,7 @@ const AdminDashboardPage: React.FC = () => {
 
   return (
     <MobileLayout>
-      <div className="p-5 space-y-6 pb-24">
+      <div className="p-5 space-y-4 pb-24">
         {/* Back Button and Role Switcher */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -274,9 +279,10 @@ const AdminDashboardPage: React.FC = () => {
           </div>
           <RoleSwitcher />
         </div>
+
         {/* Header Banner */}
-        <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-background rounded-2xl p-5 border border-primary/20">
-          <div className="flex items-center gap-3 mb-2">
+        <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-background rounded-2xl p-4 border border-primary/20">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
               <Shield className="w-5 h-5 text-primary" />
             </div>
@@ -287,115 +293,205 @@ const AdminDashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Overview
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {loading ? (
-              <>
-                {[1, 2, 3, 4, 5, 6].map(i => (
-                  <Skeleton key={i} className="h-24 rounded-xl" />
-                ))}
-              </>
-            ) : (
-              statCards.map((stat, idx) => (
-                <Card 
-                  key={idx} 
-                  className={cn(
-                    "border-border/50",
-                    stat.highlight && "border-orange-500/50 bg-orange-500/5"
-                  )}
-                >
-                  <CardContent className="p-4">
-                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-2", stat.bgColor)}>
-                      <stat.icon className={cn("w-4 h-4", stat.color)} />
-                    </div>
-                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </div>
+        {/* Tabs Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-5 h-auto">
+            <TabsTrigger value="overview" className="text-xs py-2 px-1">
+              <BarChart3 className="w-4 h-4 md:mr-1" />
+              <span className="hidden md:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="courses" className="text-xs py-2 px-1">
+              <BookOpen className="w-4 h-4 md:mr-1" />
+              <span className="hidden md:inline">Courses</span>
+            </TabsTrigger>
+            <TabsTrigger value="tutors" className="text-xs py-2 px-1">
+              <UserCheck className="w-4 h-4 md:mr-1" />
+              <span className="hidden md:inline">Tutors</span>
+            </TabsTrigger>
+            <TabsTrigger value="students" className="text-xs py-2 px-1">
+              <Users className="w-4 h-4 md:mr-1" />
+              <span className="hidden md:inline">Students</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs py-2 px-1">
+              <Settings className="w-4 h-4 md:mr-1" />
+              <span className="hidden md:inline">Settings</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Quick Actions */}
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Quick Actions
-          </h2>
-          <div className="space-y-2">
-            {quickActions.map((action, idx) => (
-              <Link key={idx} to={action.path}>
-                <Card className="border-border/50 hover:border-primary/30 transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <action.icon className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-foreground">{action.label}</p>
-                          {action.badge && (
-                            <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
-                              {action.badge}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">{action.description}</p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Recent Activity
-          </h2>
-          <Card className="border-border/50">
-            <CardContent className="p-4">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-4 mt-4">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-3">
               {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map(i => (
-                    <Skeleton key={i} className="h-12" />
+                <>
+                  {[1, 2, 3, 4, 5, 6].map(i => (
+                    <Skeleton key={i} className="h-24 rounded-xl" />
                   ))}
-                </div>
-              ) : recentActivities.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">
-                  No recent activity
-                </p>
+                </>
               ) : (
-                <div className="space-y-3">
-                  {recentActivities.map((activity) => {
-                    const Icon = getActivityIcon(activity.type);
-                    return (
-                      <div key={activity.id} className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                          <Icon className="w-4 h-4 text-muted-foreground" />
+                statCards.map((stat, idx) => (
+                  <Card 
+                    key={idx} 
+                    className={cn(
+                      "border-border/50",
+                      stat.highlight && "border-orange-500/50 bg-orange-500/5"
+                    )}
+                  >
+                    <CardContent className="p-4">
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-2", stat.bgColor)}>
+                        <stat.icon className={cn("w-4 h-4", stat.color)} />
+                      </div>
+                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="space-y-2">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Quick Actions
+              </h2>
+              {quickActions.map((action, idx) => (
+                <Link key={idx} to={action.path}>
+                  <Card className="border-border/50 hover:border-primary/30 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                          <action.icon className="w-5 h-5 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground truncate">{activity.description}</p>
-                          <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.timestamp)}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-foreground">{action.label}</p>
+                            {action.badge && (
+                              <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                                {action.badge}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">{action.description}</p>
                         </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
 
-        {/* Admin Management */}
-        <AdminManagement />
+            {/* Recent Activity */}
+            <Card className="border-border/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold">Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map(i => (
+                      <Skeleton key={i} className="h-12" />
+                    ))}
+                  </div>
+                ) : recentActivities.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">
+                    No recent activity
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {recentActivities.map((activity) => {
+                      const Icon = getActivityIcon(activity.type);
+                      return (
+                        <div key={activity.id} className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                            <Icon className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-foreground truncate">{activity.description}</p>
+                            <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.timestamp)}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Courses Tab */}
+          <TabsContent value="courses" className="mt-4">
+            <CourseManagement />
+          </TabsContent>
+
+          {/* Tutors Tab */}
+          <TabsContent value="tutors" className="space-y-4 mt-4">
+            <TutorPerformance />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <UserCheck className="w-5 h-5" />
+                  Tutor Applications
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Link to="/admin/tutors">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-orange-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Review Applications</p>
+                        <p className="text-sm text-muted-foreground">
+                          {stats.pendingApplications} pending
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                </Link>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Students Tab */}
+          <TabsContent value="students" className="mt-4">
+            <StudentManagement />
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-4 mt-4">
+            <AdminManagement />
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="w-5 h-5" />
+                  Content Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Link to="/admin/content">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-cyan-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Library Content</p>
+                        <p className="text-sm text-muted-foreground">
+                          Manage cases, past papers, and materials
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                </Link>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </MobileLayout>
   );
