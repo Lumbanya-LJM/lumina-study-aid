@@ -183,30 +183,46 @@ export const EditClassModal: React.FC<EditClassModalProps> = ({
       }
 
       // Send email notifications via edge function
-      await supabase.functions.invoke('send-class-update-notification', {
-        body: {
-          classId,
-          courseId,
-          classTitle: updatedTitle,
-          scheduledAt,
-          meetingLink,
-          updateType: 'updated'
+      try {
+        const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-class-update-notification', {
+          body: {
+            classId,
+            courseId,
+            classTitle: updatedTitle,
+            scheduledAt,
+            meetingLink,
+            updateType: 'updated'
+          }
+        });
+        if (emailError) {
+          console.error('Email notification error:', emailError);
+        } else {
+          console.log('Email notification result:', emailResult);
         }
-      });
+      } catch (e) {
+        console.error('Failed to send email notifications:', e);
+      }
 
       // Send push notifications
-      await supabase.functions.invoke('send-push-notification', {
-        body: {
-          userIds,
-          title: '📝 Class Updated',
-          body: `${updatedTitle} has been updated. Check the app for details.`,
-          icon: '/pwa-192x192.png',
-          data: { 
-            type: 'class_update',
-            classId,
+      try {
+        const { error: pushError } = await supabase.functions.invoke('send-push-notification', {
+          body: {
+            userIds,
+            payload: {
+              title: '📝 Class Updated',
+              body: `${updatedTitle} has been updated. Check the app for details.`,
+              icon: '/pwa-192x192.png',
+              data: { 
+                type: 'class_update',
+                classId,
+              },
+            },
           },
-        },
-      });
+        });
+        if (pushError) console.error('Push notification error:', pushError);
+      } catch (e) {
+        console.error('Failed to send push notifications:', e);
+      }
 
     } catch (error) {
       console.error('Error notifying students:', error);
