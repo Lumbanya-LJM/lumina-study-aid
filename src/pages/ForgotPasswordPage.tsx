@@ -5,6 +5,9 @@ import { LMVLogo } from '@/components/ui/lmv-logo';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { z } from 'zod';
+
+const emailSchema = z.string().email("Please enter a valid email address");
 
 const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,30 +19,42 @@ const ForgotPasswordPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate email
+    const validation = emailSchema.safeParse(email.trim());
+    if (!validation.success) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Email",
+        description: validation.error.issues[0].message,
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Use custom domain for password reset
-      const redirectUrl = 'https://app.lmvacademy.com/reset-password';
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
+      // Call custom password reset edge function
+      const { data, error } = await supabase.functions.invoke('request-password-reset', {
+        body: { email: email.trim().toLowerCase() },
       });
 
       if (error) {
+        console.error('Password reset error:', error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: error.message,
+          description: "Something went wrong. Please try again.",
         });
       } else {
         setEmailSent(true);
         toast({
           title: "Email Sent!",
-          description: "Check your inbox for the password reset link.",
+          description: "If an account exists with this email, you'll receive a reset link.",
         });
       }
     } catch (error) {
+      console.error('Password reset error:', error);
       toast({
         variant: "destructive",
         title: "Error",
