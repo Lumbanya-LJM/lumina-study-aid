@@ -174,7 +174,7 @@ serve(async (req: Request) => {
     const template = getEmailTemplate(type, token, userName);
 
     const emailResponse = await resend.emails.send({
-      from: "LMV Academy <noreply@lmvacademy.com>",
+      from: "LMV Academy <onboarding@resend.dev>",
       to: [email],
       subject: template.subject,
       html: template.html,

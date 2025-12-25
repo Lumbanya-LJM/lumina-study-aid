@@ -152,7 +152,7 @@ serve(async (req: Request) => {
     const emailHtml = getEmailTemplate(resetUrl, userName);
 
     const emailResponse = await resend.emails.send({
-      from: "LMV Academy <noreply@lmvacademy.com>",
+      from: "LMV Academy <onboarding@resend.dev>",
       to: [email],
       subject: "Reset Your Password — LMV Academy",
       html: emailHtml,
