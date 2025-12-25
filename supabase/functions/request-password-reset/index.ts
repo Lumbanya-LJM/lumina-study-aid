@@ -151,8 +151,10 @@ serve(async (req: Request) => {
     // Send email via Resend
     const emailHtml = getEmailTemplate(resetUrl, userName);
 
+    const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
+    
     const emailResponse = await resend.emails.send({
-      from: "LMV Academy <onboarding@resend.dev>",
+      from: `LMV Academy <${fromEmail}>`,
       to: [email],
       subject: "Reset Your Password — LMV Academy",
       html: emailHtml,

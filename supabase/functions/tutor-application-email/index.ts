@@ -205,11 +205,13 @@ const handler = async (req: Request): Promise<Response> => {
     const { type, applicantName, applicantEmail, adminEmail, rejectionReason, temporaryPassword, applicationId }: EmailRequest = await req.json();
     
     console.log(`Processing ${type} email for ${applicantEmail}${applicationId ? ` (Application ID: ${applicationId})` : ''}`);
+    
+    const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
 
     if (type === 'submitted') {
       // Email to applicant
       await resend.emails.send({
-        from: "LMV Academy <onboarding@resend.dev>",
+        from: `LMV Academy <${fromEmail}>`,
         to: [applicantEmail],
         subject: `Tutor Application Received${applicationId ? ` - ID: ${applicationId}` : ''} - LMV Academy`,
         html: getSubmittedEmail(applicantName, applicationId),
@@ -218,7 +220,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Email to admin if provided
       if (adminEmail) {
         await resend.emails.send({
-          from: "LMV Academy <onboarding@resend.dev>",
+          from: `LMV Academy <${fromEmail}>`,
           to: [adminEmail],
           subject: `New Tutor Application: ${applicantName}${applicationId ? ` (ID: ${applicationId})` : ''}`,
           html: getAdminNotificationEmail(applicantName, applicantEmail),
@@ -226,14 +228,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     } else if (type === 'approved') {
       await resend.emails.send({
-        from: "LMV Academy <onboarding@resend.dev>",
+        from: `LMV Academy <${fromEmail}>`,
         to: [applicantEmail],
         subject: "🎉 Congratulations! Your Tutor Application is Approved - LMV Academy",
         html: getApprovedEmail(applicantName, applicantEmail, temporaryPassword),
       });
     } else if (type === 'rejected') {
       await resend.emails.send({
-        from: "LMV Academy <onboarding@resend.dev>",
+        from: `LMV Academy <${fromEmail}>`,
         to: [applicantEmail],
         subject: "Tutor Application Update - LMV Academy",
         html: getRejectedEmail(applicantName, rejectionReason),
