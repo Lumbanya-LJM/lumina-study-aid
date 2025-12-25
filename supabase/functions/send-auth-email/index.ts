@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,13 +10,13 @@ const getEmailTemplate = (type: string, confirmationUrl: string, userName: strin
   const baseStyles = `
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 40px 20px; }
     .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; }
+    .header { background: linear-gradient(135deg, #2A5A6A 0%, #1a3d47 100%); padding: 40px 30px; text-align: center; }
     .logo { font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: 2px; margin-bottom: 8px; }
     .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; }
     .content { padding: 40px 30px; }
     h1 { color: #ffffff; font-size: 24px; margin: 0 0 20px 0; }
     p { color: #b8b8b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; }
-    .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+    .button { display: inline-block; background: linear-gradient(135deg, #2A5A6A 0%, #3d7a8a 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
     .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
     .footer p { color: #666; font-size: 12px; margin: 0; }
     .warning { background: rgba(255, 193, 7, 0.1); border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }
@@ -173,22 +171,35 @@ serve(async (req: Request) => {
     const userName = user_metadata?.full_name || "";
     const template = getEmailTemplate(type, token, userName);
 
-    const { error: emailError } = await resend.emails.send({
-      from: "LMV Academy <onboarding@resend.dev>",
-      to: [email],
-      subject: template.subject,
-      html: template.html,
+    const client = new SMTPClient({
+      connection: {
+        hostname: Deno.env.get("SMTP_HOST")!,
+        port: 465,
+        tls: true,
+        auth: {
+          username: Deno.env.get("SMTP_USER")!,
+          password: Deno.env.get("SMTP_PASS")!,
+        },
+      },
     });
 
-    if (emailError) {
-      console.error("Error sending email via Resend:", emailError);
-      return new Response(JSON.stringify({ error: emailError.message }), { 
+    try {
+      await client.send({
+        from: Deno.env.get("SMTP_FROM")!,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+      });
+      console.log(`${type} email sent successfully to: ${email}`);
+      try { client.close(); } catch (_) {}
+    } catch (smtpError: any) {
+      console.error("SMTP Error:", smtpError);
+      try { client.close(); } catch (_) {}
+      return new Response(JSON.stringify({ error: "Failed to send email" }), { 
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders }
       });
     }
-
-    console.log(`${type} email sent successfully to: ${email}`);
 
     return new Response(JSON.stringify({ success: true }), { 
       status: 200,
