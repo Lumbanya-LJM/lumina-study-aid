@@ -1,6 +1,8 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { Resend } from "https://esm.sh/resend@2.0.0";
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -151,32 +153,23 @@ serve(async (req: Request) => {
 
     const userName = profile?.full_name || "";
 
-    // Send email via Zoho SMTP
-    const smtpPort = Number(Deno.env.get("SMTP_PORT") || "465");
-    const client = new SMTPClient({
-      connection: {
-        hostname: Deno.env.get("SMTP_HOST")!,
-        port: smtpPort,
-        // For port 465, use tls: true (implicit TLS/SSL)
-        // For port 587, use tls: false with starttls
-        tls: smtpPort === 465,
-        auth: {
-          username: Deno.env.get("SMTP_USER")!,
-          password: Deno.env.get("SMTP_PASS")!,
-        },
-      },
-    });
-
+    // Send email via Resend
     const template = getEmailTemplate(resetUrl, userName);
 
-    await client.send({
-      from: Deno.env.get("SMTP_FROM")!,
-      to: email,
+    const { error: emailError } = await resend.emails.send({
+      from: "LMV Academy <onboarding@resend.dev>",
+      to: [email],
       subject: template.subject,
       html: template.html,
     });
 
-    await client.close();
+    if (emailError) {
+      console.error("Error sending email via Resend:", emailError);
+      return new Response(
+        JSON.stringify({ error: "Failed to send email" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     console.log(`Password reset email sent to: ${email}`);
 
