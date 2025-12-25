@@ -1,5 +1,4 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
 import {
   BarChart3,
   BookOpen,
@@ -9,11 +8,10 @@ import {
   Settings,
   FileText,
   Activity,
-  GraduationCap,
   Shield,
-  X,
   Menu,
 } from 'lucide-react';
+import { SidebarUserHeader } from '@/components/layout/SidebarUserHeader';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -96,18 +94,12 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-border/50">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-bold text-foreground">Admin Panel</h2>
-            <p className="text-xs text-muted-foreground">LMV Academy</p>
-          </div>
-        </div>
-      </div>
+      {/* User Header */}
+      <SidebarUserHeader
+        portalIcon={<Shield className="w-3.5 h-3.5 text-primary" />}
+        portalName="Admin Panel"
+        portalSubtitle="System Administrator"
+      />
 
       {/* Navigation */}
       <ScrollArea className="flex-1 py-2">
@@ -151,14 +143,6 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           })}
         </nav>
       </ScrollArea>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-border/50">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <GraduationCap className="w-4 h-4" />
-          <span>Luminary Academy Admin</span>
-        </div>
-      </div>
     </div>
   );
 };
