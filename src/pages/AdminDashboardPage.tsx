@@ -132,19 +132,21 @@ const AdminDashboardPage: React.FC = () => {
   if (adminLoading) {
     return (
       <MobileLayout>
-        <div className="p-5 space-y-4">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
           <div className="flex items-center gap-2 mb-4">
             <Link to="/profile" className="text-muted-foreground hover:text-foreground">
               <ChevronRight className="w-5 h-5 rotate-180" />
             </Link>
-            <h1 className="text-lg font-bold">Admin Dashboard</h1>
+            <h1 className="text-lg sm:text-xl font-bold">Admin Dashboard</h1>
           </div>
-          <Skeleton className="h-32 w-full" />
-          <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-24 sm:h-32 w-full rounded-2xl" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             <Skeleton className="h-24" />
             <Skeleton className="h-24" />
             <Skeleton className="h-24" />
             <Skeleton className="h-24" />
+            <Skeleton className="h-24 hidden sm:block" />
+            <Skeleton className="h-24 hidden sm:block" />
           </div>
         </div>
       </MobileLayout>
@@ -269,26 +271,26 @@ const AdminDashboardPage: React.FC = () => {
 
   return (
     <MobileLayout>
-      <div className="p-5 space-y-4 pb-24">
+      <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 pb-24 max-w-7xl mx-auto">
         {/* Back Button and Role Switcher */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link to="/profile" className="text-muted-foreground hover:text-foreground">
               <ChevronRight className="w-5 h-5 rotate-180" />
             </Link>
-            <h1 className="text-lg font-bold">Admin Dashboard</h1>
+            <h1 className="text-lg sm:text-xl font-bold">Admin Dashboard</h1>
           </div>
           <RoleSwitcher />
         </div>
 
         {/* Header Banner */}
-        <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-background rounded-2xl p-4 border border-primary/20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-primary" />
+        <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-background rounded-2xl p-4 sm:p-6 border border-primary/20">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center">
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">Admin Panel</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-foreground">Admin Panel</h1>
               <p className="text-sm text-muted-foreground">LMV Academy Management</p>
             </div>
           </div>
@@ -296,37 +298,39 @@ const AdminDashboardPage: React.FC = () => {
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 h-auto">
-            <TabsTrigger value="overview" className="text-xs py-2 px-1">
-              <BarChart3 className="w-4 h-4 md:mr-1" />
-              <span className="hidden md:inline">Overview</span>
-            </TabsTrigger>
-            <TabsTrigger value="courses" className="text-xs py-2 px-1">
-              <BookOpen className="w-4 h-4 md:mr-1" />
-              <span className="hidden md:inline">Courses</span>
-            </TabsTrigger>
-            <TabsTrigger value="enrollments" className="text-xs py-2 px-1">
-              <ClipboardList className="w-4 h-4 md:mr-1" />
-              <span className="hidden md:inline">Enrollments</span>
-            </TabsTrigger>
-            <TabsTrigger value="tutors" className="text-xs py-2 px-1">
-              <UserCheck className="w-4 h-4 md:mr-1" />
-              <span className="hidden md:inline">Tutors</span>
-            </TabsTrigger>
-            <TabsTrigger value="students" className="text-xs py-2 px-1">
-              <Users className="w-4 h-4 md:mr-1" />
-              <span className="hidden md:inline">Students</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="text-xs py-2 px-1">
-              <Settings className="w-4 h-4 md:mr-1" />
-              <span className="hidden md:inline">Settings</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-5 px-5">
+            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-6 h-auto gap-1 p-1">
+              <TabsTrigger value="overview" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
+                <BarChart3 className="w-4 h-4 shrink-0" />
+                <span className="sm:hidden lg:inline">Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="courses" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
+                <BookOpen className="w-4 h-4 shrink-0" />
+                <span className="sm:hidden lg:inline">Courses</span>
+              </TabsTrigger>
+              <TabsTrigger value="enrollments" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
+                <ClipboardList className="w-4 h-4 shrink-0" />
+                <span className="sm:hidden lg:inline">Enrollments</span>
+              </TabsTrigger>
+              <TabsTrigger value="tutors" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
+                <UserCheck className="w-4 h-4 shrink-0" />
+                <span className="sm:hidden lg:inline">Tutors</span>
+              </TabsTrigger>
+              <TabsTrigger value="students" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
+                <Users className="w-4 h-4 shrink-0" />
+                <span className="sm:hidden lg:inline">Students</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
+                <Settings className="w-4 h-4 shrink-0" />
+                <span className="sm:hidden lg:inline">Settings</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4 mt-4">
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {loading ? (
                 <>
                   {[1, 2, 3, 4, 5, 6].map(i => (
@@ -355,35 +359,37 @@ const AdminDashboardPage: React.FC = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Quick Actions
               </h2>
-              {quickActions.map((action, idx) => (
-                <Link key={idx} to={action.path}>
-                  <Card className="border-border/50 hover:border-primary/30 transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                          <action.icon className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-foreground">{action.label}</p>
-                            {action.badge && (
-                              <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
-                                {action.badge}
-                              </Badge>
-                            )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {quickActions.map((action, idx) => (
+                  <Link key={idx} to={action.path}>
+                    <Card className="border-border/50 hover:border-primary/30 transition-colors h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                            <action.icon className="w-5 h-5 text-primary" />
                           </div>
-                          <p className="text-sm text-muted-foreground truncate">{action.description}</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-foreground text-sm">{action.label}</p>
+                              {action.badge && (
+                                <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                                  {action.badge}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">{action.description}</p>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0 sm:hidden" />
                         </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
             </div>
 
             {/* Recent Activity */}
