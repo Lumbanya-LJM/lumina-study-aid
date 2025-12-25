@@ -126,32 +126,51 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
       if (enrollments && enrollments.length > 0) {
         const userIds = enrollments.map(e => e.user_id);
+        console.log(`Sending notifications to ${userIds.length} enrolled students`);
         
         // Send push notifications immediately
-        await supabase.functions.invoke('send-push-notification', {
-          body: {
-            userIds,
-            title: '📅 New Class Scheduled!',
-            body: `${formData.title.trim()} has been scheduled. Check the app for details.`,
-            icon: '/pwa-192x192.png',
-            data: { 
-              type: 'class_scheduled',
-              classId: liveClassData?.id,
+        try {
+          const { error: pushError } = await supabase.functions.invoke('send-push-notification', {
+            body: {
+              userIds,
+              payload: {
+                title: '📅 New Class Scheduled!',
+                body: `${formData.title.trim()} has been scheduled. Check the app for details.`,
+                icon: '/pwa-192x192.png',
+                data: { 
+                  type: 'class_scheduled',
+                  classId: liveClassData?.id,
+                },
+              },
             },
-          },
-        });
+          });
+          if (pushError) console.error('Push notification error:', pushError);
+        } catch (e) {
+          console.error('Failed to send push notifications:', e);
+        }
 
         // Send email notifications via edge function
-        await supabase.functions.invoke('send-class-update-notification', {
-          body: {
-            classId: liveClassData?.id,
-            courseId,
-            classTitle: formData.title.trim(),
-            scheduledAt: classDateTime.toISOString(),
-            meetingLink: zoomUrl || null,
-            updateType: 'scheduled'
+        try {
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-class-update-notification', {
+            body: {
+              classId: liveClassData?.id,
+              courseId,
+              classTitle: formData.title.trim(),
+              scheduledAt: classDateTime.toISOString(),
+              meetingLink: zoomUrl || null,
+              updateType: 'scheduled'
+            }
+          });
+          if (emailError) {
+            console.error('Email notification error:', emailError);
+          } else {
+            console.log('Email notification result:', emailResult);
           }
-        });
+        } catch (e) {
+          console.error('Failed to send email notifications:', e);
+        }
+      } else {
+        console.log('No enrolled students found to notify');
       }
 
       toast({
