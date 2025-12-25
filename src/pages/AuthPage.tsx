@@ -103,23 +103,31 @@ const AuthPage: React.FC = () => {
     return '/home';
   };
 
-  // Load available courses when reaching the courses step
+  // Load available courses when reaching the courses step (filtered by institution)
   useEffect(() => {
-    if (step === 'courses' && courses.length === 0) {
+    if (step === 'courses') {
       loadCourses();
     }
-  }, [step]);
+  }, [step, formData.university]);
 
   const loadCourses = async () => {
     setLoadingCourses(true);
     try {
+      // Determine which institution to filter by
+      const isZiale = formData.university === 'Zambia Institute of Advanced Legal Education (ZIALE)';
+      const institutionFilter = isZiale ? 'ZIALE' : 'University';
+      
       const { data, error } = await supabase
         .from('academy_courses')
         .select('id, name, description, institution')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('institution', institutionFilter)
+        .order('name');
 
       if (error) throw error;
       setCourses(data || []);
+      // Clear previously selected courses when institution changes
+      setFormData(prev => ({ ...prev, selectedCourses: [] }));
     } catch (error) {
       console.error('Error loading courses:', error);
     } finally {
