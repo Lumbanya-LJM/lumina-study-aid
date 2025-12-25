@@ -24,6 +24,9 @@ import {
   Search,
   Globe,
   Scale,
+  Paperclip,
+  Image,
+  X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -33,11 +36,19 @@ import { useToast } from '@/hooks/use-toast';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { haptics } from '@/lib/haptics';
 
+interface Attachment {
+  id: string;
+  file: File;
+  preview?: string;
+  type: 'image' | 'file';
+}
+
 interface Message {
   id: string;
   content: string;
   sender: 'user' | 'lumina';
   timestamp: Date;
+  attachments?: { name: string; type: string; url?: string }[];
 }
 
 interface Conversation {
@@ -60,12 +71,14 @@ const ChatPage: React.FC = () => {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   
   // Conversation management
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -309,6 +322,63 @@ const ChatPage: React.FC = () => {
     }
   };
 
+  // File handling functions
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newAttachments: Attachment[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const isImage = file.type.startsWith('image/');
+      
+      // Limit file size to 10MB
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          variant: 'destructive',
+          title: 'File too large',
+          description: `${file.name} exceeds 10MB limit.`,
+        });
+        continue;
+      }
+
+      const attachment: Attachment = {
+        id: Date.now().toString() + i,
+        file,
+        type: isImage ? 'image' : 'file',
+      };
+
+      // Create preview for images
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setAttachments(prev => 
+            prev.map(a => 
+              a.id === attachment.id 
+                ? { ...a, preview: e.target?.result as string }
+                : a
+            )
+          );
+        };
+        reader.readAsDataURL(file);
+      }
+
+      newAttachments.push(attachment);
+    }
+
+    setAttachments(prev => [...prev, ...newAttachments]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    haptics.light();
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+    haptics.light();
+  };
+
   const copyToClipboard = async (content: string, messageId: string) => {
     try {
       await navigator.clipboard.writeText(content);
@@ -322,13 +392,14 @@ const ChatPage: React.FC = () => {
 
   const handleSend = async (customMessage?: string, action?: string) => {
     const messageText = customMessage || message;
-    if (!messageText.trim() || isLoading) return;
+    if ((!messageText.trim() && attachments.length === 0) || isLoading) return;
 
     let activeConversationId = currentConversationId;
     
     // Create new conversation if none exists
     if (!activeConversationId) {
-      const newId = await createNewConversation(messageText.slice(0, 40));
+      const conversationTitle = messageText.slice(0, 40) || 'New Chat';
+      const newId = await createNewConversation(conversationTitle);
       if (!newId) {
         toast({
           variant: 'destructive',
@@ -343,22 +414,40 @@ const ChatPage: React.FC = () => {
       await updateConversationTitle(activeConversationId, messageText.slice(0, 40));
     }
 
+    // Prepare attachment info for message
+    const messageAttachments = attachments.map(a => ({
+      name: a.file.name,
+      type: a.file.type,
+      url: a.preview,
+    }));
+
+    // Build content with attachment context
+    let fullMessageContent = messageText;
+    if (attachments.length > 0) {
+      const attachmentDescriptions = attachments.map(a => 
+        `[Attached ${a.type === 'image' ? 'image' : 'file'}: ${a.file.name}]`
+      ).join('\n');
+      fullMessageContent = `${attachmentDescriptions}\n\n${messageText}`;
+    }
+
     const newMessage: Message = {
       id: Date.now().toString(),
       content: messageText,
       sender: 'user',
       timestamp: new Date(),
+      attachments: messageAttachments.length > 0 ? messageAttachments : undefined,
     };
 
     setMessages((prev) => [...prev, newMessage]);
     setMessage('');
+    setAttachments([]);
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
     }
     setIsLoading(true);
 
     // Save user message to database
-    await saveMessage(messageText, 'user', activeConversationId);
+    await saveMessage(fullMessageContent, 'user', activeConversationId);
 
     try {
       // Prepare messages for API
@@ -632,13 +721,13 @@ const ChatPage: React.FC = () => {
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+          <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
             {isLoadingHistory ? (
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-[60vh] text-center gap-6">
+              <div className="flex flex-col items-center justify-center h-[55vh] text-center gap-6">
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
                   <LuminaAvatar size="lg" />
@@ -669,12 +758,12 @@ const ChatPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
                     className={cn(
-                      'flex gap-3',
+                      'flex gap-3 animate-fade-in',
                       msg.sender === 'user' ? 'justify-end' : 'justify-start'
                     )}
                   >
@@ -685,10 +774,33 @@ const ChatPage: React.FC = () => {
                     )}
                     <div
                       className={cn(
-                        'group relative max-w-[85%]',
+                        'group relative max-w-[90%]',
                         msg.sender === 'user' ? 'order-1' : ''
                       )}
                     >
+                      {/* Attachments preview for user messages */}
+                      {msg.sender === 'user' && msg.attachments && msg.attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2 justify-end">
+                          {msg.attachments.map((att, idx) => (
+                            <div key={idx} className="relative">
+                              {att.url && att.type?.startsWith('image/') ? (
+                                <img 
+                                  src={att.url} 
+                                  alt={att.name}
+                                  className="max-w-[120px] max-h-[80px] rounded-lg object-cover border border-border/40"
+                                />
+                              ) : (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-lg border border-border/40">
+                                  <FileText className="w-4 h-4 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                                    {att.name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <div
                         className={cn(
                           'rounded-2xl px-4 py-3 transition-all',
@@ -698,7 +810,9 @@ const ChatPage: React.FC = () => {
                         )}
                       >
                         {msg.sender === 'lumina' ? (
-                          <MarkdownRenderer content={msg.content} />
+                          <div className="prose-smooth">
+                            <MarkdownRenderer content={msg.content} />
+                          </div>
                         ) : (
                           <p className="text-sm leading-relaxed whitespace-pre-wrap">
                             {msg.content}
@@ -733,9 +847,9 @@ const ChatPage: React.FC = () => {
                   </div>
                 ))}
                 
-                {/* Loading indicator */}
-                {isLoading && (
-                  <div className="flex gap-3">
+                {/* Typing indicator - shows when loading but no content yet */}
+                {isLoading && messages.length > 0 && messages[messages.length - 1]?.sender === 'user' && (
+                  <div className="flex gap-3 animate-fade-in">
                     <div className="shrink-0 mt-1">
                       <LuminaAvatar size="sm" />
                     </div>
@@ -757,8 +871,8 @@ const ChatPage: React.FC = () => {
 
         {/* Quick Actions when there is history */}
         {messages.length > 0 && !isLoadingHistory && !isLoading && (
-          <div className="shrink-0 px-4 pb-2">
-            <div className="max-w-3xl mx-auto">
+          <div className="shrink-0 px-4 pb-1">
+            <div className="max-w-4xl mx-auto">
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
                 <span className="shrink-0 text-[11px] text-muted-foreground flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-primary" />
@@ -780,10 +894,65 @@ const ChatPage: React.FC = () => {
           </div>
         )}
 
-        {/* Input Area */}
-        <div className="shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-sm safe-bottom">
-          <div className="max-w-3xl mx-auto px-4 py-3">
+        {/* Attachments Preview */}
+        {attachments.length > 0 && (
+          <div className="shrink-0 px-4 pb-1">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
+                {attachments.map((att) => (
+                  <div key={att.id} className="relative shrink-0 group">
+                    {att.preview ? (
+                      <img 
+                        src={att.preview} 
+                        alt={att.file.name}
+                        className="w-16 h-16 rounded-lg object-cover border border-border/40"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-lg border border-border/40">
+                        <FileText className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-xs text-foreground truncate max-w-[80px]">
+                          {att.file.name}
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => removeAttachment(att.id)}
+                      className="absolute -top-1.5 -right-1.5 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Input Area - moved closer to bottom */}
+        <div className="shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-sm pb-safe">
+          <div className="max-w-4xl mx-auto px-4 py-2">
             <div className="flex items-end gap-2 bg-secondary/50 border border-border/40 rounded-2xl p-2 focus-within:border-primary/40 transition-colors">
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.txt,.md"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              
+              {/* Attachment button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-all shrink-0"
+                title="Attach file or image"
+              >
+                <Paperclip className="w-5 h-5" />
+              </button>
+              
               <textarea
                 ref={inputRef}
                 value={message}
@@ -792,7 +961,7 @@ const ChatPage: React.FC = () => {
                 placeholder="Message Lumina..."
                 disabled={isLoading}
                 rows={1}
-                className="flex-1 bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none resize-none max-h-[120px] py-2 px-2"
+                className="flex-1 bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none resize-none max-h-[120px] py-2 px-1"
               />
               <div className="flex items-center gap-1">
                 {isVoiceSupported && (
@@ -817,10 +986,10 @@ const ChatPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSend()}
-                  disabled={!message.trim() || isLoading}
+                  disabled={(!message.trim() && attachments.length === 0) || isLoading}
                   className={cn(
                     'p-2 rounded-xl transition-all',
-                    message.trim() && !isLoading
+                    (message.trim() || attachments.length > 0) && !isLoading
                       ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                       : 'bg-muted text-muted-foreground cursor-not-allowed'
                   )}
@@ -829,7 +998,7 @@ const ChatPage: React.FC = () => {
                 </button>
               </div>
             </div>
-            <p className="text-[10px] text-center text-muted-foreground mt-2">
+            <p className="text-[10px] text-center text-muted-foreground mt-1.5">
               Lumina can make mistakes. Consider checking important information.
             </p>
           </div>
