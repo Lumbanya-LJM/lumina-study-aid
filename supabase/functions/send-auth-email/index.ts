@@ -1,5 +1,7 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { Resend } from "https://esm.sh/resend@2.0.0";
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -168,29 +170,23 @@ serve(async (req: Request) => {
     
     console.log(`Processing ${type} email for: ${email}`);
 
-    const client = new SMTPClient({
-      connection: {
-        hostname: Deno.env.get("SMTP_HOST")!,
-        port: Number(Deno.env.get("SMTP_PORT")!),
-        tls: true,
-        auth: {
-          username: Deno.env.get("SMTP_USER")!,
-          password: Deno.env.get("SMTP_PASS")!,
-        },
-      },
-    });
-
     const userName = user_metadata?.full_name || "";
     const template = getEmailTemplate(type, token, userName);
 
-    await client.send({
-      from: Deno.env.get("SMTP_FROM")!,
-      to: email,
+    const { error: emailError } = await resend.emails.send({
+      from: "LMV Academy <onboarding@resend.dev>",
+      to: [email],
       subject: template.subject,
       html: template.html,
     });
 
-    await client.close();
+    if (emailError) {
+      console.error("Error sending email via Resend:", emailError);
+      return new Response(JSON.stringify({ error: emailError.message }), { 
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders }
+      });
+    }
 
     console.log(`${type} email sent successfully to: ${email}`);
 
