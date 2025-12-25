@@ -10,6 +10,8 @@ import { TutorOnboardingTutorial } from '@/components/onboarding/TutorOnboarding
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { TutorSidebar } from '@/components/teach/TutorSidebar';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
+import { StatsDetailModal } from '@/components/teach/StatsDetailModal';
+import { EditClassModal } from '@/components/teach/EditClassModal';
 import { 
   GraduationCap, 
   Users, 
@@ -26,6 +28,7 @@ import {
   MessageSquare,
   TrendingUp,
   Mail,
+  Pencil,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PostUpdateForm from '@/components/teach/PostUpdateForm';
@@ -34,7 +37,11 @@ import CourseMaterialsManager from '@/components/teach/CourseMaterialsManager';
 import TutorUpdatesList from '@/components/teach/TutorUpdatesList';
 import { TutorProfileEditor } from '@/components/teach/TutorProfileEditor';
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { cn } from '@/lib/utils';
+
+// Zambia timezone
+const ZAMBIA_TIMEZONE = 'Africa/Lusaka';
 
 interface Course {
   id: string;
@@ -95,6 +102,12 @@ const TeachDashboardPage: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('luminary_tutor_onboarding_complete');
   });
+  
+  // Modal states
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [statsModalType, setStatsModalType] = useState<'students' | 'updates' | 'upcoming' | 'completed' | 'attendance' | 'materials' | null>(null);
+  const [editClassModalOpen, setEditClassModalOpen] = useState(false);
+  const [editingClassId, setEditingClassId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -255,44 +268,62 @@ const TeachDashboardPage: React.FC = () => {
 
   const renderOverview = () => (
     <div className="space-y-6">
-      {/* Stats Cards */}
+      {/* Stats Cards - Clickable */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+        <Card 
+          className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20 cursor-pointer hover:border-blue-500/40 transition-colors"
+          onClick={() => { setStatsModalType('students'); setStatsModalOpen(true); }}
+        >
           <CardContent className="p-4 text-center">
             <Users className="w-6 h-6 mx-auto mb-2 text-blue-500" />
             <p className="text-2xl font-bold text-blue-500">{stats.totalStudents}</p>
             <p className="text-xs text-muted-foreground">Students</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
+        <Card 
+          className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 cursor-pointer hover:border-purple-500/40 transition-colors"
+          onClick={() => { setStatsModalType('updates'); setStatsModalOpen(true); }}
+        >
           <CardContent className="p-4 text-center">
             <Bell className="w-6 h-6 mx-auto mb-2 text-purple-500" />
             <p className="text-2xl font-bold text-purple-500">{stats.totalUpdates}</p>
             <p className="text-xs text-muted-foreground">Updates</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
+        <Card 
+          className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 cursor-pointer hover:border-emerald-500/40 transition-colors"
+          onClick={() => { setStatsModalType('upcoming'); setStatsModalOpen(true); }}
+        >
           <CardContent className="p-4 text-center">
             <Video className="w-6 h-6 mx-auto mb-2 text-emerald-500" />
             <p className="text-2xl font-bold text-emerald-500">{stats.upcomingClasses}</p>
             <p className="text-xs text-muted-foreground">Upcoming</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
+        <Card 
+          className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20 cursor-pointer hover:border-green-500/40 transition-colors"
+          onClick={() => { setStatsModalType('completed'); setStatsModalOpen(true); }}
+        >
           <CardContent className="p-4 text-center">
             <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-green-500" />
             <p className="text-2xl font-bold text-green-500">{stats.totalClassesCompleted}</p>
             <p className="text-xs text-muted-foreground">Completed</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
+        <Card 
+          className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20 cursor-pointer hover:border-orange-500/40 transition-colors"
+          onClick={() => { setStatsModalType('attendance'); setStatsModalOpen(true); }}
+        >
           <CardContent className="p-4 text-center">
             <TrendingUp className="w-6 h-6 mx-auto mb-2 text-orange-500" />
             <p className="text-2xl font-bold text-orange-500">{stats.avgAttendance}</p>
             <p className="text-xs text-muted-foreground">Avg Attendance</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border-cyan-500/20">
+        <Card 
+          className="bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border-cyan-500/20 cursor-pointer hover:border-cyan-500/40 transition-colors"
+          onClick={() => { setStatsModalType('materials'); setStatsModalOpen(true); }}
+        >
           <CardContent className="p-4 text-center">
             <FileText className="w-6 h-6 mx-auto mb-2 text-cyan-500" />
             <p className="text-2xl font-bold text-cyan-500">{stats.totalMaterials}</p>
@@ -316,7 +347,7 @@ const TeachDashboardPage: React.FC = () => {
               {scheduledClasses.map((cls) => (
                 <div
                   key={cls.id}
-                  className="flex items-center justify-between p-3 bg-background rounded-lg border border-border/50"
+                  className="flex items-center justify-between p-3 bg-background rounded-lg border border-border/50 group"
                 >
                   <div className="flex items-center gap-3">
                     <div className={cn(
@@ -333,15 +364,30 @@ const TeachDashboardPage: React.FC = () => {
                       <p className="text-xs text-muted-foreground">{cls.course_name}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    {cls.status === 'live' ? (
-                      <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
-                    ) : (
-                      <Badge variant="secondary">Scheduled</Badge>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      {cls.status === 'live' ? (
+                        <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
+                      ) : (
+                        <Badge variant="secondary">Scheduled</Badge>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatInTimeZone(new Date(cls.scheduled_at), ZAMBIA_TIMEZONE, 'MMM d, h:mm a')} CAT
+                      </p>
+                    </div>
+                    {cls.status !== 'live' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                          setEditingClassId(cls.id);
+                          setEditClassModalOpen(true);
+                        }}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                     )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(cls.scheduled_at), 'MMM d, h:mm a')}
-                    </p>
                   </div>
                 </div>
               ))}
@@ -727,6 +773,21 @@ const TeachDashboardPage: React.FC = () => {
           </main>
         </div>
       </div>
+      
+      {/* Stats Detail Modal */}
+      <StatsDetailModal
+        open={statsModalOpen}
+        onOpenChange={setStatsModalOpen}
+        statType={statsModalType}
+      />
+      
+      {/* Edit Class Modal */}
+      <EditClassModal
+        open={editClassModalOpen}
+        onOpenChange={setEditClassModalOpen}
+        classId={editingClassId}
+        onSuccess={loadData}
+      />
     </SidebarProvider>
   );
 };
