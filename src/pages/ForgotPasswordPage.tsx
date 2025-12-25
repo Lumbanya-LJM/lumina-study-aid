@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LMVLogo } from '@/components/ui/lmv-logo';
-import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { z } from 'zod';
@@ -16,11 +16,34 @@ const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+
+  // Countdown timer for resend button
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const sendResetEmail = useCallback(async (emailAddress: string) => {
+    const { error } = await supabase.functions.invoke('request-password-reset', {
+      body: { email: emailAddress.trim().toLowerCase() },
+    });
+
+    if (error) {
+      console.error('Password reset error:', error);
+      throw error;
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate email
     const validation = emailSchema.safeParse(email.trim());
     if (!validation.success) {
       toast({
@@ -34,25 +57,13 @@ const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Call custom password reset edge function
-      const { data, error } = await supabase.functions.invoke('request-password-reset', {
-        body: { email: email.trim().toLowerCase() },
+      await sendResetEmail(email);
+      setEmailSent(true);
+      setResendCooldown(30); // Start 30 second cooldown
+      toast({
+        title: "Email Sent!",
+        description: "If an account exists with this email, you'll receive a reset link.",
       });
-
-      if (error) {
-        console.error('Password reset error:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Something went wrong. Please try again.",
-        });
-      } else {
-        setEmailSent(true);
-        toast({
-          title: "Email Sent!",
-          description: "If an account exists with this email, you'll receive a reset link.",
-        });
-      }
     } catch (error) {
       console.error('Password reset error:', error);
       toast({
@@ -62,6 +73,29 @@ const ForgotPasswordPage: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    
+    setResending(true);
+    try {
+      await sendResetEmail(email);
+      setResendCooldown(30); // Reset cooldown
+      toast({
+        title: "Email Sent Again!",
+        description: "Check your inbox for the reset link.",
+      });
+    } catch (error) {
+      console.error('Resend error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to resend email. Please try again.",
+      });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -82,15 +116,47 @@ const ForgotPasswordPage: React.FC = () => {
         <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
           <div className="p-4 bg-secondary/50 rounded-2xl border border-border/50 mb-6">
             <p className="text-sm text-muted-foreground text-center">
-              Didn't receive the email? Check your spam folder or try again in a few minutes.
+              Didn't receive the email? Check your spam folder or resend below.
             </p>
           </div>
 
           <button
-            onClick={() => setEmailSent(false)}
-            className="w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow hover:opacity-90 transition-all mb-4"
+            onClick={handleResend}
+            disabled={resendCooldown > 0 || resending}
+            className={cn(
+              "w-full py-4 rounded-2xl font-semibold transition-all flex items-center justify-center gap-2 mb-4",
+              resendCooldown > 0 || resending
+                ? "bg-secondary text-muted-foreground cursor-not-allowed"
+                : "text-primary-foreground gradient-primary shadow-glow hover:opacity-90"
+            )}
           >
-            Try Another Email
+            {resending ? (
+              <>
+                <RefreshCw className="w-5 h-5 animate-spin" />
+                Sending...
+              </>
+            ) : resendCooldown > 0 ? (
+              <>
+                <RefreshCw className="w-5 h-5" />
+                Resend in {resendCooldown}s
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-5 h-5" />
+                Resend Reset Link
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              setEmailSent(false);
+              setEmail('');
+              setResendCooldown(0);
+            }}
+            className="w-full py-3 rounded-2xl font-medium text-muted-foreground border border-border/50 hover:bg-secondary/50 transition-all mb-4"
+          >
+            Try a Different Email
           </button>
 
           <button

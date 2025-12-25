@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,66 +21,88 @@ serve(async (req: Request): Promise<Response> => {
     
     console.log(`Sending welcome email to ${email}`);
 
-    const { data, error } = await resend.emails.send({
-      from: "LMV Academy <onboarding@resend.dev>",
-      to: [email],
-      subject: "Welcome to LMV Academy! 🎓",
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
-          <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-            <div style="background: linear-gradient(135deg, #0d5c63 0%, #1a7a82 100%); border-radius: 16px 16px 0 0; padding: 40px 30px; text-align: center;">
-              <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Welcome to LMV Academy</h1>
-              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your AI-powered study companion</p>
-            </div>
-            
-            <div style="background: white; padding: 40px 30px; border-radius: 0 0 16px 16px;">
-              <h2 style="color: #1a1a1a; margin: 0 0 20px 0; font-size: 22px;">Hi ${fullName || 'there'}! 👋</h2>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 20px 0;">
-                Thank you for joining LMV Academy! We're excited to help you excel in your academic journey.
-              </p>
-              
-              <p style="color: #4a4a4a; line-height: 1.6; margin: 0 0 20px 0;">
-                Here's what you can do with Lumina, your AI study buddy:
-              </p>
-              
-              <ul style="color: #4a4a4a; line-height: 1.8; padding-left: 20px; margin: 0 0 25px 0;">
-                <li>📚 Generate flashcards from your study materials</li>
-                <li>📝 Create quizzes to test your knowledge</li>
-                <li>⚖️ Get AI-powered case summaries</li>
-                <li>📅 Build personalized study schedules</li>
-                <li>🎯 Track your progress and streaks</li>
-              </ul>
-              
-              <p style="color: #888; font-size: 14px; text-align: center; margin: 30px 0 0 0;">
-                Happy studying! 📖<br>
-                <strong>The LMV Academy Team</strong>
-              </p>
-            </div>
-            
-            <p style="color: #999; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
-              © 2025 LMV Academy. All rights reserved.
-            </p>
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 40px 20px; }
+          .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+          .header { background: linear-gradient(135deg, #2A5A6A 0%, #1a3d47 100%); padding: 40px 30px; text-align: center; }
+          .logo { font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: 2px; margin-bottom: 8px; }
+          .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; }
+          .content { padding: 40px 30px; }
+          h1 { color: #ffffff; font-size: 24px; margin: 0 0 20px 0; }
+          p { color: #b8b8b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; }
+          ul { color: #b8b8b8; padding-left: 20px; margin: 0 0 20px 0; }
+          li { margin-bottom: 12px; line-height: 1.5; }
+          .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+          .footer p { color: #666; font-size: 12px; margin: 0; }
+          .highlight { color: #4ecdc4; font-weight: 600; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">LMV ACADEMY</div>
+            <div class="tagline">Luminary Innovision Academy</div>
           </div>
-        </body>
-        </html>
-      `,
+          <div class="content">
+            <h1>Welcome${fullName ? `, ${fullName}` : ''}! 👋</h1>
+            <p>Thank you for joining LMV Academy! We're excited to help you excel in your academic journey.</p>
+            <p>Here's what you can do with <span class="highlight">Lumina</span>, your AI study buddy:</p>
+            <ul>
+              <li>📚 Generate flashcards from your study materials</li>
+              <li>📝 Create quizzes to test your knowledge</li>
+              <li>⚖️ Get AI-powered case summaries</li>
+              <li>📅 Build personalized study schedules</li>
+              <li>🎯 Track your progress and streaks</li>
+            </ul>
+            <p>Happy studying! 📖</p>
+            <p style="color: #4ecdc4;"><strong>The LMV Academy Team</strong></p>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
+            <p>Questions? Contact us at admin@lmvacademy.com</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const client = new SMTPClient({
+      connection: {
+        hostname: Deno.env.get("SMTP_HOST")!,
+        port: 465,
+        tls: true,
+        auth: {
+          username: Deno.env.get("SMTP_USER")!,
+          password: Deno.env.get("SMTP_PASS")!,
+        },
+      },
     });
 
-    if (error) {
-      console.error("Error sending welcome email:", error);
-      throw new Error(error.message);
+    try {
+      await client.send({
+        from: Deno.env.get("SMTP_FROM")!,
+        to: email,
+        subject: "Welcome to LMV Academy! 🎓",
+        html: emailHtml,
+      });
+      console.log("Welcome email sent successfully to:", email);
+      try { client.close(); } catch (_) {}
+    } catch (smtpError: any) {
+      console.error("SMTP Error:", smtpError);
+      try { client.close(); } catch (_) {}
+      return new Response(
+        JSON.stringify({ error: "Failed to send email" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
-    console.log("Welcome email sent successfully:", data);
-
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });

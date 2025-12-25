@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,8 +12,6 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 interface StudentNotification {
   userId: string;
   email: string;
@@ -23,6 +21,65 @@ interface StudentNotification {
   classId: string;
   scheduledAt: string;
 }
+
+const getEmailHtml = (notification: StudentNotification, formattedTime: string) => `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <style>
+      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 40px 20px; }
+      .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+      .header { background: linear-gradient(135deg, #2A5A6A 0%, #1a3d47 100%); padding: 40px 30px; text-align: center; }
+      .logo { font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: 2px; margin-bottom: 8px; }
+      .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; }
+      .content { padding: 40px 30px; }
+      h1 { color: #ffffff; font-size: 24px; margin: 0 0 20px 0; }
+      p { color: #b8b8b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; }
+      .button { display: inline-block; background: linear-gradient(135deg, #2A5A6A 0%, #3d7a8a 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+      .info-box { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 12px; margin: 20px 0; }
+      .info-item { color: #b8b8b8; margin: 10px 0; }
+      .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+      .footer p { color: #666; font-size: 12px; margin: 0; }
+      .urgent { color: #ff6b6b; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">LMV ACADEMY</div>
+        <div class="tagline">Luminary Innovision Academy</div>
+      </div>
+      <div class="content">
+        <h1>${notification.minutesUntil === 5 ? '<span class="urgent">🔴 Class Starting Soon!</span>' : '📚 Class Reminder'}</h1>
+        <p>Hi ${notification.fullName},</p>
+        <p>
+          ${notification.minutesUntil === 5 
+            ? `Your class <strong style="color: #4ecdc4;">${notification.classTitle}</strong> is starting in just <strong class="urgent">5 minutes</strong>!`
+            : `This is a friendly reminder that your class <strong style="color: #4ecdc4;">${notification.classTitle}</strong> starts in <strong>30 minutes</strong>.`
+          }
+        </p>
+        <div class="info-box">
+          <div class="info-item">📅 <strong>Class:</strong> ${notification.classTitle}</div>
+          <div class="info-item">⏰ <strong>Time:</strong> ${formattedTime}</div>
+        </div>
+        <p>
+          ${notification.minutesUntil === 5 
+            ? "Join now to make sure you don't miss anything!"
+            : "Make sure to prepare and be ready on time!"
+          }
+        </p>
+        <div style="text-align: center;">
+          <a href="https://app.lmvacademy.com/class/${notification.classId}" class="button">Join Class Now</a>
+        </div>
+      </div>
+      <div class="footer">
+        <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
+        <p>Excellence in Legal Education 🇿🇲</p>
+      </div>
+    </div>
+  </body>
+  </html>
+`;
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -54,7 +111,6 @@ const handler = async (req: Request): Promise<Response> => {
       for (const liveClass of thirtyMinClasses || []) {
         if (!liveClass.course_id) continue;
 
-        // Get enrolled students with their profile info
         const { data: enrollments } = await supabase
           .from("academy_enrollments")
           .select("user_id")
@@ -62,14 +118,12 @@ const handler = async (req: Request): Promise<Response> => {
           .eq("status", "active");
 
         for (const enrollment of enrollments || []) {
-          // Get user email from auth.users via profiles
           const { data: profile } = await supabase
             .from("profiles")
             .select("full_name")
             .eq("user_id", enrollment.user_id)
             .maybeSingle();
 
-          // Get user email - we need to use admin API
           const { data: { user: userData } } = await supabase.auth.admin.getUserById(enrollment.user_id);
 
           if (userData?.email) {
@@ -162,7 +216,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.error("Error sending push notification:", err);
       }
 
-      // Send email reminder
+      // Send email reminder via Zoho SMTP
       try {
         const formattedTime = new Date(notification.scheduledAt).toLocaleTimeString('en-US', {
           hour: '2-digit',
@@ -170,54 +224,29 @@ const handler = async (req: Request): Promise<Response> => {
           hour12: true
         });
 
-        await resend.emails.send({
-          from: "LMV Academy <admin@lmvacademy.com>",
-          to: [notification.email],
+        const emailHtml = getEmailHtml(notification, formattedTime);
+
+        const client = new SMTPClient({
+          connection: {
+            hostname: Deno.env.get("SMTP_HOST")!,
+            port: 465,
+            tls: true,
+            auth: {
+              username: Deno.env.get("SMTP_USER")!,
+              password: Deno.env.get("SMTP_PASS")!,
+            },
+          },
+        });
+
+        await client.send({
+          from: Deno.env.get("SMTP_FROM")!,
+          to: notification.email,
           subject: notification.minutesUntil === 5 
             ? `🔴 ${notification.classTitle} is starting in 5 minutes!`
             : `📚 Reminder: ${notification.classTitle} starts at ${formattedTime}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <div style="background: linear-gradient(135deg, #2A5A6A, #3d7a8a); padding: 30px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">
-                  ${notification.minutesUntil === 5 ? '🔴 Class Starting Soon!' : '📚 Class Reminder'}
-                </h1>
-              </div>
-              
-              <p style="color: #333; font-size: 16px;">Hi ${notification.fullName},</p>
-              
-              <p style="color: #333; font-size: 16px;">
-                ${notification.minutesUntil === 5 
-                  ? `Your class <strong>${notification.classTitle}</strong> is starting in just <strong>5 minutes</strong>!`
-                  : `This is a friendly reminder that your class <strong>${notification.classTitle}</strong> starts in <strong>30 minutes</strong>.`
-                }
-              </p>
-              
-              <div style="background: #f5f5f5; padding: 20px; border-radius: 12px; margin: 20px 0;">
-                <p style="margin: 0 0 10px 0; color: #666;">📅 <strong>Class:</strong> ${notification.classTitle}</p>
-                <p style="margin: 0; color: #666;">⏰ <strong>Time:</strong> ${formattedTime}</p>
-              </div>
-              
-              <p style="color: #333; font-size: 16px;">
-                ${notification.minutesUntil === 5 
-                  ? 'Join now to make sure you don\'t miss anything!'
-                  : 'Make sure to prepare and be ready on time!'
-                }
-              </p>
-              
-              <div style="text-align: center; margin-top: 30px;">
-                <a href="https://app.lmvacademy.com/class/${notification.classId}" 
-                   style="background: #2A5A6A; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-                  Join Class Now
-                </a>
-              </div>
-              
-              <p style="color: #888; font-size: 12px; margin-top: 40px; text-align: center;">
-                LMV Academy - Excellence in Legal Education 🇿🇲
-              </p>
-            </div>
-          `,
+          html: emailHtml,
         });
+        try { client.close(); } catch (_) {}
         emailSent++;
       } catch (err) {
         console.error("Error sending email:", err);
