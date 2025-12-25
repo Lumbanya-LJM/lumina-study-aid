@@ -356,7 +356,7 @@ serve(async (req) => {
       );
     }
 
-    const { messages, action, userId, enableWebSearch, deepSearch } = await req.json();
+    const { messages, action, userId, enableWebSearch, deepSearch, hasImages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -375,8 +375,18 @@ serve(async (req) => {
       userFilesContext = await getUserFiles(authenticatedUserId);
     }
 
-    // Get the last user message for analysis
-    const lastUserMessage = messages.filter((m: any) => m.role === 'user').pop()?.content || "";
+    // Get the last user message for analysis - handle both string and multimodal content
+    const lastUserMessageObj = messages.filter((m: any) => m.role === 'user').pop();
+    let lastUserMessage = "";
+    if (lastUserMessageObj) {
+      if (typeof lastUserMessageObj.content === 'string') {
+        lastUserMessage = lastUserMessageObj.content;
+      } else if (Array.isArray(lastUserMessageObj.content)) {
+        // Extract text from multimodal content
+        const textParts = lastUserMessageObj.content.filter((p: any) => p.type === 'text');
+        lastUserMessage = textParts.map((p: any) => p.text).join(' ');
+      }
+    }
     
     // Check if this query needs research mode
     let researchContext = "";
@@ -611,7 +621,29 @@ The student is sharing their thoughts or feelings. Respond with:
 - Reminder that challenges are part of growth`;
     }
 
-    console.log("Sending request to AI Gateway with action:", action || "general chat", "| Research mode:", needsResearch);
+    console.log("Sending request to AI Gateway with action:", action || "general chat", "| Research mode:", needsResearch, "| Has images:", hasImages);
+
+    // Use gemini-2.5-flash which supports both text and vision
+    const model = "google/gemini-2.5-flash";
+    
+    // Build the system message
+    const systemMessage = { role: "system", content: systemPrompt };
+    
+    // Add image analysis context if images are present
+    let imageAnalysisPrompt = "";
+    if (hasImages) {
+      imageAnalysisPrompt = `
+
+## IMAGE ANALYSIS MODE
+The user has shared one or more images. You should:
+1. **Carefully analyze** the visual content of each image
+2. **Describe** what you see in detail if asked
+3. **Extract text** from documents, notes, or screenshots if present
+4. **Provide relevant study guidance** based on the image content (e.g., if it's a case excerpt, legal document, lecture slide, or handwritten notes)
+5. **Answer questions** about the image content accurately
+
+If the image contains legal content, apply your legal expertise to help the student understand it.`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -620,9 +652,9 @@ The student is sharing their thoughts or feelings. Respond with:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: systemPrompt + imageAnalysisPrompt },
           ...messages,
         ],
         stream: true,

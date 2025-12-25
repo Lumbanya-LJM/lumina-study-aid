@@ -450,12 +450,28 @@ const ChatPage: React.FC = () => {
     await saveMessage(fullMessageContent, 'user', activeConversationId);
 
     try {
-      // Prepare messages for API
+      // Prepare messages for API - include image data for vision
       const apiMessages = messages.map((msg) => ({
         role: msg.sender === 'user' ? 'user' : 'assistant',
         content: msg.content,
       }));
-      apiMessages.push({ role: 'user', content: messageText });
+      
+      // Build the current message content with images for vision analysis
+      let currentMessageContent: any = messageText;
+      
+      // If we have image attachments, format for multimodal AI
+      const imageAttachments = attachments.filter(a => a.type === 'image' && a.preview);
+      if (imageAttachments.length > 0) {
+        currentMessageContent = [
+          { type: 'text', text: messageText || 'Please analyze this image.' },
+          ...imageAttachments.map(img => ({
+            type: 'image_url',
+            image_url: { url: img.preview }
+          }))
+        ];
+      }
+      
+      apiMessages.push({ role: 'user', content: currentMessageContent });
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
@@ -471,6 +487,7 @@ const ChatPage: React.FC = () => {
             userId: user?.id,
             enableWebSearch,
             deepSearch: enableWebSearch,
+            hasImages: imageAttachments.length > 0,
           }),
         },
       );
@@ -942,13 +959,13 @@ const ChatPage: React.FC = () => {
                 className="hidden"
               />
               
-              {/* Attachment button */}
+              {/* Attachment button with vision support */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
-                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-all shrink-0"
-                title="Attach file or image"
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-all shrink-0 group relative"
+                title="Attach image or file - Lumina can analyze images!"
               >
                 <Paperclip className="w-5 h-5" />
               </button>
