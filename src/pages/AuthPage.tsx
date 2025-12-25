@@ -826,13 +826,7 @@ const AuthPage: React.FC = () => {
           <div className="mt-6 text-center">
             <button
               type="button"
-              onClick={() => {
-                // Just focus the email field - admins use the same login
-                toast({
-                  title: "Admin Login",
-                  description: "Use your admin credentials to sign in above.",
-                });
-              }}
+              onClick={() => navigate('/admin/auth')}
               className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
             >
               Admin Access

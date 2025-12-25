@@ -41,6 +41,7 @@ import ClassRecordingsPage from "./pages/ClassRecordingsPage";
 import TutorApplicationsAdminPage from "./pages/TutorApplicationsAdminPage";
 import TutorProfilePage from "./pages/TutorProfilePage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
+import AdminAuthPage from "./pages/AdminAuthPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -89,6 +90,7 @@ const App = () => (
             <Route path="/teach" element={<TutorProtectedRoute><TeachDashboardPage /></TutorProtectedRoute>} />
             
             {/* Admin routes */}
+            <Route path="/admin/auth" element={<AdminAuthPage />} />
             <Route path="/admin" element={<AdminProtectedRoute><AdminDashboardPage /></AdminProtectedRoute>} />
             <Route path="/admin/content" element={<AdminProtectedRoute><AdminContentPage /></AdminProtectedRoute>} />
             <Route path="/admin/tutors" element={<AdminProtectedRoute><TutorApplicationsAdminPage /></AdminProtectedRoute>} />
