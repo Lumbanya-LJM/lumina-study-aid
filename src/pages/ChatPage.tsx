@@ -662,118 +662,141 @@ const ChatPage: React.FC = () => {
       />
 
       <div className="flex flex-col h-screen bg-background">
-        {/* Header */}
-        <div className="shrink-0 px-4 py-3 safe-top border-b border-border/50 bg-background/95 backdrop-blur-sm flex items-center gap-2">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 -ml-2 rounded-xl hover:bg-secondary transition-colors"
-          >
-            <Menu className="w-5 h-5 text-foreground" />
-          </button>
-          <div className="flex items-center gap-3 flex-1">
-            <div className="relative">
-              <LuminaAvatar size="sm" />
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">Lumina</p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {currentConversationId && conversations.find(c => c.id === currentConversationId)?.title || 'New Chat'}
-              </p>
-            </div>
-          </div>
-          
-          {/* Web Search Toggle */}
-          <button
-            onClick={() => {
-              setEnableWebSearch(!enableWebSearch);
-              haptics.light();
-            }}
-            className={cn(
-              "p-2 rounded-xl transition-colors",
-              enableWebSearch 
-                ? "bg-primary/10 text-primary" 
-                : "hover:bg-secondary text-muted-foreground"
-            )}
-            title={enableWebSearch ? "Web Search On" : "Web Search Off"}
-          >
-            <Globe className="w-5 h-5" />
-          </button>
-          
-          {/* ZambiaLII Button */}
-          <button
-            onClick={() => setIsZambiaLiiSearchOpen(true)}
-            className="p-2 rounded-xl hover:bg-secondary transition-colors"
-            title="Search ZambiaLII Cases"
-          >
-            <Scale className="w-5 h-5 text-muted-foreground" />
-          </button>
-          
-          {/* Search Button */}
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="p-2 rounded-xl hover:bg-secondary transition-colors"
-            title="Search Conversations"
-          >
-            <Search className="w-5 h-5 text-muted-foreground" />
-          </button>
-          
-          <button
-            onClick={handleNewConversation}
-            className="p-2 rounded-xl hover:bg-secondary transition-colors"
-            title="New Chat"
-          >
-            <Plus className="w-5 h-5 text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 rounded-xl hover:bg-secondary transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-foreground" />
-          </button>
-        </div>
-        
-        {/* Web Search Indicator */}
-        {enableWebSearch && (
-          <div className="px-4 py-2 bg-primary/5 border-b border-primary/10 flex items-center gap-2">
-            <Globe className="w-4 h-4 text-primary" />
-            <span className="text-xs text-primary font-medium">Deep Search Mode Active</span>
-            <span className="text-xs text-muted-foreground">- Lumina will search the web for answers</span>
-          </div>
-        )}
-
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
-            {isLoadingHistory ? (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-[55vh] text-center gap-6">
+        {/* Clean Header */}
+        <header className="shrink-0 safe-top border-b border-border/30 bg-background">
+          <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            {/* Left - Menu & Avatar */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors"
+                aria-label="Open conversations"
+              >
+                <Menu className="w-5 h-5 text-muted-foreground" />
+              </button>
+              <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
-                  <LuminaAvatar size="lg" />
+                  <LuminaAvatar size="sm" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background" />
                 </div>
-                <div className="space-y-2">
-                  <h2 className="text-xl font-semibold text-foreground">
-                    Hi {displayName}!
-                  </h2>
-                  <p className="text-sm text-muted-foreground max-w-sm">
-                    I'm Lumina, your AI study companion for Zambian law. How can I help you today?
+                <div className="hidden sm:block">
+                  <h1 className="text-sm font-semibold text-foreground">Lumina</h1>
+                  <p className="text-xs text-muted-foreground truncate max-w-[180px]">
+                    {currentConversationId && conversations.find(c => c.id === currentConversationId)?.title || 'New conversation'}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+              </div>
+            </div>
+
+            {/* Right - Actions */}
+            <div className="flex items-center gap-1">
+              {/* Web Search Toggle */}
+              <button
+                onClick={() => {
+                  setEnableWebSearch(!enableWebSearch);
+                  haptics.light();
+                }}
+                className={cn(
+                  "p-2 rounded-lg transition-colors flex items-center gap-1.5",
+                  enableWebSearch 
+                    ? "bg-primary/10 text-primary" 
+                    : "hover:bg-muted text-muted-foreground"
+                )}
+                title={enableWebSearch ? "Web search enabled" : "Enable web search"}
+              >
+                <Globe className="w-4 h-4" />
+                <span className="text-xs font-medium hidden sm:inline">
+                  {enableWebSearch ? 'On' : 'Search'}
+                </span>
+              </button>
+              
+              {/* ZambiaLII */}
+              <button
+                onClick={() => setIsZambiaLiiSearchOpen(true)}
+                className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+                title="Search legal cases"
+              >
+                <Scale className="w-4 h-4" />
+              </button>
+              
+              {/* Search Conversations */}
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+                title="Search conversations"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+              
+              {/* New Chat */}
+              <button
+                onClick={handleNewConversation}
+                className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+                title="Start new chat"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+
+              {/* Back */}
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors ml-1"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Web Search Banner */}
+          {enableWebSearch && (
+            <div className="px-4 py-2 bg-primary/5 border-t border-primary/10">
+              <div className="max-w-4xl mx-auto flex items-center justify-center gap-2">
+                <Globe className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs text-primary font-medium">Deep Search Active</span>
+                <span className="text-xs text-muted-foreground hidden sm:inline">• Lumina will search the web</span>
+              </div>
+            </div>
+          )}
+        </header>
+
+        {/* Messages Area */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-4 py-6">
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Loading conversation...</p>
+                </div>
+              </div>
+            ) : messages.length === 0 ? (
+              /* Empty State - Welcome Screen */
+              <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-primary/10 blur-3xl rounded-full scale-150" />
+                  <LuminaAvatar size="lg" />
+                </div>
+                
+                <h2 className="text-2xl font-bold text-foreground mb-2">
+                  Hello, {displayName}!
+                </h2>
+                <p className="text-muted-foreground max-w-md mb-8">
+                  I'm Lumina, your AI study companion for Zambian law. What would you like to learn today?
+                </p>
+                
+                {/* Quick Action Cards */}
+                <div className="grid grid-cols-2 gap-3 w-full max-w-md">
                   {quickPrompts.map((prompt) => (
                     <button
                       key={prompt.action}
                       onClick={() => handleQuickPrompt(prompt.action)}
-                      className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-secondary/50 border border-border/40 hover:bg-secondary hover:border-primary/30 transition-all group"
+                      className="flex flex-col items-start gap-2 p-4 rounded-xl bg-card border border-border hover:border-primary/40 hover:shadow-md transition-all text-left group"
                     >
-                      <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                        <prompt.icon className="w-4 h-4 text-primary" />
+                      <div className="p-2.5 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                        <prompt.icon className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="text-xs font-medium text-foreground">
+                      <span className="text-sm font-medium text-foreground">
                         {prompt.label}
                       </span>
                     </button>
@@ -781,27 +804,40 @@ const ChatPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
+              /* Conversation Messages */
+              <div className="space-y-6">
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
                     className={cn(
-                      'flex gap-3 animate-fade-in',
-                      msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                      'flex gap-4 animate-fade-in',
+                      msg.sender === 'user' ? 'flex-row-reverse' : ''
                     )}
                   >
-                    {msg.sender === 'lumina' && (
-                      <div className="shrink-0 mt-1">
+                    {/* Avatar */}
+                    <div className="shrink-0 mt-0.5">
+                      {msg.sender === 'lumina' ? (
                         <LuminaAvatar size="sm" />
-                      </div>
-                    )}
-                    <div
-                      className={cn(
-                        'group relative max-w-[90%]',
-                        msg.sender === 'user' ? 'order-1' : ''
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                          <span className="text-xs font-semibold text-primary-foreground">
+                            {displayName.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
                       )}
-                    >
-                      {/* Attachments preview for user messages */}
+                    </div>
+                    
+                    {/* Message Content */}
+                    <div className={cn(
+                      'flex-1 max-w-[85%] group',
+                      msg.sender === 'user' ? 'flex flex-col items-end' : ''
+                    )}>
+                      {/* Sender name */}
+                      <p className="text-xs font-medium text-muted-foreground mb-1.5">
+                        {msg.sender === 'lumina' ? 'Lumina' : 'You'}
+                      </p>
+                      
+                      {/* Attachments */}
                       {msg.sender === 'user' && msg.attachments && msg.attachments.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-2 justify-end">
                           {msg.attachments.map((att, idx) => (
@@ -810,12 +846,12 @@ const ChatPage: React.FC = () => {
                                 <img 
                                   src={att.url} 
                                   alt={att.name}
-                                  className="max-w-[120px] max-h-[80px] rounded-lg object-cover border border-border/40"
+                                  className="max-w-[140px] max-h-[100px] rounded-lg object-cover border border-border"
                                 />
                               ) : (
-                                <div className="flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-lg border border-border/40">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
                                   <FileText className="w-4 h-4 text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                                  <span className="text-xs text-foreground truncate max-w-[100px]">
                                     {att.name}
                                   </span>
                                 </div>
@@ -824,16 +860,18 @@ const ChatPage: React.FC = () => {
                           ))}
                         </div>
                       )}
+                      
+                      {/* Message bubble */}
                       <div
                         className={cn(
-                          'rounded-2xl px-4 py-3 transition-all',
+                          'rounded-2xl px-4 py-3',
                           msg.sender === 'user'
-                            ? 'bg-primary text-primary-foreground rounded-br-md'
-                            : 'bg-secondary/50 border border-border/40 rounded-bl-md'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted/60'
                         )}
                       >
                         {msg.sender === 'lumina' ? (
-                          <div className="prose-smooth">
+                          <div className="prose-smooth text-foreground">
                             <MarkdownRenderer content={msg.content} />
                           </div>
                         ) : (
@@ -843,44 +881,46 @@ const ChatPage: React.FC = () => {
                         )}
                       </div>
                       
-                      {/* Message actions for Lumina */}
+                      {/* Actions for Lumina messages */}
                       {msg.sender === 'lumina' && msg.content && (
-                        <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => copyToClipboard(msg.content, msg.id)}
-                            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                            title="Copy response"
+                            className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs"
+                            title="Copy"
                           >
                             {copiedId === msg.id ? (
-                              <Check className="w-3.5 h-3.5 text-green-500" />
+                              <>
+                                <Check className="w-3.5 h-3.5 text-green-500" />
+                                <span className="text-green-500">Copied</span>
+                              </>
                             ) : (
-                              <Copy className="w-3.5 h-3.5" />
+                              <>
+                                <Copy className="w-3.5 h-3.5" />
+                                <span>Copy</span>
+                              </>
                             )}
                           </button>
                         </div>
                       )}
                     </div>
-                    {msg.sender === 'user' && (
-                      <div className="shrink-0 mt-1 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-xs font-medium text-primary">
-                          {displayName.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 ))}
                 
-                {/* Typing indicator - shows when loading but no content yet */}
+                {/* Typing indicator */}
                 {isLoading && messages.length > 0 && messages[messages.length - 1]?.sender === 'user' && (
-                  <div className="flex gap-3 animate-fade-in">
-                    <div className="shrink-0 mt-1">
+                  <div className="flex gap-4 animate-fade-in">
+                    <div className="shrink-0">
                       <LuminaAvatar size="sm" />
                     </div>
-                    <div className="bg-secondary/50 border border-border/40 rounded-2xl rounded-bl-md px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Lumina</p>
+                      <div className="bg-muted/60 rounded-2xl px-4 py-3 inline-block">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-primary/60 rounded-full animate-pulse" />
+                          <span className="w-2 h-2 bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                          <span className="w-2 h-2 bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -890,24 +930,22 @@ const ChatPage: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </main>
 
-        {/* Quick Actions when there is history */}
+        {/* Quick Actions Bar - only when there are messages */}
         {messages.length > 0 && !isLoadingHistory && !isLoading && (
-          <div className="shrink-0 px-4 pb-1">
-            <div className="max-w-4xl mx-auto">
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                <span className="shrink-0 text-[11px] text-muted-foreground flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-primary" />
-                </span>
+          <div className="shrink-0 border-t border-border/20 bg-background">
+            <div className="max-w-3xl mx-auto px-4 py-2">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
                 {quickPrompts.map((prompt) => (
                   <button
                     key={prompt.action}
                     onClick={() => handleQuickPrompt(prompt.action)}
-                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-border/40 hover:border-primary/30 transition-colors"
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors"
                   >
-                    <prompt.icon className="w-3 h-3 text-primary" />
-                    <span className="text-[11px] font-medium text-foreground whitespace-nowrap">
+                    <prompt.icon className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-xs font-medium text-foreground whitespace-nowrap">
                       {prompt.label}
                     </span>
                   </button>
@@ -919,19 +957,19 @@ const ChatPage: React.FC = () => {
 
         {/* Attachments Preview */}
         {attachments.length > 0 && (
-          <div className="shrink-0 px-4 pb-1">
-            <div className="max-w-4xl mx-auto">
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
+          <div className="shrink-0 bg-background px-4 py-2">
+            <div className="max-w-3xl mx-auto">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                 {attachments.map((att) => (
                   <div key={att.id} className="relative shrink-0 group">
                     {att.preview ? (
                       <img 
                         src={att.preview} 
                         alt={att.file.name}
-                        className="w-16 h-16 rounded-lg object-cover border border-border/40"
+                        className="w-14 h-14 rounded-lg object-cover border border-border"
                       />
                     ) : (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-lg border border-border/40">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
                         <FileText className="w-4 h-4 text-muted-foreground" />
                         <span className="text-xs text-foreground truncate max-w-[80px]">
                           {att.file.name}
@@ -940,7 +978,7 @@ const ChatPage: React.FC = () => {
                     )}
                     <button
                       onClick={() => removeAttachment(att.id)}
-                      className="absolute -top-1.5 -right-1.5 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -top-1 -right-1 p-0.5 bg-destructive text-destructive-foreground rounded-full"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -951,10 +989,10 @@ const ChatPage: React.FC = () => {
           </div>
         )}
 
-        {/* Input Area - moved closer to bottom */}
-        <div className="shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-sm pb-safe">
-          <div className="max-w-4xl mx-auto px-4 py-2">
-            <div className="flex items-end gap-2 bg-secondary/50 border border-border/40 rounded-2xl p-2 focus-within:border-primary/40 transition-colors">
+        {/* Input Area */}
+        <footer className="shrink-0 border-t border-border/30 bg-background pb-safe">
+          <div className="max-w-3xl mx-auto px-4 py-3">
+            <div className="flex items-end gap-3 bg-muted/50 border border-border rounded-2xl p-2 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
               {/* Hidden file input */}
               <input
                 ref={fileInputRef}
@@ -965,39 +1003,43 @@ const ChatPage: React.FC = () => {
                 className="hidden"
               />
               
-              {/* Attachment button with vision support */}
+              {/* Attachment button */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
-                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-all shrink-0 group relative"
-                title="Attach image or file - Lumina can analyze images!"
+                className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-background transition-all shrink-0"
+                title="Attach file or image"
               >
                 <Paperclip className="w-5 h-5" />
               </button>
               
+              {/* Text input */}
               <textarea
                 ref={inputRef}
                 value={message}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Message Lumina..."
+                placeholder="Ask Lumina anything..."
                 disabled={isLoading}
                 rows={1}
-                className="flex-1 bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none resize-none max-h-[120px] py-2 px-1"
+                className="flex-1 bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none resize-none max-h-[120px] py-2.5 leading-relaxed"
               />
-              <div className="flex items-center gap-1">
+              
+              {/* Action buttons */}
+              <div className="flex items-center gap-1 shrink-0">
                 {isVoiceSupported && (
                   <button
                     type="button"
                     onClick={handleVoiceToggle}
                     disabled={isLoading}
                     className={cn(
-                      'p-2 rounded-xl transition-all',
+                      'p-2.5 rounded-xl transition-all',
                       isListening
                         ? 'bg-red-500/10 text-red-500'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-background'
                     )}
+                    title={isListening ? 'Stop recording' : 'Voice input'}
                   >
                     {isListening ? (
                       <MicOff className="w-5 h-5" />
@@ -1011,21 +1053,23 @@ const ChatPage: React.FC = () => {
                   onClick={() => handleSend()}
                   disabled={(!message.trim() && attachments.length === 0) || isLoading}
                   className={cn(
-                    'p-2 rounded-xl transition-all',
+                    'p-2.5 rounded-xl transition-all',
                     (message.trim() || attachments.length > 0) && !isLoading
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
                       : 'bg-muted text-muted-foreground cursor-not-allowed'
                   )}
+                  title="Send message"
                 >
                   <Send className="w-5 h-5" />
                 </button>
               </div>
             </div>
-            <p className="text-[10px] text-center text-muted-foreground mt-1.5">
+            
+            <p className="text-[10px] text-center text-muted-foreground mt-2">
               Lumina can make mistakes. Consider checking important information.
             </p>
           </div>
-        </div>
+        </footer>
 
         {/* Floating Quick Tips */}
         <FloatingQuickTip tipId="chat_voice" anchor="bottom-left" />
