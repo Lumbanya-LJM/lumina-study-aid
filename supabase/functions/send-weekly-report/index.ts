@@ -1,11 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 interface Partner {
   id: string;
@@ -243,33 +245,15 @@ const handler = async (req: Request): Promise<Response> => {
           weekEndStr
         );
 
-        const client = new SMTPClient({
-          connection: {
-            hostname: Deno.env.get("SMTP_HOST")!,
-            port: 465,
-            tls: true,
-            auth: {
-              username: Deno.env.get("SMTP_USER")!,
-              password: Deno.env.get("SMTP_PASS")!,
-            },
-          },
+        await resend.emails.send({
+          from: "LMV Academy <noreply@lmvacademy.com>",
+          to: [partner.partner_email],
+          subject: `📊 Weekly Progress Report for ${studentName}`,
+          html: emailHtml,
         });
-
-        try {
-          await client.send({
-            from: Deno.env.get("SMTP_FROM")!,
-            to: partner.partner_email,
-            subject: `📊 Weekly Progress Report for ${studentName}`,
-            html: emailHtml,
-          });
-          console.log(`Email sent to ${partner.partner_email}`);
-          try { client.close(); } catch (_) {}
-          emailResults.push({ partner: partner.partner_email, status: "sent" });
-        } catch (smtpError) {
-          console.error(`SMTP error for ${partner.partner_email}:`, smtpError);
-          try { client.close(); } catch (_) {}
-          emailResults.push({ partner: partner.partner_email, status: "error", error: String(smtpError) });
-        }
+        
+        console.log(`Email sent to ${partner.partner_email}`);
+        emailResults.push({ partner: partner.partner_email, status: "sent" });
 
       } catch (partnerError) {
         console.error(`Error processing partner ${partner.partner_email}:`, partnerError);
