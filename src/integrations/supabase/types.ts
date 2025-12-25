@@ -1026,6 +1026,7 @@ export type Database = {
         Row: {
           called_to_bar: boolean | null
           created_at: string
+          date_of_birth: string | null
           documents: Json | null
           email: string
           experience: string | null
@@ -1038,6 +1039,8 @@ export type Database = {
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          selected_courses: string[] | null
+          sex: string | null
           status: string
           subjects: string[] | null
           target_students: string[] | null
@@ -1049,6 +1052,7 @@ export type Database = {
         Insert: {
           called_to_bar?: boolean | null
           created_at?: string
+          date_of_birth?: string | null
           documents?: Json | null
           email: string
           experience?: string | null
@@ -1061,6 +1065,8 @@ export type Database = {
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          selected_courses?: string[] | null
+          sex?: string | null
           status?: string
           subjects?: string[] | null
           target_students?: string[] | null
@@ -1072,6 +1078,7 @@ export type Database = {
         Update: {
           called_to_bar?: boolean | null
           created_at?: string
+          date_of_birth?: string | null
           documents?: Json | null
           email?: string
           experience?: string | null
@@ -1084,6 +1091,8 @@ export type Database = {
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          selected_courses?: string[] | null
+          sex?: string | null
           status?: string
           subjects?: string[] | null
           target_students?: string[] | null

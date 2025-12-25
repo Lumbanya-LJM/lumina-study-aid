@@ -20,8 +20,19 @@ import {
   BookOpen,
   ArrowLeft,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  GraduationCap,
+  Calendar,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
+interface Course {
+  id: string;
+  name: string;
+  institution: string | null;
+}
 
 interface TutorApplication {
   id: string;
@@ -34,6 +45,9 @@ interface TutorApplication {
   status: string;
   rejection_reason: string | null;
   created_at: string;
+  selected_courses: string[] | null;
+  date_of_birth: string | null;
+  sex: string | null;
 }
 
 const TutorApplicationsAdminPage: React.FC = () => {
@@ -41,14 +55,17 @@ const TutorApplicationsAdminPage: React.FC = () => {
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { toast } = useToast();
   const [applications, setApplications] = useState<TutorApplication[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
+  const [expandedCourses, setExpandedCourses] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAdmin) {
       loadApplications();
+      loadCourses();
     }
   }, [isAdmin]);
 
@@ -66,6 +83,42 @@ const TutorApplicationsAdminPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('academy_courses')
+        .select('id, name, institution')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setCourses(data || []);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+    }
+  };
+
+  const getCoursesByIds = (courseIds: string[] | null) => {
+    if (!courseIds || courseIds.length === 0) return { undergraduate: [], ziale: [] };
+    
+    const selectedCourses = courses.filter(c => courseIds.includes(c.id));
+    return {
+      undergraduate: selectedCourses.filter(c => c.institution !== 'ZIALE'),
+      ziale: selectedCourses.filter(c => c.institution === 'ZIALE')
+    };
+  };
+
+  const calculateAge = (dob: string | null): number | null => {
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
   };
 
   // Generate a random temporary password
@@ -193,6 +246,10 @@ const TutorApplicationsAdminPage: React.FC = () => {
         title: 'Application Rejected',
         description: 'The applicant has been notified',
       });
+      
+      setShowRejectModal(null);
+      setRejectionReason('');
+      loadApplications();
     } catch (error: any) {
       console.error('Error rejecting:', error);
       toast({
@@ -276,131 +333,209 @@ const TutorApplicationsAdminPage: React.FC = () => {
             </CardContent>
           </Card>
         ) : (
-          applications.map((app) => (
-            <Card key={app.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <User className="w-4 h-4" />
-                      {app.full_name}
-                    </CardTitle>
-                    <CardDescription className="flex items-center gap-1 mt-1">
-                      <Mail className="w-3 h-3" />
-                      {app.email}
-                    </CardDescription>
+          applications.map((app) => {
+            const { undergraduate, ziale } = getCoursesByIds(app.selected_courses);
+            const age = calculateAge(app.date_of_birth);
+            const isCoursesExpanded = expandedCourses === app.id;
+            
+            return (
+              <Card key={app.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <User className="w-4 h-4" />
+                        {app.full_name}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-1 mt-1">
+                        <Mail className="w-3 h-3" />
+                        {app.email}
+                      </CardDescription>
+                    </div>
+                    {getStatusBadge(app.status)}
                   </div>
-                  {getStatusBadge(app.status)}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {app.qualifications && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
-                      <Award className="w-3 h-3" /> Qualifications
-                    </p>
-                    <p className="text-sm">{app.qualifications}</p>
-                  </div>
-                )}
-                
-                {app.experience && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
-                      <Briefcase className="w-3 h-3" /> Experience
-                    </p>
-                    <p className="text-sm">{app.experience}</p>
-                  </div>
-                )}
-                
-                {app.subjects && app.subjects.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
-                      <BookOpen className="w-3 h-3" /> Subjects
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {app.subjects.map((subject) => (
-                        <Badge key={subject} variant="secondary" className="text-xs">
-                          {subject}
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Personal Info */}
+                  {(app.date_of_birth || app.sex) && (
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {app.sex && (
+                        <Badge variant="outline" className="capitalize">
+                          {app.sex}
                         </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {app.rejection_reason && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                    <p className="text-xs font-medium text-destructive mb-1">Rejection Reason</p>
-                    <p className="text-sm text-destructive/80">{app.rejection_reason}</p>
-                  </div>
-                )}
-
-                <p className="text-xs text-muted-foreground">
-                  Applied: {new Date(app.created_at).toLocaleDateString()}
-                </p>
-
-                {app.status === 'pending' && (
-                  <div className="flex gap-2 pt-2">
-                    <Button 
-                      onClick={() => handleApprove(app)}
-                      disabled={processingId === app.id}
-                      className="flex-1"
-                      size="sm"
-                    >
-                      {processingId === app.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4 mr-1" /> Approve
-                        </>
                       )}
-                    </Button>
-                    <Button 
-                      variant="destructive"
-                      onClick={() => setShowRejectModal(app.id)}
-                      disabled={processingId === app.id}
-                      className="flex-1"
-                      size="sm"
-                    >
-                      <X className="w-4 h-4 mr-1" /> Reject
-                    </Button>
-                  </div>
-                )}
+                      {app.date_of_birth && (
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(app.date_of_birth).toLocaleDateString()}
+                          {age !== null && ` (${age} yrs)`}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
 
-                {/* Reject Modal */}
-                {showRejectModal === app.id && (
-                  <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
-                    <p className="text-sm font-medium">Rejection Reason (optional)</p>
-                    <Textarea
-                      placeholder="Explain why the application was rejected..."
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      rows={3}
-                    />
-                    <div className="flex gap-2">
+                  {/* Selected Courses */}
+                  {(undergraduate.length > 0 || ziale.length > 0) && (
+                    <Collapsible
+                      open={isCoursesExpanded}
+                      onOpenChange={() => setExpandedCourses(isCoursesExpanded ? null : app.id)}
+                    >
+                      <CollapsibleTrigger asChild>
+                        <button className="w-full flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <GraduationCap className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium">
+                              Selected Courses ({undergraduate.length + ziale.length})
+                            </span>
+                          </div>
+                          {isCoursesExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-2 space-y-2">
+                        {undergraduate.length > 0 && (
+                          <div className="p-3 rounded-lg bg-secondary/30">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">
+                              Undergraduate Courses ({undergraduate.length})
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {undergraduate.map((course) => (
+                                <Badge key={course.id} variant="secondary" className="text-xs">
+                                  {course.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {ziale.length > 0 && (
+                          <div className="p-3 rounded-lg bg-accent/10 border border-accent/20">
+                            <p className="text-xs font-medium text-accent-foreground mb-2">
+                              ZIALE Courses ({ziale.length})
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {ziale.map((course) => (
+                                <Badge key={course.id} className="bg-accent/20 text-accent-foreground text-xs">
+                                  {course.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+
+                  {app.qualifications && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                        <Award className="w-3 h-3" /> Qualifications
+                      </p>
+                      <p className="text-sm">{app.qualifications}</p>
+                    </div>
+                  )}
+                  
+                  {app.experience && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                        <Briefcase className="w-3 h-3" /> Experience
+                      </p>
+                      <p className="text-sm">{app.experience}</p>
+                    </div>
+                  )}
+                  
+                  {app.subjects && app.subjects.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                        <BookOpen className="w-3 h-3" /> Subjects
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {app.subjects.map((subject) => (
+                          <Badge key={subject} variant="secondary" className="text-xs">
+                            {subject}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {app.rejection_reason && (
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <p className="text-xs font-medium text-destructive mb-1">Rejection Reason</p>
+                      <p className="text-sm text-destructive/80">{app.rejection_reason}</p>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground">
+                    Applied: {new Date(app.created_at).toLocaleDateString()}
+                  </p>
+
+                  {app.status === 'pending' && (
+                    <div className="flex gap-2 pt-2">
                       <Button 
-                        variant="outline" 
+                        onClick={() => handleApprove(app)}
+                        disabled={processingId === app.id}
+                        className="flex-1"
                         size="sm"
-                        onClick={() => {
-                          setShowRejectModal(null);
-                          setRejectionReason('');
-                        }}
                       >
-                        Cancel
+                        {processingId === app.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4 mr-1" /> Approve
+                          </>
+                        )}
                       </Button>
                       <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleReject(app.id)}
+                        variant="destructive"
+                        onClick={() => setShowRejectModal(app.id)}
                         disabled={processingId === app.id}
+                        className="flex-1"
+                        size="sm"
                       >
-                        Confirm Rejection
+                        <X className="w-4 h-4 mr-1" /> Reject
                       </Button>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
+                  )}
+
+                  {/* Reject Modal */}
+                  {showRejectModal === app.id && (
+                    <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
+                      <p className="text-sm font-medium">Rejection Reason (optional)</p>
+                      <Textarea
+                        placeholder="Explain why the application was rejected..."
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        rows={3}
+                      />
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setShowRejectModal(null);
+                            setRejectionReason('');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => handleReject(app.id)}
+                          disabled={processingId === app.id}
+                        >
+                          Confirm Rejection
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </div>
