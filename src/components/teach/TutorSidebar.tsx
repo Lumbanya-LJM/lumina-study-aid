@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { SidebarUserHeader } from '@/components/layout/SidebarUserHeader';
 
 interface TutorSidebarProps {
   activeTab: string;
@@ -107,18 +108,12 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-border/50">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-            <GraduationCap className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-bold text-foreground">Lumina Teach</h2>
-            <p className="text-xs text-muted-foreground">Tutor Dashboard</p>
-          </div>
-        </div>
-      </div>
+      {/* User Header */}
+      <SidebarUserHeader
+        portalIcon={<GraduationCap className="w-3.5 h-3.5 text-primary" />}
+        portalName="Lumina Teach"
+        portalSubtitle="Tutor Portal"
+      />
 
       {/* Navigation */}
       <ScrollArea className="flex-1 py-2">
@@ -192,14 +187,6 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           })}
         </nav>
       </ScrollArea>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-border/50">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <GraduationCap className="w-4 h-4" />
-          <span>LMV Academy Tutor</span>
-        </div>
-      </div>
     </div>
   );
 };
