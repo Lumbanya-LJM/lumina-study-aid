@@ -1040,6 +1040,7 @@ export type Database = {
           reviewed_by: string | null
           status: string
           subjects: string[] | null
+          target_students: string[] | null
           time_flexibility: string | null
           updated_at: string
           user_id: string
@@ -1062,6 +1063,7 @@ export type Database = {
           reviewed_by?: string | null
           status?: string
           subjects?: string[] | null
+          target_students?: string[] | null
           time_flexibility?: string | null
           updated_at?: string
           user_id: string
@@ -1084,6 +1086,7 @@ export type Database = {
           reviewed_by?: string | null
           status?: string
           subjects?: string[] | null
+          target_students?: string[] | null
           time_flexibility?: string | null
           updated_at?: string
           user_id?: string

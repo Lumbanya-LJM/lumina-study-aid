@@ -232,7 +232,8 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           called_to_bar: formData.calledToBar === 'yes',
           years_at_bar: formData.calledToBar === 'yes' && formData.yearsAtBar ? parseInt(formData.yearsAtBar) : null,
           motivation: formData.motivation,
-          documents: uploadedDocs
+          documents: uploadedDocs,
+          target_students: formData.targetStudents
         });
 
       if (error) throw error;
