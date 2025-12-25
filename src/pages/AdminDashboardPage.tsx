@@ -7,12 +7,13 @@ import { AdminManagement } from '@/components/admin/AdminManagement';
 import CourseManagement from '@/components/admin/CourseManagement';
 import TutorPerformance from '@/components/admin/TutorPerformance';
 import StudentManagement from '@/components/admin/StudentManagement';
+import BulkEnrollmentManager from '@/components/admin/BulkEnrollmentManager';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { 
   Shield, Users, BookOpen, FileText, GraduationCap, 
   TrendingUp, AlertCircle, CheckCircle, Clock, 
   BarChart3, Activity, Settings, ChevronRight,
-  UserCheck, UserX, Calendar, MessageSquare
+  UserCheck, UserX, Calendar, MessageSquare, ClipboardList
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -295,7 +296,7 @@ const AdminDashboardPage: React.FC = () => {
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 h-auto">
+          <TabsList className="grid w-full grid-cols-6 h-auto">
             <TabsTrigger value="overview" className="text-xs py-2 px-1">
               <BarChart3 className="w-4 h-4 md:mr-1" />
               <span className="hidden md:inline">Overview</span>
@@ -303,6 +304,10 @@ const AdminDashboardPage: React.FC = () => {
             <TabsTrigger value="courses" className="text-xs py-2 px-1">
               <BookOpen className="w-4 h-4 md:mr-1" />
               <span className="hidden md:inline">Courses</span>
+            </TabsTrigger>
+            <TabsTrigger value="enrollments" className="text-xs py-2 px-1">
+              <ClipboardList className="w-4 h-4 md:mr-1" />
+              <span className="hidden md:inline">Enrollments</span>
             </TabsTrigger>
             <TabsTrigger value="tutors" className="text-xs py-2 px-1">
               <UserCheck className="w-4 h-4 md:mr-1" />
@@ -422,6 +427,11 @@ const AdminDashboardPage: React.FC = () => {
           {/* Courses Tab */}
           <TabsContent value="courses" className="mt-4">
             <CourseManagement />
+          </TabsContent>
+
+          {/* Enrollments Tab */}
+          <TabsContent value="enrollments" className="mt-4">
+            <BulkEnrollmentManager />
           </TabsContent>
 
           {/* Tutors Tab */}
