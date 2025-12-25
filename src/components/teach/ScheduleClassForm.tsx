@@ -101,7 +101,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
       if (liveClassError) throw liveClassError;
 
-      // Also create a tutor update to notify students
+      // Also create a tutor update to notify students on portal
       const { error: updateError } = await supabase
         .from('tutor_updates')
         .insert({
@@ -117,11 +117,48 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
       if (updateError) console.error('Error creating update:', updateError);
 
+      // Send immediate notifications to enrolled students
+      const { data: enrollments } = await supabase
+        .from('academy_enrollments')
+        .select('user_id')
+        .eq('course_id', courseId)
+        .eq('status', 'active');
+
+      if (enrollments && enrollments.length > 0) {
+        const userIds = enrollments.map(e => e.user_id);
+        
+        // Send push notifications immediately
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            userIds,
+            title: '📅 New Class Scheduled!',
+            body: `${formData.title.trim()} has been scheduled. Check the app for details.`,
+            icon: '/pwa-192x192.png',
+            data: { 
+              type: 'class_scheduled',
+              classId: liveClassData?.id,
+            },
+          },
+        });
+
+        // Send email notifications via edge function
+        await supabase.functions.invoke('send-class-update-notification', {
+          body: {
+            classId: liveClassData?.id,
+            courseId,
+            classTitle: formData.title.trim(),
+            scheduledAt: classDateTime.toISOString(),
+            meetingLink: zoomUrl || null,
+            updateType: 'scheduled'
+          }
+        });
+      }
+
       toast({
         title: 'Success',
         description: zoomUrl 
-          ? 'Class scheduled with Zoom link! Students will be notified.'
-          : 'Class scheduled successfully! Students will be notified.',
+          ? 'Class scheduled with Zoom link! Students have been notified.'
+          : 'Class scheduled successfully! Students have been notified.',
       });
 
       setFormData({ title: '', content: '', classDate: '', classTime: '', classLink: '' });
