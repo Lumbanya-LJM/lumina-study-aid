@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, BookOpen, Award, Briefcase, Clock, Scale, Upload, FileText, X } from 'lucide-react';
+import { Loader2, BookOpen, Award, Briefcase, Clock, Scale, Upload, FileText, X, Users } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -57,7 +57,8 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
     preferredTeachingTimes: '',
     calledToBar: 'no' as 'yes' | 'no',
     yearsAtBar: '',
-    motivation: ''
+    motivation: '',
+    targetStudents: [] as ('university' | 'ziale')[],
   });
   
   const [documents, setDocuments] = useState<DocumentUpload[]>([
@@ -133,6 +134,26 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate target students
+    if (formData.targetStudents.length === 0) {
+      toast({
+        title: 'Select Target Students',
+        description: 'Please select at least one student category you want to teach',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate bar admission for ZIALE tutors
+    if (formData.targetStudents.includes('ziale') && formData.calledToBar !== 'yes') {
+      toast({
+        title: 'Bar Admission Required',
+        description: 'You must be called to the bar to teach ZIALE students',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     // Validate subjects
     const actualSubjects = formData.subjects.filter(s => s !== 'Other');
@@ -254,6 +275,60 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           Complete your application to become a Luminary tutor
         </p>
       </div>
+
+      {/* Target Students */}
+      <div className="space-y-3">
+        <Label className="flex items-center gap-2">
+          <Users className="w-4 h-4" />
+          Who do you want to teach?
+        </Label>
+        <p className="text-xs text-muted-foreground">Select the student category you want to tutor</p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+            <Checkbox
+              id="target-university"
+              checked={formData.targetStudents.includes('university')}
+              onCheckedChange={(checked) => {
+                setFormData(prev => ({
+                  ...prev,
+                  targetStudents: checked 
+                    ? [...prev.targetStudents, 'university'] 
+                    : prev.targetStudents.filter(t => t !== 'university')
+                }));
+              }}
+            />
+            <label htmlFor="target-university" className="cursor-pointer flex-1">
+              <span className="font-medium">University Students</span>
+              <p className="text-xs text-muted-foreground">LLB students at universities</p>
+            </label>
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+            <Checkbox
+              id="target-ziale"
+              checked={formData.targetStudents.includes('ziale')}
+              onCheckedChange={(checked) => {
+                setFormData(prev => ({
+                  ...prev,
+                  targetStudents: checked 
+                    ? [...prev.targetStudents, 'ziale'] 
+                    : prev.targetStudents.filter(t => t !== 'ziale')
+                }));
+              }}
+            />
+            <label htmlFor="target-ziale" className="cursor-pointer flex-1">
+              <span className="font-medium">ZIALE Students</span>
+              <p className="text-xs text-muted-foreground">Bar course students (requires bar admission)</p>
+            </label>
+          </div>
+        </div>
+        {formData.targetStudents.includes('ziale') && formData.calledToBar !== 'yes' && (
+          <p className="text-xs text-destructive flex items-center gap-1">
+            <Scale className="w-3 h-3" />
+            You must be called to the bar to teach ZIALE students
+          </p>
+        )}
+      </div>
+
 
       {/* Qualifications */}
       <div className="space-y-2">
