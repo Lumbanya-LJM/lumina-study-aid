@@ -12,7 +12,7 @@ interface ClassUpdateRequest {
   classTitle: string;
   scheduledAt: string | null;
   meetingLink: string | null;
-  updateType: 'updated' | 'cancelled';
+  updateType: 'scheduled' | 'updated' | 'cancelled';
 }
 
 const getEmailHtml = (
@@ -20,7 +20,7 @@ const getEmailHtml = (
   classTitle: string,
   scheduledAt: string | null,
   meetingLink: string | null,
-  updateType: 'updated' | 'cancelled'
+  updateType: 'scheduled' | 'updated' | 'cancelled'
 ) => {
   const formattedTime = scheduledAt 
     ? new Date(scheduledAt).toLocaleString('en-ZM', { 
@@ -29,6 +29,28 @@ const getEmailHtml = (
         timeStyle: 'short'
       })
     : 'Time TBD';
+
+  const getTitle = () => {
+    switch (updateType) {
+      case 'scheduled':
+        return '<span class="scheduled">📅 New Class Scheduled!</span>';
+      case 'updated':
+        return '<span class="updated">📝 Class Updated</span>';
+      case 'cancelled':
+        return '<span class="cancelled">❌ Class Cancelled</span>';
+    }
+  };
+
+  const getMessage = () => {
+    switch (updateType) {
+      case 'scheduled':
+        return `Great news! A new class <strong style="color: #4ecdc4;">${classTitle}</strong> has been scheduled. Mark your calendar!`;
+      case 'updated':
+        return `The class <strong style="color: #4ecdc4;">${classTitle}</strong> has been updated. Please review the new details below.`;
+      case 'cancelled':
+        return `We regret to inform you that the class <strong style="color: #4ecdc4;">${classTitle}</strong> has been cancelled.`;
+    }
+  };
 
   return `
     <!DOCTYPE html>
@@ -48,7 +70,8 @@ const getEmailHtml = (
         .info-item { color: #b8b8b8; margin: 10px 0; }
         .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
         .footer p { color: #666; font-size: 12px; margin: 0; }
-        .updated { color: #4ecdc4; }
+        .scheduled { color: #4ecdc4; }
+        .updated { color: #f0ad4e; }
         .cancelled { color: #ff6b6b; }
       </style>
     </head>
@@ -59,24 +82,16 @@ const getEmailHtml = (
           <div class="tagline">Luminary Innovision Academy</div>
         </div>
         <div class="content">
-          <h1>${updateType === 'cancelled' 
-            ? '<span class="cancelled">❌ Class Cancelled</span>' 
-            : '<span class="updated">📝 Class Updated</span>'
-          }</h1>
+          <h1>${getTitle()}</h1>
           <p>Hi ${studentName},</p>
-          <p>
-            ${updateType === 'cancelled'
-              ? `We regret to inform you that the class <strong style="color: #4ecdc4;">${classTitle}</strong> has been cancelled.`
-              : `The class <strong style="color: #4ecdc4;">${classTitle}</strong> has been updated. Please review the new details below.`
-            }
-          </p>
+          <p>${getMessage()}</p>
           ${updateType !== 'cancelled' ? `
             <div class="info-box">
               <div class="info-item">📅 <strong>Class:</strong> ${classTitle}</div>
               <div class="info-item">⏰ <strong>Time:</strong> ${formattedTime} (CAT)</div>
               ${meetingLink ? `<div class="info-item">🔗 <strong>Link:</strong> <a href="${meetingLink}" style="color: #4ecdc4;">${meetingLink}</a></div>` : ''}
             </div>
-            <p>Make sure to update your calendar with the new details!</p>
+            <p>${updateType === 'scheduled' ? 'Add this to your calendar and prepare for the class!' : 'Make sure to update your calendar with the new details!'}</p>
             <div style="text-align: center;">
               <a href="https://app.lmvacademy.com/home" class="button">View in App</a>
             </div>
@@ -178,7 +193,7 @@ const handler = async (req: Request): Promise<Response> => {
           classTitle,
           scheduledAt,
           meetingLink,
-          updateType
+          updateType as 'scheduled' | 'updated' | 'cancelled'
         );
 
         const emailResponse = await fetch('https://api.resend.com/emails', {
@@ -192,7 +207,9 @@ const handler = async (req: Request): Promise<Response> => {
             to: [student.email],
             subject: updateType === 'cancelled'
               ? `❌ Class Cancelled: ${classTitle}`
-              : `📝 Class Updated: ${classTitle}`,
+              : updateType === 'scheduled'
+                ? `📅 New Class Scheduled: ${classTitle}`
+                : `📝 Class Updated: ${classTitle}`,
             html: emailHtml,
           }),
         });
