@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -195,14 +193,44 @@ const handler = async (req: Request): Promise<Response> => {
     const userName = user.user_metadata?.full_name || "";
     const template = getEmailTemplate(email_action_type, confirmationUrl, userName);
 
-    const emailResponse = await resend.emails.send({
-      from: "LMV Academy <admin@lmvacademy.com>",
-      to: [user.email],
+    // Get SMTP configuration from secrets
+    const smtpHost = Deno.env.get("SMTP_HOST");
+    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
+    const smtpUser = Deno.env.get("SMTP_USER");
+    const smtpPass = Deno.env.get("SMTP_PASS");
+    const smtpFrom = Deno.env.get("SMTP_FROM");
+
+    if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
+      throw new Error("SMTP configuration incomplete. Please check SMTP_HOST, SMTP_USER, SMTP_PASS, and SMTP_FROM secrets.");
+    }
+
+    console.log(`Connecting to SMTP server: ${smtpHost}:${smtpPort}`);
+
+    // Create SMTP client with Zoho configuration
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpHost,
+        port: smtpPort,
+        tls: true,
+        auth: {
+          username: smtpUser,
+          password: smtpPass,
+        },
+      },
+    });
+
+    // Send email using SMTP
+    await client.send({
+      from: smtpFrom,
+      to: user.email,
       subject: template.subject,
+      content: "Please view this email in an HTML-compatible email client.",
       html: template.html,
     });
 
-    console.log("Auth email sent successfully:", emailResponse);
+    await client.close();
+
+    console.log("Auth email sent successfully via SMTP to:", user.email);
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
