@@ -49,7 +49,39 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
     setLoading(true);
     try {
-      const classDateTime = new Date(`${formData.classDate}T${formData.classTime}`);
+      // Parse date and time in Zambia timezone (CAT - UTC+2)
+      const dateTimeStr = `${formData.classDate}T${formData.classTime}:00`;
+      const localDate = new Date(dateTimeStr);
+      const zambiaOffset = 2 * 60; // minutes
+      const localOffset = localDate.getTimezoneOffset();
+      const classDateTime = new Date(localDate.getTime() + (localOffset + zambiaOffset) * 60 * 1000);
+
+      // Auto-generate Zoom meeting link if not provided
+      let zoomUrl = formData.classLink.trim();
+      let meetingId = null;
+      
+      if (!zoomUrl) {
+        const { data: meetingData, error: meetingError } = await supabase.functions.invoke('zoom-meeting', {
+          body: {
+            action: 'create',
+            topic: formData.title.trim(),
+            duration: 60,
+            startTime: classDateTime.toISOString(),
+          }
+        });
+
+        if (meetingError) {
+          console.error('Zoom meeting creation error:', meetingError);
+          toast({
+            title: 'Warning',
+            description: 'Could not auto-generate Zoom link. You can add it manually later.',
+            variant: 'default'
+          });
+        } else {
+          zoomUrl = meetingData?.joinUrl || '';
+          meetingId = meetingData?.meetingId || null;
+        }
+      }
 
       // Create a live_classes entry for scheduled class
       const { data: liveClassData, error: liveClassError } = await supabase
@@ -61,7 +93,8 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           course_id: courseId,
           status: 'scheduled',
           scheduled_at: classDateTime.toISOString(),
-          daily_room_url: formData.classLink.trim() || null,
+          daily_room_name: meetingId,
+          daily_room_url: zoomUrl || null,
         })
         .select()
         .single();
@@ -78,7 +111,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           content: formData.content.trim() || `Live class scheduled for ${classDateTime.toLocaleString()}`,
           update_type: 'class',
           class_time: classDateTime.toISOString(),
-          class_link: formData.classLink.trim() || null,
+          class_link: zoomUrl || null,
           is_published: true
         });
 
@@ -86,7 +119,9 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
       toast({
         title: 'Success',
-        description: 'Class scheduled successfully! Students will be notified.',
+        description: zoomUrl 
+          ? 'Class scheduled with Zoom link! Students will be notified.'
+          : 'Class scheduled successfully! Students will be notified.',
       });
 
       setFormData({ title: '', content: '', classDate: '', classTime: '', classLink: '' });
