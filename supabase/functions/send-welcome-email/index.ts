@@ -75,7 +75,7 @@ serve(async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "LMV Academy <noreply@lmvacademy.com>",
+      from: "LMV Academy <onboarding@resend.dev>",
       to: [email],
       subject: "Welcome to LMV Academy! 🎓",
       html: emailHtml,

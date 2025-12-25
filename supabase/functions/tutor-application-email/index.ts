@@ -209,7 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (type === 'submitted') {
       // Email to applicant
       await resend.emails.send({
-        from: "LMV Academy <noreply@lmvacademy.com>",
+        from: "LMV Academy <onboarding@resend.dev>",
         to: [applicantEmail],
         subject: `Tutor Application Received${applicationId ? ` - ID: ${applicationId}` : ''} - LMV Academy`,
         html: getSubmittedEmail(applicantName, applicationId),
@@ -218,7 +218,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Email to admin if provided
       if (adminEmail) {
         await resend.emails.send({
-          from: "LMV Academy <noreply@lmvacademy.com>",
+          from: "LMV Academy <onboarding@resend.dev>",
           to: [adminEmail],
           subject: `New Tutor Application: ${applicantName}${applicationId ? ` (ID: ${applicationId})` : ''}`,
           html: getAdminNotificationEmail(applicantName, applicantEmail),
@@ -226,14 +226,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     } else if (type === 'approved') {
       await resend.emails.send({
-        from: "LMV Academy <noreply@lmvacademy.com>",
+        from: "LMV Academy <onboarding@resend.dev>",
         to: [applicantEmail],
         subject: "🎉 Congratulations! Your Tutor Application is Approved - LMV Academy",
         html: getApprovedEmail(applicantName, applicantEmail, temporaryPassword),
       });
     } else if (type === 'rejected') {
       await resend.emails.send({
-        from: "LMV Academy <noreply@lmvacademy.com>",
+        from: "LMV Academy <onboarding@resend.dev>",
         to: [applicantEmail],
         subject: "Tutor Application Update - LMV Academy",
         html: getRejectedEmail(applicantName, rejectionReason),
