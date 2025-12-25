@@ -150,6 +150,8 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
+    const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
+    
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -157,7 +159,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Lumina Academy <onboarding@resend.dev>",
+        from: `LMV Academy <${fromEmail}>`,
         to: [studentEmail],
         subject: "🎓 Your Course Enrollment is Confirmed!",
         html: emailHtml,
