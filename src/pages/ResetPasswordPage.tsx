@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LMVLogo } from '@/components/ui/lmv-logo';
-import { Lock, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { z } from 'zod';
+
+const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
   const [password, setPassword] = useState('');
@@ -15,47 +19,66 @@ const ResetPasswordPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [isValidSession, setIsValidSession] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
+  const [isValidToken, setIsValidToken] = useState(false);
+  const [checkingToken, setCheckingToken] = useState(true);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+
+  // Get token from URL query params (custom flow)
+  const customToken = searchParams.get('token');
 
   useEffect(() => {
-    // Set up auth state listener FIRST (before checking session)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth event:', event, 'Session:', !!session);
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsValidSession(true);
-        setCheckingSession(false);
-      } else if (event === 'SIGNED_IN' && session) {
-        // User signed in via recovery link
-        setIsValidSession(true);
-        setCheckingSession(false);
-      }
-    });
+    // Check for custom token first
+    if (customToken) {
+      setIsValidToken(true);
+      setCheckingToken(false);
+      return;
+    }
 
-    // Check URL for recovery tokens (Supabase sends tokens in URL hash)
+    // Fallback: Check for Supabase's built-in recovery flow (URL hash)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const accessToken = hashParams.get('access_token');
     const type = hashParams.get('type');
     
     if (accessToken && type === 'recovery') {
-      // Valid recovery link - session will be established by Supabase
-      setIsValidSession(true);
-      setCheckingSession(false);
-    } else {
-      // Check for existing session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          setIsValidSession(true);
-        }
-        setCheckingSession(false);
-      });
+      setIsValidToken(true);
+      setCheckingToken(false);
+      return;
     }
 
+    // Check for existing session (user might already be authenticated via recovery link)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsValidToken(true);
+      } else {
+        setTokenError('No valid reset token found');
+      }
+      setCheckingToken(false);
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        setIsValidToken(true);
+        setCheckingToken(false);
+      }
+    });
+
     return () => subscription.unsubscribe();
-  }, []);
+  }, [customToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate password
+    const validation = passwordSchema.safeParse(password);
+    if (!validation.success) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Password",
+        description: validation.error.issues[0].message,
+      });
+      return;
+    }
 
     if (password !== confirmPassword) {
       toast({
@@ -66,34 +89,55 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
 
-    if (password.length < 6) {
-      toast({
-        variant: "destructive",
-        title: "Password Too Short",
-        description: "Password must be at least 6 characters long.",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      // Use custom flow if we have a custom token
+      if (customToken) {
+        const { data, error } = await supabase.functions.invoke('reset-password', {
+          body: { token: customToken, newPassword: password },
+        });
 
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Reset Failed",
-          description: error.message,
-        });
+        if (error) {
+          console.error('Password reset error:', error);
+          toast({
+            variant: "destructive",
+            title: "Reset Failed",
+            description: "Something went wrong. Please try again.",
+          });
+        } else if (data?.error) {
+          toast({
+            variant: "destructive",
+            title: "Reset Failed",
+            description: data.error,
+          });
+        } else {
+          setSuccess(true);
+          toast({
+            title: "Password Updated!",
+            description: "Your password has been successfully reset.",
+          });
+        }
       } else {
-        setSuccess(true);
-        toast({
-          title: "Password Updated!",
-          description: "Your password has been successfully reset.",
-        });
+        // Fallback to Supabase's built-in password update
+        const { error } = await supabase.auth.updateUser({ password });
+
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Reset Failed",
+            description: error.message,
+          });
+        } else {
+          setSuccess(true);
+          toast({
+            title: "Password Updated!",
+            description: "Your password has been successfully reset.",
+          });
+        }
       }
     } catch (error) {
+      console.error('Password reset error:', error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -104,7 +148,7 @@ const ResetPasswordPage: React.FC = () => {
     }
   };
 
-  if (checkingSession) {
+  if (checkingToken) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -112,11 +156,14 @@ const ResetPasswordPage: React.FC = () => {
     );
   }
 
-  if (!isValidSession) {
+  if (!isValidToken || tokenError) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <div className="gradient-subtle px-5 md:px-8 pt-12 pb-8 text-center">
           <LMVLogo size="lg" className="justify-center mb-6" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/20 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-destructive" />
+          </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">Invalid Link</h1>
           <p className="text-muted-foreground text-sm">
             This password reset link is invalid or has expired.
@@ -124,9 +171,16 @@ const ResetPasswordPage: React.FC = () => {
         </div>
         <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
           <button
-            onClick={() => navigate('/auth')}
-            className="w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow hover:opacity-90 transition-all"
+            onClick={() => navigate('/forgot-password')}
+            className="w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow hover:opacity-90 transition-all mb-4"
           >
+            Request New Reset Link
+          </button>
+          <button
+            onClick={() => navigate('/auth')}
+            className="flex items-center justify-center gap-2 w-full py-3 text-primary font-medium hover:underline"
+          >
+            <ArrowLeft className="w-4 h-4" />
             Back to Login
           </button>
         </div>
@@ -149,10 +203,10 @@ const ResetPasswordPage: React.FC = () => {
         </div>
         <div className="flex-1 px-5 md:px-8 py-8 max-w-md mx-auto w-full">
           <button
-            onClick={() => navigate('/home')}
+            onClick={() => navigate('/auth')}
             className="w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow hover:opacity-90 transition-all"
           >
-            Continue to App
+            Continue to Login
           </button>
         </div>
       </div>
