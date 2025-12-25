@@ -1,10 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 interface EmailRequest {
   type: 'submitted' | 'approved' | 'rejected';
@@ -186,36 +188,6 @@ const getRejectedEmail = (applicantName: string, rejectionReason?: string) => `
   </html>
 `;
 
-const sendEmail = async (to: string, subject: string, html: string) => {
-  const client = new SMTPClient({
-    connection: {
-      hostname: Deno.env.get("SMTP_HOST")!,
-      port: 465,
-      tls: true,
-      auth: {
-        username: Deno.env.get("SMTP_USER")!,
-        password: Deno.env.get("SMTP_PASS")!,
-      },
-    },
-  });
-
-  try {
-    await client.send({
-      from: Deno.env.get("SMTP_FROM")!,
-      to: to,
-      subject: subject,
-      html: html,
-    });
-    console.log(`Email sent to ${to}`);
-    try { client.close(); } catch (_) {}
-    return { success: true };
-  } catch (error: any) {
-    console.error("SMTP Error:", error);
-    try { client.close(); } catch (_) {}
-    throw error;
-  }
-};
-
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -228,32 +200,36 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (type === 'submitted') {
       // Email to applicant
-      await sendEmail(
-        applicantEmail,
-        "Tutor Application Received - LMV Academy",
-        getSubmittedEmail(applicantName)
-      );
+      await resend.emails.send({
+        from: "LMV Academy <noreply@lmvacademy.com>",
+        to: [applicantEmail],
+        subject: "Tutor Application Received - LMV Academy",
+        html: getSubmittedEmail(applicantName),
+      });
 
       // Email to admin if provided
       if (adminEmail) {
-        await sendEmail(
-          adminEmail,
-          `New Tutor Application: ${applicantName}`,
-          getAdminNotificationEmail(applicantName, applicantEmail)
-        );
+        await resend.emails.send({
+          from: "LMV Academy <noreply@lmvacademy.com>",
+          to: [adminEmail],
+          subject: `New Tutor Application: ${applicantName}`,
+          html: getAdminNotificationEmail(applicantName, applicantEmail),
+        });
       }
     } else if (type === 'approved') {
-      await sendEmail(
-        applicantEmail,
-        "🎉 Congratulations! Your Tutor Application is Approved - LMV Academy",
-        getApprovedEmail(applicantName, applicantEmail, temporaryPassword)
-      );
+      await resend.emails.send({
+        from: "LMV Academy <noreply@lmvacademy.com>",
+        to: [applicantEmail],
+        subject: "🎉 Congratulations! Your Tutor Application is Approved - LMV Academy",
+        html: getApprovedEmail(applicantName, applicantEmail, temporaryPassword),
+      });
     } else if (type === 'rejected') {
-      await sendEmail(
-        applicantEmail,
-        "Tutor Application Update - LMV Academy",
-        getRejectedEmail(applicantName, rejectionReason)
-      );
+      await resend.emails.send({
+        from: "LMV Academy <noreply@lmvacademy.com>",
+        to: [applicantEmail],
+        subject: "Tutor Application Update - LMV Academy",
+        html: getRejectedEmail(applicantName, rejectionReason),
+      });
     }
 
     console.log("Email(s) sent successfully");

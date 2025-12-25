@@ -1,10 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const getEmailTemplate = (type: string, confirmationUrl: string, userName: string) => {
   const baseStyles = `
@@ -57,7 +59,7 @@ const getEmailTemplate = (type: string, confirmationUrl: string, userName: strin
       `,
     },
     recovery: {
-      subject: "Reset Your Password — Luminary Innovision Academy",
+      subject: "Reset Your Password — LMV Academy",
       html: `
         <!DOCTYPE html>
         <html>
@@ -171,35 +173,14 @@ serve(async (req: Request) => {
     const userName = user_metadata?.full_name || "";
     const template = getEmailTemplate(type, token, userName);
 
-    const client = new SMTPClient({
-      connection: {
-        hostname: Deno.env.get("SMTP_HOST")!,
-        port: 465,
-        tls: true,
-        auth: {
-          username: Deno.env.get("SMTP_USER")!,
-          password: Deno.env.get("SMTP_PASS")!,
-        },
-      },
+    const emailResponse = await resend.emails.send({
+      from: "LMV Academy <noreply@lmvacademy.com>",
+      to: [email],
+      subject: template.subject,
+      html: template.html,
     });
 
-    try {
-      await client.send({
-        from: Deno.env.get("SMTP_FROM")!,
-        to: email,
-        subject: template.subject,
-        html: template.html,
-      });
-      console.log(`${type} email sent successfully to: ${email}`);
-      try { client.close(); } catch (_) {}
-    } catch (smtpError: any) {
-      console.error("SMTP Error:", smtpError);
-      try { client.close(); } catch (_) {}
-      return new Response(JSON.stringify({ error: "Failed to send email" }), { 
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders }
-      });
-    }
+    console.log(`${type} email sent successfully:`, emailResponse);
 
     return new Response(JSON.stringify({ success: true }), { 
       status: 200,

@@ -1,11 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -216,7 +218,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.error("Error sending push notification:", err);
       }
 
-      // Send email reminder via Zoho SMTP
+      // Send email reminder via Resend
       try {
         const formattedTime = new Date(notification.scheduledAt).toLocaleTimeString('en-US', {
           hour: '2-digit',
@@ -226,27 +228,14 @@ const handler = async (req: Request): Promise<Response> => {
 
         const emailHtml = getEmailHtml(notification, formattedTime);
 
-        const client = new SMTPClient({
-          connection: {
-            hostname: Deno.env.get("SMTP_HOST")!,
-            port: 465,
-            tls: true,
-            auth: {
-              username: Deno.env.get("SMTP_USER")!,
-              password: Deno.env.get("SMTP_PASS")!,
-            },
-          },
-        });
-
-        await client.send({
-          from: Deno.env.get("SMTP_FROM")!,
-          to: notification.email,
+        await resend.emails.send({
+          from: "LMV Academy <noreply@lmvacademy.com>",
+          to: [notification.email],
           subject: notification.minutesUntil === 5 
             ? `🔴 ${notification.classTitle} is starting in 5 minutes!`
             : `📚 Reminder: ${notification.classTitle} starts at ${formattedTime}`,
           html: emailHtml,
         });
-        try { client.close(); } catch (_) {}
         emailSent++;
       } catch (err) {
         console.error("Error sending email:", err);
