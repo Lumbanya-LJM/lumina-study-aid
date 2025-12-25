@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { TutorOnboardingTutorial } from '@/components/onboarding/TutorOnboardingTutorial';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { TutorSidebar } from '@/components/teach/TutorSidebar';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { StatsDetailModal } from '@/components/teach/StatsDetailModal';
@@ -715,63 +714,58 @@ const TeachDashboardPage: React.FC = () => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <TutorSidebar activeTab={activeTab} onTabChange={setActiveTab} />
-        
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Header */}
-          <header className="sticky top-0 z-40 h-14 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex items-center justify-between h-full px-4">
-              <div className="flex items-center gap-3">
-                <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-                <div>
-                  <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <RoleSwitcher />
-              </div>
+    <div className="min-h-screen flex w-full bg-background">
+      <TutorSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="sticky top-0 z-40 h-14 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-center justify-between h-full px-4">
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
             </div>
-          </header>
+            <div className="flex items-center gap-2">
+              <RoleSwitcher />
+            </div>
+          </div>
+        </header>
 
-          {/* Main Content */}
-          <main className="flex-1 p-6 overflow-auto">
-            {/* Course Selector - Show for relevant tabs */}
-            {['updates', 'live', 'materials'].includes(activeTab) && courses.length > 0 && (
-              <Card className="mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <BookOpen className="w-4 h-4" />
-                    Select Course
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="w-full whitespace-nowrap">
-                    <div className="flex gap-2">
-                      {courses.map((course) => (
-                        <Button
-                          key={course.id}
-                          variant={selectedCourse === course.id ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setSelectedCourse(course.id)}
-                          className="shrink-0"
-                        >
-                          {course.name}
-                          {selectedCourse === course.id && (
-                            <CheckCircle2 className="w-3 h-3 ml-1" />
-                          )}
-                        </Button>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            )}
-            
-            {renderContent()}
-          </main>
-        </div>
+        {/* Main Content */}
+        <main className="flex-1 p-6 overflow-auto">
+          {/* Course Selector - Show for relevant tabs */}
+          {['updates', 'live', 'materials'].includes(activeTab) && courses.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  Select Course
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <div className="flex gap-2">
+                    {courses.map((course) => (
+                      <Button
+                        key={course.id}
+                        variant={selectedCourse === course.id ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedCourse(course.id)}
+                        className="shrink-0"
+                      >
+                        {course.name}
+                        {selectedCourse === course.id && (
+                          <CheckCircle2 className="w-3 h-3 ml-1" />
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
+          
+          {renderContent()}
+        </main>
       </div>
       
       {/* Stats Detail Modal */}
@@ -788,7 +782,7 @@ const TeachDashboardPage: React.FC = () => {
         classId={editingClassId}
         onSuccess={loadData}
       />
-    </SidebarProvider>
+    </div>
   );
 };
 
