@@ -291,3 +291,37 @@
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* Smooth prose styling for AI chat responses */
+.prose-smooth {
+  @apply transition-all duration-150 ease-out;
+}
+
+.prose-smooth p,
+.prose-smooth li,
+.prose-smooth h1,
+.prose-smooth h2,
+.prose-smooth h3,
+.prose-smooth h4,
+.prose-smooth blockquote,
+.prose-smooth pre,
+.prose-smooth code {
+  @apply transition-opacity duration-100 ease-out;
+}
+
+/* Typing cursor animation */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.typing-cursor::after {
+  content: '▋';
+  animation: blink 1s step-end infinite;
+  @apply text-primary ml-0.5;
+}
+
+/* Safe bottom area for input */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
