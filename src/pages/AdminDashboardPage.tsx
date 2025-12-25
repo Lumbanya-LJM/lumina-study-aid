@@ -4,8 +4,10 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { AdminManagement } from '@/components/admin/AdminManagement';
+import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import CourseManagement from '@/components/admin/CourseManagement';
 import TutorPerformance from '@/components/admin/TutorPerformance';
+import TutorActivityDashboard from '@/components/admin/TutorActivityDashboard';
 import StudentManagement from '@/components/admin/StudentManagement';
 import BulkEnrollmentManager from '@/components/admin/BulkEnrollmentManager';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
@@ -18,7 +20,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 interface DashboardStats {
@@ -60,7 +61,6 @@ const AdminDashboardPage: React.FC = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // Fetch all stats in parallel
       const [
         profilesResult,
         coursesResult,
@@ -86,7 +86,6 @@ const AdminDashboardPage: React.FC = () => {
         libraryContent: contentResult.count || 0,
       });
 
-      // Fetch recent activities
       const { data: recentEnrollments } = await supabase
         .from('academy_enrollments')
         .select('id, enrolled_at, course_id')
@@ -119,7 +118,6 @@ const AdminDashboardPage: React.FC = () => {
         });
       });
 
-      // Sort by timestamp
       activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setRecentActivities(activities.slice(0, 5));
     } catch (error) {
@@ -131,22 +129,19 @@ const AdminDashboardPage: React.FC = () => {
 
   if (adminLoading) {
     return (
-      <MobileLayout>
-        <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
-          <div className="flex items-center gap-2 mb-4">
-            <Link to="/profile" className="text-muted-foreground hover:text-foreground">
-              <ChevronRight className="w-5 h-5 rotate-180" />
-            </Link>
-            <h1 className="text-lg sm:text-xl font-bold">Admin Dashboard</h1>
+      <MobileLayout showNav={false}>
+        <div className="flex h-screen">
+          <div className="hidden lg:block w-64 border-r border-border/50 p-4">
+            <Skeleton className="h-16 mb-4" />
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12" />)}
+            </div>
           </div>
-          <Skeleton className="h-24 sm:h-32 w-full rounded-2xl" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24 hidden sm:block" />
-            <Skeleton className="h-24 hidden sm:block" />
+          <div className="flex-1 p-4 sm:p-6 lg:p-8">
+            <Skeleton className="h-24 w-full rounded-2xl mb-6" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
+            </div>
           </div>
         </div>
       </MobileLayout>
@@ -173,77 +168,19 @@ const AdminDashboardPage: React.FC = () => {
   }
 
   const statCards = [
-    { 
-      label: 'Total Users', 
-      value: stats.totalUsers, 
-      icon: Users, 
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-500/10' 
-    },
-    { 
-      label: 'Active Courses', 
-      value: stats.totalCourses, 
-      icon: BookOpen, 
-      color: 'text-emerald-500',
-      bgColor: 'bg-emerald-500/10' 
-    },
-    { 
-      label: 'Enrollments', 
-      value: stats.totalEnrollments, 
-      icon: GraduationCap, 
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-500/10' 
-    },
-    { 
-      label: 'Pending Applications', 
-      value: stats.pendingApplications, 
-      icon: Clock, 
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-500/10',
-      highlight: stats.pendingApplications > 0 
-    },
-    { 
-      label: 'Active Classes', 
-      value: stats.activeClasses, 
-      icon: Activity, 
-      color: 'text-pink-500',
-      bgColor: 'bg-pink-500/10' 
-    },
-    { 
-      label: 'Library Items', 
-      value: stats.libraryContent, 
-      icon: FileText, 
-      color: 'text-cyan-500',
-      bgColor: 'bg-cyan-500/10' 
-    },
+    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+    { label: 'Active Courses', value: stats.totalCourses, icon: BookOpen, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
+    { label: 'Enrollments', value: stats.totalEnrollments, icon: GraduationCap, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+    { label: 'Pending Apps', value: stats.pendingApplications, icon: Clock, color: 'text-orange-500', bgColor: 'bg-orange-500/10', highlight: stats.pendingApplications > 0 },
+    { label: 'Active Classes', value: stats.activeClasses, icon: Activity, color: 'text-pink-500', bgColor: 'bg-pink-500/10' },
+    { label: 'Library Items', value: stats.libraryContent, icon: FileText, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
   ];
 
   const quickActions = [
-    { 
-      label: 'Manage Tutor Applications', 
-      description: 'Review and approve new tutors',
-      icon: UserCheck, 
-      path: '/admin/tutors',
-      badge: stats.pendingApplications > 0 ? stats.pendingApplications : undefined
-    },
-    { 
-      label: 'Content Manager', 
-      description: 'Manage library content',
-      icon: FileText, 
-      path: '/admin/content' 
-    },
-    { 
-      label: 'View Analytics', 
-      description: 'Study progress and metrics',
-      icon: BarChart3, 
-      path: '/analytics' 
-    },
-    { 
-      label: 'Academy Settings', 
-      description: 'Manage courses and enrollments',
-      icon: Settings, 
-      path: '/academy' 
-    },
+    { label: 'Tutor Applications', description: 'Review and approve', icon: UserCheck, tab: 'tutors', badge: stats.pendingApplications > 0 ? stats.pendingApplications : undefined },
+    { label: 'Manage Courses', description: 'Add or remove courses', icon: BookOpen, tab: 'courses' },
+    { label: 'Enrollments', description: 'Enroll/unenroll students', icon: ClipboardList, tab: 'enrollments' },
+    { label: 'Library Content', description: 'Manage resources', icon: FileText, tab: 'content' },
   ];
 
   const getActivityIcon = (type: string) => {
@@ -269,83 +206,18 @@ const AdminDashboardPage: React.FC = () => {
     return `${days}d ago`;
   };
 
-  return (
-    <MobileLayout>
-      <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 pb-24 max-w-7xl mx-auto">
-        {/* Back Button and Role Switcher */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Link to="/profile" className="text-muted-foreground hover:text-foreground">
-              <ChevronRight className="w-5 h-5 rotate-180" />
-            </Link>
-            <h1 className="text-lg sm:text-xl font-bold">Admin Dashboard</h1>
-          </div>
-          <RoleSwitcher />
-        </div>
-
-        {/* Header Banner */}
-        <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-background rounded-2xl p-4 sm:p-6 border border-primary/20">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center">
-              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-foreground">Admin Panel</h1>
-              <p className="text-sm text-muted-foreground">LMV Academy Management</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs Navigation */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="overflow-x-auto -mx-5 px-5">
-            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-6 h-auto gap-1 p-1">
-              <TabsTrigger value="overview" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
-                <BarChart3 className="w-4 h-4 shrink-0" />
-                <span className="sm:hidden lg:inline">Overview</span>
-              </TabsTrigger>
-              <TabsTrigger value="courses" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
-                <BookOpen className="w-4 h-4 shrink-0" />
-                <span className="sm:hidden lg:inline">Courses</span>
-              </TabsTrigger>
-              <TabsTrigger value="enrollments" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
-                <ClipboardList className="w-4 h-4 shrink-0" />
-                <span className="sm:hidden lg:inline">Enrollments</span>
-              </TabsTrigger>
-              <TabsTrigger value="tutors" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
-                <UserCheck className="w-4 h-4 shrink-0" />
-                <span className="sm:hidden lg:inline">Tutors</span>
-              </TabsTrigger>
-              <TabsTrigger value="students" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
-                <Users className="w-4 h-4 shrink-0" />
-                <span className="sm:hidden lg:inline">Students</span>
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="text-xs py-2 px-3 flex items-center gap-1.5 whitespace-nowrap">
-                <Settings className="w-4 h-4 shrink-0" />
-                <span className="sm:hidden lg:inline">Settings</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-4 mt-4">
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return (
+          <div className="space-y-6">
             {/* Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {loading ? (
-                <>
-                  {[1, 2, 3, 4, 5, 6].map(i => (
-                    <Skeleton key={i} className="h-24 rounded-xl" />
-                  ))}
-                </>
+                [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)
               ) : (
                 statCards.map((stat, idx) => (
-                  <Card 
-                    key={idx} 
-                    className={cn(
-                      "border-border/50",
-                      stat.highlight && "border-orange-500/50 bg-orange-500/5"
-                    )}
-                  >
+                  <Card key={idx} className={cn("border-border/50", stat.highlight && "border-orange-500/50 bg-orange-500/5")}>
                     <CardContent className="p-4">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-2", stat.bgColor)}>
                         <stat.icon className={cn("w-4 h-4", stat.color)} />
@@ -360,34 +232,31 @@ const AdminDashboardPage: React.FC = () => {
 
             {/* Quick Actions */}
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Quick Actions
-              </h2>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Quick Actions</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {quickActions.map((action, idx) => (
-                  <Link key={idx} to={action.path}>
-                    <Card className="border-border/50 hover:border-primary/30 transition-colors h-full">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                            <action.icon className="w-5 h-5 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-foreground text-sm">{action.label}</p>
-                              {action.badge && (
-                                <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
-                                  {action.badge}
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">{action.description}</p>
-                          </div>
-                          <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0 sm:hidden" />
+                  <Card
+                    key={idx}
+                    onClick={() => setActiveTab(action.tab)}
+                    className="border-border/50 hover:border-primary/30 transition-colors cursor-pointer h-full"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                          <action.icon className="w-5 h-5 text-primary" />
                         </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-foreground text-sm">{action.label}</p>
+                            {action.badge && (
+                              <Badge variant="destructive" className="text-xs px-1.5 py-0.5">{action.badge}</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{action.description}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -399,15 +268,9 @@ const AdminDashboardPage: React.FC = () => {
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map(i => (
-                      <Skeleton key={i} className="h-12" />
-                    ))}
-                  </div>
+                  <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}</div>
                 ) : recentActivities.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    No recent activity
-                  </p>
+                  <p className="text-center text-muted-foreground py-4">No recent activity</p>
                 ) : (
                   <div className="space-y-3">
                     {recentActivities.map((activity) => {
@@ -428,22 +291,20 @@ const AdminDashboardPage: React.FC = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        );
 
-          {/* Courses Tab */}
-          <TabsContent value="courses" className="mt-4">
-            <CourseManagement />
-          </TabsContent>
+      case 'courses':
+        return <CourseManagement />;
 
-          {/* Enrollments Tab */}
-          <TabsContent value="enrollments" className="mt-4">
-            <BulkEnrollmentManager />
-          </TabsContent>
+      case 'enrollments':
+        return <BulkEnrollmentManager />;
 
-          {/* Tutors Tab */}
-          <TabsContent value="tutors" className="space-y-4 mt-4">
-            <TutorPerformance />
-            <Card>
+      case 'tutors':
+        return (
+          <div className="space-y-6">
+            <TutorActivityDashboard />
+            <Card className="border-border/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <UserCheck className="w-5 h-5" />
@@ -459,9 +320,7 @@ const AdminDashboardPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-medium">Review Applications</p>
-                        <p className="text-sm text-muted-foreground">
-                          {stats.pendingApplications} pending
-                        </p>
+                        <p className="text-sm text-muted-foreground">{stats.pendingApplications} pending</p>
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -469,45 +328,120 @@ const AdminDashboardPage: React.FC = () => {
                 </Link>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        );
 
-          {/* Students Tab */}
-          <TabsContent value="students" className="mt-4">
-            <StudentManagement />
-          </TabsContent>
+      case 'students':
+        return <StudentManagement />;
 
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-4 mt-4">
-            <AdminManagement />
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FileText className="w-5 h-5" />
-                  Content Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Link to="/admin/content">
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-cyan-500" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Library Content</p>
-                        <p className="text-sm text-muted-foreground">
-                          Manage cases, past papers, and materials
-                        </p>
-                      </div>
+      case 'content':
+        return (
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="w-5 h-5" />
+                Library Content Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Link to="/admin/content">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-cyan-500" />
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Manage Content</p>
+                      <p className="text-sm text-muted-foreground">Cases, past papers, and materials</p>
+                    </div>
                   </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </Link>
+            </CardContent>
+          </Card>
+        );
+
+      case 'analytics':
+        return (
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BarChart3 className="w-5 h-5" />
+                Platform Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Link to="/analytics">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-indigo-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">View Analytics</p>
+                      <p className="text-sm text-muted-foreground">Study progress and metrics</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </Link>
+            </CardContent>
+          </Card>
+        );
+
+      case 'settings':
+        return <AdminManagement />;
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <MobileLayout showNav={false}>
+      <div className="flex min-h-screen w-full">
+        {/* Sidebar */}
+        <AdminSidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          pendingApplications={stats.pendingApplications}
+        />
+
+        {/* Main Content */}
+        <main className="flex-1 min-w-0 overflow-auto">
+          <div className="p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Link to="/profile" className="text-muted-foreground hover:text-foreground lg:hidden">
+                  <ChevronRight className="w-5 h-5 rotate-180" />
                 </Link>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                <div className="hidden lg:flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-foreground">Admin Dashboard</h1>
+                    <p className="text-sm text-muted-foreground">LMV Academy Management</p>
+                  </div>
+                </div>
+                <h1 className="text-lg font-bold lg:hidden">Admin Dashboard</h1>
+              </div>
+              <RoleSwitcher />
+            </div>
+
+            {/* Mobile Tab Indicator */}
+            <div className="lg:hidden mb-4">
+              <Badge variant="secondary" className="text-xs">
+                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+              </Badge>
+            </div>
+
+            {/* Content */}
+            {renderContent()}
+          </div>
+        </main>
       </div>
     </MobileLayout>
   );
