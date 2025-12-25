@@ -173,17 +173,17 @@ serve(async (req: Request) => {
         subject: template.subject,
         html: template.html,
       });
-      await client.close();
+      console.log(`Password reset email sent to: ${email}`);
+      // Close connection in background to avoid timeout - don't await
+      try { client.close(); } catch (_) {}
     } catch (smtpError: any) {
       console.error("SMTP Error:", smtpError);
-      await client.close();
+      try { client.close(); } catch (_) {}
       return new Response(
         JSON.stringify({ error: "Failed to send email" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-
-    console.log(`Password reset email sent to: ${email}`);
 
     return new Response(
       JSON.stringify({ success: true, message: "If an account exists with this email, a reset link will be sent." }),
