@@ -104,6 +104,9 @@ const LiveClassPage: React.FC = () => {
       return;
     }
 
+    // Open Zoom meeting in new tab immediately
+    window.open(liveClass.daily_room_url, "_blank");
+
     setJoining(true);
 
     try {
@@ -112,9 +115,6 @@ const LiveClassPage: React.FC = () => {
         class_id: liveClass.id,
         user_id: user?.id,
       });
-
-      // Open Zoom meeting in new tab
-      window.open(liveClass.daily_room_url, "_blank");
 
       toast({
         title: "Joining Zoom Meeting",
