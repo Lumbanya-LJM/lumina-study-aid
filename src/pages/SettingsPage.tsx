@@ -9,6 +9,7 @@ import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useQuickTips } from '@/hooks/useQuickTips';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,12 +62,13 @@ interface StudyGoals {
   quizzesPerWeek: number;
 }
 
-type ThemeMode = 'light' | 'dark' | 'system';
+
 
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const pushNotifications = usePushNotifications();
   const soundNotifications = useSoundNotifications();
   const offlineSync = useOfflineSync();
@@ -102,14 +104,10 @@ const SettingsPage: React.FC = () => {
     quizzesPerWeek: 5,
   });
 
-  // Appearance
-  const [theme, setTheme] = useState<ThemeMode>('system');
-
   // Load settings from localStorage
   useEffect(() => {
     const savedNotifications = localStorage.getItem('luminary_notifications');
     const savedGoals = localStorage.getItem('luminary_goals');
-    const savedTheme = localStorage.getItem('luminary_theme');
 
     if (savedNotifications) {
       setNotifications(JSON.parse(savedNotifications));
@@ -117,29 +115,7 @@ const SettingsPage: React.FC = () => {
     if (savedGoals) {
       setGoals(JSON.parse(savedGoals));
     }
-    if (savedTheme) {
-      setTheme(savedTheme as ThemeMode);
-    }
   }, []);
-
-  // Apply theme
-  useEffect(() => {
-    const root = document.documentElement;
-    
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else if (theme === 'light') {
-      root.classList.remove('dark');
-    } else {
-      // System preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    }
-  }, [theme]);
 
   const handleSave = () => {
     setSaving(true);
@@ -147,7 +123,6 @@ const SettingsPage: React.FC = () => {
     // Save to localStorage
     localStorage.setItem('luminary_notifications', JSON.stringify(notifications));
     localStorage.setItem('luminary_goals', JSON.stringify(goals));
-    localStorage.setItem('luminary_theme', theme);
 
     setTimeout(() => {
       setSaving(false);
