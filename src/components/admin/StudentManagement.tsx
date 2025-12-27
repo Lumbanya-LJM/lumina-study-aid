@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,10 @@ interface Enrollment {
   status: string;
 }
 
+interface AcademyCourse {
+  name: string;
+}
+
 const StudentManagement: React.FC = () => {
   const { toast } = useToast();
   const [students, setStudents] = useState<StudentData[]>([]);
@@ -45,22 +49,7 @@ const StudentManagement: React.FC = () => {
   const [studentEnrollments, setStudentEnrollments] = useState<Enrollment[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
 
-  useEffect(() => {
-    loadStudents();
-  }, []);
-
-  useEffect(() => {
-    const query = searchQuery.toLowerCase();
-    setFilteredStudents(
-      students.filter(s => 
-        s.fullName.toLowerCase().includes(query) ||
-        s.email.toLowerCase().includes(query) ||
-        s.university?.toLowerCase().includes(query)
-      )
-    );
-  }, [searchQuery, students]);
-
-  const loadStudents = async () => {
+  const loadStudents = useCallback(async () => {
     try {
       // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
@@ -79,7 +68,7 @@ const StudentManagement: React.FC = () => {
           .eq('user_id', profile.user_id)
           .eq('status', 'active');
 
-        const courseNames = enrollments?.map(e => (e.academy_courses as any)?.name).filter(Boolean) || [];
+        const courseNames = enrollments?.map(e => (e.academy_courses as AcademyCourse)?.name).filter(Boolean) || [];
 
         // Get email
         const { data: userData } = await supabase.auth.admin.getUserById(profile.user_id);
@@ -109,7 +98,23 @@ const StudentManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadStudents();
+  }, [loadStudents]);
+
+  useEffect(() => {
+    const query = searchQuery.toLowerCase();
+    setFilteredStudents(
+      students.filter(s =>
+        s.fullName.toLowerCase().includes(query) ||
+        s.email.toLowerCase().includes(query) ||
+        s.university?.toLowerCase().includes(query)
+      )
+    );
+  }, [searchQuery, students]);
+
 
   const loadStudentDetails = async (student: StudentData) => {
     setSelectedStudent(student);
@@ -127,7 +132,7 @@ const StudentManagement: React.FC = () => {
       setStudentEnrollments(
         (enrollments || []).map(e => ({
           id: e.id,
-          courseName: (e.academy_courses as any)?.name || 'Unknown Course',
+          courseName: (e.academy_courses as AcademyCourse)?.name || 'Unknown Course',
           enrolledAt: e.enrolled_at,
           status: e.status || 'active'
         }))

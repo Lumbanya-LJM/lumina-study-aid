@@ -53,6 +53,10 @@ interface EnrollmentData {
   status: string;
 }
 
+interface AcademyCourse {
+  name: string;
+}
+
 const BulkEnrollmentManager: React.FC = () => {
   const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
@@ -75,11 +79,7 @@ const BulkEnrollmentManager: React.FC = () => {
   const [unenrollDialogOpen, setUnenrollDialogOpen] = useState(false);
   const [selectedCourseForEnroll, setSelectedCourseForEnroll] = useState<string>('');
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Load courses
@@ -125,7 +125,7 @@ const BulkEnrollmentManager: React.FC = () => {
           fullName: profile?.full_name || 'Unknown',
           email: '', // Will be populated if needed
           university: profile?.university || null,
-          courseName: (e.academy_courses as any)?.name || 'Unknown Course',
+          courseName: (e.academy_courses as AcademyCourse)?.name || 'Unknown Course',
           courseId: e.course_id,
           enrolledAt: e.enrolled_at,
           status: e.status || 'active'
@@ -153,7 +153,11 @@ const BulkEnrollmentManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const filteredEnrollments = enrollments.filter(e => {
     const matchesSearch = 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -41,13 +41,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      loadAvailableCourses();
-    }
-  }, [open]);
-
-  const loadAvailableCourses = async () => {
+  const loadAvailableCourses = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -73,7 +67,13 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [enrolledCourseIds, toast]);
+
+  useEffect(() => {
+    if (open) {
+      loadAvailableCourses();
+    }
+  }, [open, loadAvailableCourses]);
 
   const toggleCourse = (courseId: string) => {
     setSelectedCourses(prev => 
