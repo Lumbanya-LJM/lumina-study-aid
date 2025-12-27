@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { getEmailTemplate } from '../_shared/email-template.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,65 +24,6 @@ interface StudentNotification {
   classId: string;
   scheduledAt: string;
 }
-
-const getEmailHtml = (notification: StudentNotification, formattedTime: string) => `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <style>
-      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 40px 20px; }
-      .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-      .header { background: linear-gradient(135deg, #2A5A6A 0%, #1a3d47 100%); padding: 40px 30px; text-align: center; }
-      .logo { font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: 2px; margin-bottom: 8px; }
-      .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; }
-      .content { padding: 40px 30px; }
-      h1 { color: #ffffff; font-size: 24px; margin: 0 0 20px 0; }
-      p { color: #b8b8b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; }
-      .button { display: inline-block; background: linear-gradient(135deg, #2A5A6A 0%, #3d7a8a 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
-      .info-box { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 12px; margin: 20px 0; }
-      .info-item { color: #b8b8b8; margin: 10px 0; }
-      .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-      .footer p { color: #666; font-size: 12px; margin: 0; }
-      .urgent { color: #ff6b6b; }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <div class="logo">LMV ACADEMY</div>
-        <div class="tagline">Luminary Innovision Academy</div>
-      </div>
-      <div class="content">
-        <h1>${notification.minutesUntil === 5 ? '<span class="urgent">🔴 Class Starting Soon!</span>' : '📚 Class Reminder'}</h1>
-        <p>Hi ${notification.fullName},</p>
-        <p>
-          ${notification.minutesUntil === 5 
-            ? `Your class <strong style="color: #4ecdc4;">${notification.classTitle}</strong> is starting in just <strong class="urgent">5 minutes</strong>!`
-            : `This is a friendly reminder that your class <strong style="color: #4ecdc4;">${notification.classTitle}</strong> starts in <strong>30 minutes</strong>.`
-          }
-        </p>
-        <div class="info-box">
-          <div class="info-item">📅 <strong>Class:</strong> ${notification.classTitle}</div>
-          <div class="info-item">⏰ <strong>Time:</strong> ${formattedTime}</div>
-        </div>
-        <p>
-          ${notification.minutesUntil === 5 
-            ? "Join now to make sure you don't miss anything!"
-            : "Make sure to prepare and be ready on time!"
-          }
-        </p>
-        <div style="text-align: center;">
-          <a href="https://app.lmvacademy.com/class/${notification.classId}" class="button">Join Class Now</a>
-        </div>
-      </div>
-      <div class="footer">
-        <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
-        <p>Excellence in Legal Education 🇿🇲</p>
-      </div>
-    </div>
-  </body>
-  </html>
-`;
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -226,7 +168,35 @@ const handler = async (req: Request): Promise<Response> => {
           hour12: true
         });
 
-        const emailHtml = getEmailHtml(notification, formattedTime);
+        const title = notification.minutesUntil === 5 ? '🔴 Class Starting Soon!' : '📚 Class Reminder';
+        const content = `
+          <p>
+            ${notification.minutesUntil === 5
+              ? `Your class <strong class="highlight">${notification.classTitle}</strong> is starting in just <strong class="highlight">5 minutes</strong>!`
+              : `This is a friendly reminder that your class <strong class="highlight">${notification.classTitle}</strong> starts in <strong>30 minutes</strong>.`
+            }
+          </p>
+          <div style="background: #f0f2f5; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+            <p style="margin: 0 0 10px 0;"><strong>Class:</strong> ${notification.classTitle}</p>
+            <p style="margin: 0;"><strong>Time:</strong> ${formattedTime}</p>
+          </div>
+          <p>
+            ${notification.minutesUntil === 5
+              ? "Join now to make sure you don't miss anything!"
+              : "Make sure to prepare and be ready on time!"
+            }
+          </p>
+          <div style="text-align: center;">
+            <a href="https://app.lmvacademy.com/class/${notification.classId}" class="button">Join Class Now</a>
+          </div>
+        `;
+
+        const emailHtml = getEmailTemplate({
+          title,
+          name: notification.fullName,
+          content,
+        });
+
         const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
 
         await resend.emails.send({
@@ -259,10 +229,11 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-class-reminder function:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

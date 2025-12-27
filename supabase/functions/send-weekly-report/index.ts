@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { getEmailTemplate } from '../_shared/email-template.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,95 +32,6 @@ interface WeeklyStats {
   studyHours: number;
   journalEntries: number;
 }
-
-const getEmailHtml = (
-  partnerName: string,
-  studentName: string,
-  university: string,
-  yearOfStudy: string,
-  stats: WeeklyStats,
-  completionRate: number,
-  weekStartStr: string,
-  weekEndStr: string
-) => `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 40px 20px; }
-      .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-      .header { background: linear-gradient(135deg, #2A5A6A 0%, #1a3d47 100%); padding: 40px 30px; text-align: center; }
-      .logo { font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: 2px; margin-bottom: 8px; }
-      .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; }
-      .content { padding: 40px 30px; }
-      h1 { color: #ffffff; font-size: 24px; margin: 0 0 20px 0; }
-      p { color: #b8b8b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; }
-      .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-      .footer p { color: #666; font-size: 12px; margin: 0; }
-      .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
-      .stat-card { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 12px; text-align: center; }
-      .stat-value { font-size: 28px; font-weight: 700; color: #4ecdc4; }
-      .stat-label { font-size: 12px; color: #888; margin-top: 8px; }
-      .completion-circle { width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #2A5A6A 0%, #3d7a8a 100%); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
-      .completion-value { font-size: 28px; font-weight: 700; color: #ffffff; }
-      .info-box { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 12px; margin: 20px 0; }
-      .info-item { color: #888; margin: 8px 0; font-size: 14px; }
-      .highlight { color: #4ecdc4; }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <div class="logo">LMV ACADEMY</div>
-        <div class="tagline">Weekly Progress Report</div>
-      </div>
-      <div class="content">
-        <h1>📊 Weekly Progress Report</h1>
-        <p>Hello ${partnerName},</p>
-        <p>Here's the weekly progress update for <strong class="highlight">${studentName}</strong>:</p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <div class="completion-circle">
-            <span class="completion-value">${completionRate}%</span>
-          </div>
-          <p style="color: #888; margin: 0;">Completion Rate</p>
-        </div>
-        
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-value">${stats.tasksCompleted}/${stats.totalTasks}</div>
-            <div class="stat-label">Tasks Completed</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.quizzesTaken}</div>
-            <div class="stat-label">Quizzes Taken</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.flashcardsReviewed}</div>
-            <div class="stat-label">Flashcards Reviewed</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.studyHours}h</div>
-            <div class="stat-label">Study Hours</div>
-          </div>
-        </div>
-        
-        <div class="info-box">
-          <div class="info-item"><strong>Student:</strong> ${studentName}</div>
-          <div class="info-item"><strong>University:</strong> ${university}${yearOfStudy ? ` • ${yearOfStudy}` : ''}</div>
-          <div class="info-item"><strong>Week:</strong> ${weekStartStr} to ${weekEndStr}</div>
-        </div>
-      </div>
-      <div class="footer">
-        <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
-        <p>Empowering Zambian students to excel 🇿🇲</p>
-      </div>
-    </div>
-  </body>
-  </html>
-`;
 
 const handler = async (req: Request): Promise<Response> => {
   console.log("send-weekly-report function called");
@@ -234,16 +146,48 @@ const handler = async (req: Request): Promise<Response> => {
           ? Math.round((stats.tasksCompleted / stats.totalTasks) * 100) 
           : 0;
 
-        const emailHtml = getEmailHtml(
-          partner.partner_name,
-          studentName,
-          university,
-          yearOfStudy,
-          stats,
-          completionRate,
-          weekStartStr,
-          weekEndStr
-        );
+        const emailContent = `
+          <p>Here's the weekly progress update for <strong class="highlight">${studentName}</strong>:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <div style="width: 120px; height: 120px; border-radius: 50%; background: #f0f2f5; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 32px; font-weight: 700; color: #1b263b;">${completionRate}%</span>
+            </div>
+            <p style="color: #666; margin: 0;">Completion Rate</p>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+              <td style="padding: 15px; text-align: center; border: 1px solid #e0e0e0; border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: 600; color: #2a6fdb;">${stats.tasksCompleted}/${stats.totalTasks}</div>
+                <div style="font-size: 12px; color: #666; margin-top: 8px;">Tasks Completed</div>
+              </td>
+              <td style="padding: 15px; text-align: center; border: 1px solid #e0e0e0; border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: 600; color: #2a6fdb;">${stats.quizzesTaken}</div>
+                <div style="font-size: 12px; color: #666; margin-top: 8px;">Quizzes Taken</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 15px; text-align: center; border: 1px solid #e0e0e0; border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: 600; color: #2a6fdb;">${stats.flashcardsReviewed}</div>
+                <div style="font-size: 12px; color: #666; margin-top: 8px;">Flashcards Reviewed</div>
+              </td>
+              <td style="padding: 15px; text-align: center; border: 1px solid #e0e0e0; border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: 600; color: #2a6fdb;">${stats.studyHours}h</div>
+                <div style="font-size: 12px; color: #666; margin-top: 8px;">Study Hours</div>
+              </td>
+            </tr>
+          </table>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+            <p style="margin: 0 0 10px 0;"><strong>Student:</strong> ${studentName}</p>
+            <p style="margin: 0 0 10px 0;"><strong>University:</strong> ${university}${yearOfStudy ? ` • ${yearOfStudy}` : ''}</p>
+            <p style="margin: 0;"><strong>Week:</strong> ${weekStartStr} to ${weekEndStr}</p>
+          </div>
+        `;
+
+        const emailHtml = getEmailTemplate({
+            title: '📊 Weekly Progress Report',
+            name: partner.partner_name,
+            content: emailContent,
+        });
 
         const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
         

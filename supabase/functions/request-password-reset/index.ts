@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { getEmailTemplate } from '../_shared/email-template.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,54 +16,6 @@ function generateToken(): string {
   crypto.getRandomValues(array);
   return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-
-const getEmailTemplate = (resetUrl: string, userName: string) => {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 40px 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-        .header { background: linear-gradient(135deg, #2A5A6A 0%, #1a3d47 100%); padding: 40px 30px; text-align: center; }
-        .logo { font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: 2px; margin-bottom: 8px; }
-        .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; }
-        .content { padding: 40px 30px; }
-        h1 { color: #ffffff; font-size: 24px; margin: 0 0 20px 0; }
-        p { color: #b8b8b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; }
-        .button { display: inline-block; background: linear-gradient(135deg, #2A5A6A 0%, #3d7a8a 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
-        .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-        .footer p { color: #666; font-size: 12px; margin: 0; }
-        .warning { background: rgba(255, 193, 7, 0.1); border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }
-        .warning p { color: #ffc107; margin: 0; font-size: 14px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <div class="logo">LMV ACADEMY</div>
-          <div class="tagline">Luminary Innovision Academy</div>
-        </div>
-        <div class="content">
-          <h1>Password Reset Request 🔐</h1>
-          <p>Hello${userName ? ` ${userName}` : ''},</p>
-          <p>We received a request to reset your password for your LMV Academy account. Click the button below to create a new password:</p>
-          <div style="text-align: center;">
-            <a href="${resetUrl}" class="button">Reset Password</a>
-          </div>
-          <div class="warning">
-            <p>⚠️ This link expires in 1 hour. If you didn't request a password reset, please ignore this email.</p>
-          </div>
-        </div>
-        <div class="footer">
-          <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
-          <p>Questions? Contact us at admin@lmvacademy.com</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-};
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -149,7 +102,19 @@ serve(async (req: Request) => {
     const userName = profile?.full_name || "";
 
     // Send email via Resend
-    const emailHtml = getEmailTemplate(resetUrl, userName);
+    const emailContent = `
+      <p>We received a request to reset your password for your LMV Academy account. Click the button below to create a new password:</p>
+      <div style="text-align: center;">
+        <a href="${resetUrl}" class="button">Reset Password</a>
+      </div>
+      <p>⚠️ This link expires in 1 hour. If you didn't request a password reset, please ignore this email.</p>
+    `;
+
+    const emailHtml = getEmailTemplate({
+      title: 'Password Reset Request 🔐',
+      name: userName,
+      content: emailContent,
+    });
 
     const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
     
@@ -166,10 +131,11 @@ serve(async (req: Request) => {
       JSON.stringify({ success: true, message: "If an account exists with this email, a reset link will be sent." }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in request-password-reset:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
