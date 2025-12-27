@@ -15,6 +15,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -39,6 +40,7 @@ const FlashcardsPage: React.FC = () => {
   const navigate = useNavigate();
   const { deckId } = useParams();
   const { toast } = useToast();
+  const { session } = useAuth();
   
   const [deck, setDeck] = useState<Deck | null>(null);
   const [currentCard, setCurrentCard] = useState(0);
@@ -101,6 +103,10 @@ const FlashcardsPage: React.FC = () => {
       toast({ variant: "destructive", title: "Error", description: "Please enter a topic" });
       return;
     }
+    if (!session) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to generate flashcards." });
+      return;
+    }
 
     setIsGenerating(true);
     try {
@@ -108,7 +114,7 @@ const FlashcardsPage: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ topic, numCards: 10 }),
       });

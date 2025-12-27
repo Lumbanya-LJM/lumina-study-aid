@@ -11,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const JournalPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -46,6 +46,14 @@ const JournalPage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!entry.trim() || !selectedMood || !user) return;
+    if (!session) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "You must be logged in to save a journal entry.",
+      });
+      return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -54,7 +62,7 @@ const JournalPage: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ content: entry, mood: selectedMood }),
       });
