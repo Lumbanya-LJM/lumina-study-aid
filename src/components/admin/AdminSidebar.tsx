@@ -1,5 +1,7 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
+  ArrowLeft,
   BarChart3,
   BookOpen,
   ClipboardList,
@@ -87,8 +89,15 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   pendingApplications,
   onClose,
 }) => {
+  const navigate = useNavigate();
+
   const handleClick = (id: string) => {
     onTabChange(id);
+    onClose?.();
+  };
+
+  const handleExit = () => {
+    navigate('/home');
     onClose?.();
   };
 
@@ -143,6 +152,19 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           })}
         </nav>
       </ScrollArea>
+
+      {/* Exit Button */}
+      <div className="p-2 border-t border-border/50">
+        <button
+          onClick={handleExit}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="w-5 h-5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="font-medium text-sm">Exit to Student App</span>
+          </div>
+        </button>
+      </div>
     </div>
   );
 };
