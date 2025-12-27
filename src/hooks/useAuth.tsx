@@ -2,12 +2,15 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+// Make Supabase client accessible globally for scripts and debugging
+(window as any).supabase = supabase;
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: AuthError | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -18,130 +21,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Handle auth errors gracefully - clear stale sessions
-  const handleAuthError = useCallback((error: AuthError) => {
-    console.warn('Auth error detected:', error.code);
-    
-    // Clear stale session on refresh token errors
-    if (
-      error.code === 'refresh_token_not_found' ||
-      error.code === 'session_not_found' ||
-      error.message?.includes('Refresh Token Not Found') ||
-      error.message?.includes('Invalid Refresh Token')
-    ) {
-      console.log('Clearing stale session due to invalid refresh token');
-      setSession(null);
-      setUser(null);
-      // Clear any cached auth data
-      localStorage.removeItem('supabase.auth.token');
+  const getActiveSession = useCallback(async () => {
+    try {
+      const { data: { session: activeSession }, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.warn('Error fetching session:', error.message);
+        // This is not a critical failure, user is simply not logged in.
+        return;
+      }
+
+      setSession(activeSession);
+      setUser(activeSession?.user ?? null);
+    } catch (err) {
+      console.error('Unexpected error in getActiveSession:', err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    let mounted = true;
+    getActiveSession();
 
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        if (!mounted) return;
-        
-        console.log('Auth state change:', event);
-        
-        if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed successfully');
-        }
-        
-        if (event === 'SIGNED_OUT') {
-          setSession(null);
-          setUser(null);
-        } else {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-        }
-        
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session with error handling
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: existingSession }, error } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-        
-        if (error) {
-          handleAuthError(error);
-          setLoading(false);
-          return;
-        }
-        
-        setSession(existingSession);
-        setUser(existingSession?.user ?? null);
-        setLoading(false);
-      } catch (error) {
-        console.error('Session initialization error:', error);
-        if (mounted) {
-          setSession(null);
-          setUser(null);
-          setLoading(false);
-        }
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth errors globally
-    const handleGlobalAuthError = (event: CustomEvent<AuthError>) => {
-      handleAuthError(event.detail);
-    };
-    
-    window.addEventListener('supabase.auth.error' as any, handleGlobalAuthError);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
-      window.removeEventListener('supabase.auth.error' as any, handleGlobalAuthError);
     };
-  }, [handleAuthError]);
+  }, [getActiveSession]);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    // Use the canonical custom domain for email redirects
-    const redirectUrl = 'https://app.lmvacademy.com/home';
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
         },
       },
     });
-    
     return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      // Even if signOut fails, clear local state
-      console.warn('Sign out error (clearing local state anyway):', error);
-    }
-    // Always clear local state
-    setSession(null);
-    setUser(null);
+    await supabase.auth.signOut();
+    // onAuthStateChange will handle setting user/session to null
   };
 
   return (

@@ -4,6 +4,7 @@ import { Home, MessageCircle, Calendar, BookOpen, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { haptics } from '@/lib/haptics';
 import { StudentSidebar } from './StudentSidebar';
+import { FocusStatusBar } from '@/features/focus/FocusStatusBar';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -31,6 +32,9 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, showNav = 
     <div className="min-h-screen flex w-full bg-background">
       {/* Desktop Sidebar */}
       <StudentSidebar />
+
+      {/* Focus Status Bar - absolutely positioned */}
+      <FocusStatusBar />
       
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">

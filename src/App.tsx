@@ -17,7 +17,7 @@ import HomePage from "./pages/HomePage";
 import ChatPage from "./pages/ChatPage";
 import PlannerPage from "./pages/PlannerPage";
 import LibraryPage from "./pages/LibraryPage";
-import FocusPage from "./pages/FocusPage";
+import FocusView from "@/features/focus/FocusView";
 import JournalPage from "./pages/JournalPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
@@ -69,7 +69,7 @@ const App = () => (
               <Route path="/chat" element={<ProtectedRoute studentOnly><ChatPage /></ProtectedRoute>} />
               <Route path="/planner" element={<ProtectedRoute studentOnly><PlannerPage /></ProtectedRoute>} />
               <Route path="/library" element={<ProtectedRoute studentOnly><LibraryPage /></ProtectedRoute>} />
-              <Route path="/focus" element={<ProtectedRoute studentOnly><FocusPage /></ProtectedRoute>} />
+              <Route path="/focus" element={<ProtectedRoute studentOnly><FocusView /></ProtectedRoute>} />
               <Route path="/journal" element={<ProtectedRoute studentOnly><JournalPage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute studentOnly><ProfilePage /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

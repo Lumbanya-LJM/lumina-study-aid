@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Shield, GraduationCap, BookOpen, ChevronDown, Check } from 'lucide-react';
+import { Shield, GraduationCap, BookOpen, ChevronDown, Check, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface UserRoles {
@@ -22,7 +22,7 @@ interface UserRoles {
 type RoleView = 'admin' | 'tutor' | 'student';
 
 export const RoleSwitcher: React.FC = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [roles, setRoles] = useState<UserRoles>({ isAdmin: false, isTutor: false });
@@ -79,6 +79,11 @@ export const RoleSwitcher: React.FC = () => {
     navigate(path);
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -118,6 +123,11 @@ export const RoleSwitcher: React.FC = () => {
             )}
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-3 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
+          <LogOut className="w-4 h-4" />
+          <span>Log Out</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

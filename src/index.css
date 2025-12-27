@@ -362,3 +362,22 @@
 .pb-safe {
   padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
 }
+
+/* Mobile-safe scrolling */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Ensure smooth touch interactions */
+@layer utilities {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+}
+
+/* Fix for mobile viewport height */
+.h-dvh {
+  height: 100vh;
+  height: 100dvh;
+}
