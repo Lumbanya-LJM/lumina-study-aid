@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import TutorApplicationForm from '@/components/auth/TutorApplicationForm';
+import { Button } from '@/components/ui/button';
 
 const universities = [
   'University of Zambia',
@@ -465,16 +466,13 @@ const AuthPage: React.FC = () => {
         </div>
       )}
 
-      <button
+      <Button
         type="submit"
-        disabled={loading}
-        className={cn(
-          "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
-          loading ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
-        )}
+        loading={loading}
+        className="w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all"
       >
-        {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Continue'}
-      </button>
+        {isLogin ? 'Sign In' : 'Continue'}
+      </Button>
     </form>
   );
 
