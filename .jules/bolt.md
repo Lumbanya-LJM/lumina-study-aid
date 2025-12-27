@@ -1,0 +1,3 @@
+## 2024-07-25 - The Power of Route-Based Code Splitting
+**Learning:** Statically importing all page components in the main `App.tsx` file creates a monolithic bundle, significantly slowing down initial page load. Implementing route-based code splitting with `React.lazy` and `Suspense` is a high-impact, low-effort optimization. It defers the loading of page-specific code until it's actually needed, resulting in a much smaller initial bundle and a faster Time to Interactive (TTI).
+**Action:** In future projects, always check the root application component for static route imports. Prioritize implementing lazy loading for routes as a foundational performance optimization.
