@@ -41,7 +41,7 @@ interface Quiz {
 const QuizPage: React.FC = () => {
   const navigate = useNavigate();
   const { quizId } = useParams();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   
   const [quiz, setQuiz] = useState<Quiz | null>(null);
@@ -107,6 +107,10 @@ const QuizPage: React.FC = () => {
       toast({ variant: "destructive", title: "Error", description: "Please enter a topic" });
       return;
     }
+    if (!session) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to generate a quiz." });
+      return;
+    }
 
     setIsGenerating(true);
     try {
@@ -114,7 +118,7 @@ const QuizPage: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ topic, numQuestions: 5 }),
       });
