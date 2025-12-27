@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { getEmailTemplate } from '../_shared/email-template.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,184 +19,6 @@ interface EmailRequest {
   applicationId?: string;
 }
 
-const baseStyles = `
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 40px 20px; }
-  .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-  .header { background: linear-gradient(135deg, #2A5A6A 0%, #1a3d47 100%); padding: 40px 30px; text-align: center; }
-  .logo { font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: 2px; margin-bottom: 8px; }
-  .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; }
-  .content { padding: 40px 30px; }
-  h1 { color: #ffffff; font-size: 24px; margin: 0 0 20px 0; }
-  p { color: #b8b8b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; }
-  .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-  .footer p { color: #666; font-size: 12px; margin: 0; }
-  .info-box { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 12px; margin: 20px 0; }
-  .success-box { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); padding: 20px; border-radius: 12px; margin: 20px 0; }
-  .success-box p { color: #4ade80; margin: 0; }
-  .warning-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 20px; border-radius: 12px; margin: 20px 0; }
-  .warning-box p { color: #f87171; }
-  ul { color: #b8b8b8; padding-left: 20px; margin: 0 0 20px 0; }
-  li { margin-bottom: 12px; }
-  .highlight { color: #4ecdc4; }
-  .credentials { background: rgba(78, 205, 196, 0.1); border: 1px solid rgba(78, 205, 196, 0.3); padding: 20px; border-radius: 12px; margin: 20px 0; }
-  .credentials p { margin: 8px 0; color: #4ecdc4; }
-`;
-
-const getSubmittedEmail = (applicantName: string, applicationId?: string) => `
-  <!DOCTYPE html>
-  <html>
-  <head><style>${baseStyles}</style></head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <div class="logo">LMV ACADEMY</div>
-        <div class="tagline">Luminary Innovision Academy</div>
-      </div>
-      <div class="content">
-        <h1>Application Received! 📋</h1>
-        <p>Dear ${applicantName},</p>
-        <p>Thank you for applying to become a tutor at LMV Academy! We have received your application and our team will review it shortly.</p>
-        ${applicationId ? `
-          <div class="credentials">
-            <p style="font-weight: bold; margin-bottom: 10px;">Your Application ID:</p>
-            <p style="font-size: 24px; letter-spacing: 2px; text-align: center;">${applicationId}</p>
-          </div>
-          <p style="font-size: 12px; color: #888;">Please keep this ID for your records. You may reference it in future communications.</p>
-        ` : ''}
-        <p>You will be notified via email and push notification once a decision has been made.</p>
-        <div class="info-box">
-          <p style="color: #ffffff; font-weight: bold; margin-bottom: 15px;">What to expect:</p>
-          <ul>
-            <li>Our team will review your qualifications and experience</li>
-            <li>This typically takes 2-5 business days</li>
-            <li>You'll receive an email with the outcome</li>
-          </ul>
-        </div>
-        <p>Best regards,<br><strong class="highlight">The LMV Academy Team</strong></p>
-      </div>
-      <div class="footer">
-        <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
-        <p>Questions? Contact us at admin@lmvacademy.com</p>
-      </div>
-    </div>
-  </body>
-  </html>
-`;
-
-const getAdminNotificationEmail = (applicantName: string, applicantEmail: string) => `
-  <!DOCTYPE html>
-  <html>
-  <head><style>${baseStyles}</style></head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <div class="logo">LMV ACADEMY</div>
-        <div class="tagline">Admin Notification</div>
-      </div>
-      <div class="content">
-        <h1>New Tutor Application 📝</h1>
-        <p>A new tutor application has been submitted:</p>
-        <div class="info-box">
-          <p><strong>Name:</strong> ${applicantName}</p>
-          <p><strong>Email:</strong> ${applicantEmail}</p>
-        </div>
-        <p>Please review the application in the admin dashboard.</p>
-        <p>Best regards,<br>LMV Academy System</p>
-      </div>
-      <div class="footer">
-        <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
-      </div>
-    </div>
-  </body>
-  </html>
-`;
-
-const getApprovedEmail = (applicantName: string, applicantEmail: string, temporaryPassword?: string) => {
-  const credentialsSection = temporaryPassword ? `
-    <div class="credentials">
-      <p style="font-weight: bold; margin-bottom: 15px;">Your Login Credentials:</p>
-      <p><strong>Email:</strong> ${applicantEmail}</p>
-      <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
-    </div>
-    <p style="color: #f87171;"><strong>Important:</strong> Please change your password after your first login for security.</p>
-  ` : '';
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head><style>${baseStyles}</style></head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <div class="logo">LMV ACADEMY</div>
-          <div class="tagline">Welcome to Luminary Teach</div>
-        </div>
-        <div class="content">
-          <h1>🎉 Congratulations!</h1>
-          <p>Dear ${applicantName},</p>
-          <p>We are thrilled to inform you that your application to become a tutor at LMV Academy has been <strong style="color: #4ade80;">approved</strong>!</p>
-          <div class="success-box">
-            <p>🌟 You're now part of our elite teaching team!</p>
-          </div>
-          ${credentialsSection}
-          <p>As a Luminary Tutor, you now have access to:</p>
-          <div class="info-box">
-            <ul>
-              <li><strong>Create and manage courses</strong> - Design comprehensive law courses for students</li>
-              <li><strong>Host live classes</strong> - Conduct interactive video sessions with students</li>
-              <li><strong>Upload course materials</strong> - Share notes, case summaries, and resources</li>
-              <li><strong>Post updates</strong> - Keep your students informed with announcements</li>
-              <li><strong>Track student progress</strong> - Monitor enrollment and engagement</li>
-            </ul>
-          </div>
-          <p>To get started, log in to your account and look for the <strong>"Teach"</strong> button in the Academy section.</p>
-          <p style="color: #4ecdc4; font-weight: bold; font-size: 18px; text-align: center; margin-top: 30px;">Welcome to the team! 🚀</p>
-          <p>Best regards,<br><strong class="highlight">The LMV Academy Team</strong></p>
-        </div>
-        <div class="footer">
-          <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
-          <p>Questions? Contact us at admin@lmvacademy.com</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-};
-
-const getRejectedEmail = (applicantName: string, rejectionReason?: string) => `
-  <!DOCTYPE html>
-  <html>
-  <head><style>${baseStyles}</style></head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <div class="logo">LMV ACADEMY</div>
-        <div class="tagline">Luminary Innovision Academy</div>
-      </div>
-      <div class="content">
-        <h1>Application Update</h1>
-        <p>Dear ${applicantName},</p>
-        <p>Thank you for your interest in becoming a tutor at LMV Academy.</p>
-        <p>After careful review, we regret to inform you that we are unable to approve your application at this time.</p>
-        ${rejectionReason ? `
-          <div class="warning-box">
-            <p><strong>Reason:</strong></p>
-            <p>${rejectionReason}</p>
-          </div>
-        ` : ''}
-        <p>You are welcome to apply again in the future if your circumstances change.</p>
-        <p>Thank you for your understanding.</p>
-        <p>Best regards,<br><strong class="highlight">The LMV Academy Team</strong></p>
-      </div>
-      <div class="footer">
-        <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
-        <p>Questions? Contact us at admin@lmvacademy.com</p>
-      </div>
-    </div>
-  </body>
-  </html>
-`;
-
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -209,37 +32,110 @@ const handler = async (req: Request): Promise<Response> => {
     const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
 
     if (type === 'submitted') {
-      // Email to applicant
-      await resend.emails.send({
-        from: `LMV Academy <${fromEmail}>`,
-        to: [applicantEmail],
-        subject: `Tutor Application Received${applicationId ? ` - ID: ${applicationId}` : ''} - LMV Academy`,
-        html: getSubmittedEmail(applicantName, applicationId),
-      });
+        const submittedContent = `
+            <p>Thank you for applying to become a tutor at LMV Academy! We have received your application and our team will review it shortly.</p>
+            ${applicationId ? `
+                <div style="background: #f0f2f5; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                    <p style="font-weight: bold; margin-bottom: 10px;">Your Application ID:</p>
+                    <p style="font-size: 24px; letter-spacing: 2px; text-align: center; color: #1b263b;">${applicationId}</p>
+                </div>
+                <p style="font-size: 12px; color: #666;">Please keep this ID for your records. You may reference it in future communications.</p>
+            ` : ''}
+            <p>You will be notified via email and push notification once a decision has been made.</p>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                <p style="font-weight: bold; margin-bottom: 15px;">What to expect:</p>
+                <ul>
+                    <li>Our team will review your qualifications and experience</li>
+                    <li>This typically takes 2-5 business days</li>
+                    <li>You'll receive an email with the outcome</li>
+                </ul>
+            </div>
+            <p>Best regards,<br><strong>The LMV Academy Team</strong></p>
+        `;
+        const submittedEmailHtml = getEmailTemplate({ title: 'Application Received! 📋', name: applicantName, content: submittedContent });
 
-      // Email to admin if provided
-      if (adminEmail) {
         await resend.emails.send({
-          from: `LMV Academy <${fromEmail}>`,
-          to: [adminEmail],
-          subject: `New Tutor Application: ${applicantName}${applicationId ? ` (ID: ${applicationId})` : ''}`,
-          html: getAdminNotificationEmail(applicantName, applicantEmail),
+            from: `LMV Academy <${fromEmail}>`,
+            to: [applicantEmail],
+            subject: `Tutor Application Received${applicationId ? ` - ID: ${applicationId}` : ''} - LMV Academy`,
+            html: submittedEmailHtml,
         });
-      }
+
+        if (adminEmail) {
+            const adminContent = `
+                <p>A new tutor application has been submitted:</p>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                    <p><strong>Name:</strong> ${applicantName}</p>
+                    <p><strong>Email:</strong> ${applicantEmail}</p>
+                </div>
+                <p>Please review the application in the admin dashboard.</p>
+                <p>Best regards,<br>LMV Academy System</p>
+            `;
+            const adminEmailHtml = getEmailTemplate({ title: 'New Tutor Application 📝', content: adminContent });
+
+            await resend.emails.send({
+                from: `LMV Academy <${fromEmail}>`,
+                to: [adminEmail],
+                subject: `New Tutor Application: ${applicantName}${applicationId ? ` (ID: ${applicationId})` : ''}`,
+                html: adminEmailHtml,
+            });
+        }
     } else if (type === 'approved') {
-      await resend.emails.send({
-        from: `LMV Academy <${fromEmail}>`,
-        to: [applicantEmail],
-        subject: "🎉 Congratulations! Your Tutor Application is Approved - LMV Academy",
-        html: getApprovedEmail(applicantName, applicantEmail, temporaryPassword),
-      });
+        const approvedContent = `
+            <p>We are thrilled to inform you that your application to become a tutor at LMV Academy has been <strong style="color: #16a34a;">approved</strong>!</p>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                <p style="color: #166534; margin: 0;">🌟 You're now part of our elite teaching team!</p>
+            </div>
+            ${temporaryPassword ? `
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                    <p style="font-weight: bold; margin-bottom: 15px;">Your Login Credentials:</p>
+                    <p><strong>Email:</strong> ${applicantEmail}</p>
+                    <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
+                </div>
+                <p style="color: #ef4444;"><strong>Important:</strong> Please change your password after your first login for security.</p>
+            ` : ''}
+            <p>As a Luminary Tutor, you now have access to:</p>
+            <ul>
+                <li><strong>Create and manage courses</strong></li>
+                <li><strong>Host live classes</strong></li>
+                <li><strong>Upload course materials</strong></li>
+                <li><strong>Post updates</strong></li>
+                <li><strong>Track student progress</strong></li>
+            </ul>
+            <p>To get started, log in to your account and look for the <strong>"Teach"</strong> button in the Academy section.</p>
+            <p style="font-weight: bold; font-size: 18px; text-align: center; margin-top: 30px;">Welcome to the team! 🚀</p>
+            <p>Best regards,<br><strong>The LMV Academy Team</strong></p>
+        `;
+        const approvedEmailHtml = getEmailTemplate({ title: '🎉 Congratulations!', name: applicantName, content: approvedContent });
+
+        await resend.emails.send({
+            from: `LMV Academy <${fromEmail}>`,
+            to: [applicantEmail],
+            subject: "🎉 Congratulations! Your Tutor Application is Approved - LMV Academy",
+            html: approvedEmailHtml,
+        });
     } else if (type === 'rejected') {
-      await resend.emails.send({
-        from: `LMV Academy <${fromEmail}>`,
-        to: [applicantEmail],
-        subject: "Tutor Application Update - LMV Academy",
-        html: getRejectedEmail(applicantName, rejectionReason),
-      });
+        const rejectedContent = `
+            <p>Thank you for your interest in becoming a tutor at LMV Academy.</p>
+            <p>After careful review, we regret to inform you that we are unable to approve your application at this time.</p>
+            ${rejectionReason ? `
+                <div style="background: #fff1f2; border: 1px solid #ffdde1; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                    <p style="color: #be123c;"><strong>Reason:</strong></p>
+                    <p style="color: #be123c;">${rejectionReason}</p>
+                </div>
+            ` : ''}
+            <p>You are welcome to apply again in the future if your circumstances change.</p>
+            <p>Thank you for your understanding.</p>
+            <p>Best regards,<br><strong>The LMV Academy Team</strong></p>
+        `;
+        const rejectedEmailHtml = getEmailTemplate({ title: 'Application Update', name: applicantName, content: rejectedContent });
+
+        await resend.emails.send({
+            from: `LMV Academy <${fromEmail}>`,
+            to: [applicantEmail],
+            subject: "Tutor Application Update - LMV Academy",
+            html: rejectedEmailHtml,
+        });
     }
 
     console.log("Email(s) sent successfully");
@@ -248,10 +144,11 @@ const handler = async (req: Request): Promise<Response> => {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in tutor-application-email function:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

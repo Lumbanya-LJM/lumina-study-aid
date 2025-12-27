@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { getEmailTemplate } from '../_shared/email-template.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,56 +24,25 @@ serve(async (req: Request): Promise<Response> => {
     
     console.log(`Sending welcome email to ${email}`);
 
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 40px 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-          .header { background: linear-gradient(135deg, #2A5A6A 0%, #1a3d47 100%); padding: 40px 30px; text-align: center; }
-          .logo { font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: 2px; margin-bottom: 8px; }
-          .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; }
-          .content { padding: 40px 30px; }
-          h1 { color: #ffffff; font-size: 24px; margin: 0 0 20px 0; }
-          p { color: #b8b8b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; }
-          ul { color: #b8b8b8; padding-left: 20px; margin: 0 0 20px 0; }
-          li { margin-bottom: 12px; line-height: 1.5; }
-          .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-          .footer p { color: #666; font-size: 12px; margin: 0; }
-          .highlight { color: #4ecdc4; font-weight: 600; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">LMV ACADEMY</div>
-            <div class="tagline">Luminary Innovision Academy</div>
-          </div>
-          <div class="content">
-            <h1>Welcome${fullName ? `, ${fullName}` : ''}! 👋</h1>
-            <p>Thank you for joining LMV Academy! We're excited to help you excel in your academic journey.</p>
-            <p>Here's what you can do with <span class="highlight">Lumina</span>, your AI study buddy:</p>
-            <ul>
-              <li>📚 Generate flashcards from your study materials</li>
-              <li>📝 Create quizzes to test your knowledge</li>
-              <li>⚖️ Get AI-powered case summaries</li>
-              <li>📅 Build personalized study schedules</li>
-              <li>🎯 Track your progress and streaks</li>
-            </ul>
-            <p>Happy studying! 📖</p>
-            <p style="color: #4ecdc4;"><strong>The LMV Academy Team</strong></p>
-          </div>
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
-            <p>Questions? Contact us at admin@lmvacademy.com</p>
-          </div>
-        </div>
-      </body>
-      </html>
+    const emailContent = `
+      <p>Thank you for joining LMV Academy! We're excited to help you excel in your academic journey.</p>
+      <p>Here's what you can do with <span class="highlight">Lumina</span>, your AI study buddy:</p>
+      <ul>
+        <li>📚 Generate flashcards from your study materials</li>
+        <li>📝 Create quizzes to test your knowledge</li>
+        <li>⚖️ Get AI-powered case summaries</li>
+        <li>📅 Build personalized study schedules</li>
+        <li>🎯 Track your progress and streaks</li>
+      </ul>
+      <p>Happy studying! 📖</p>
+      <p><strong>The LMV Academy Team</strong></p>
     `;
+
+    const emailHtml = getEmailTemplate({
+      title: 'Welcome! 👋',
+      name: fullName,
+      content: emailContent,
+    });
 
     const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
     
@@ -89,10 +59,11 @@ serve(async (req: Request): Promise<Response> => {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error sending welcome email:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

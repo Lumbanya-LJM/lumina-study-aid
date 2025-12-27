@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { getEmailTemplate } from '../_shared/email-template.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -80,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Build course list HTML
     const courseListHtml = assignedTutors.map(({ course, tutor }) => `
-      <tr style="border-bottom: 1px solid #eee;">
+      <tr style="border-bottom: 1px solid #e0e0e0;">
         <td style="padding: 12px; text-align: left;">
           <strong>${course.name}</strong>
           <br/>
@@ -95,60 +96,37 @@ const handler = async (req: Request): Promise<Response> => {
       </tr>
     `).join('');
 
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Enrollment Confirmation</title>
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
-          <h1 style="color: #fff; margin: 0; font-size: 24px;">🎓 Enrollment Confirmed!</h1>
-        </div>
-        
-        <div style="background: #fff; padding: 30px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <p style="color: #333; font-size: 16px;">Dear ${studentName},</p>
-          
-          <p style="color: #666; font-size: 14px; line-height: 1.6;">
-            Congratulations! You have successfully enrolled in the following course(s) at Luminary Innovision Academy:
-          </p>
-          
-          <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
-            <thead>
-              <tr style="background: #f8f8f8;">
-                <th style="padding: 12px; text-align: left; font-size: 14px; color: #333;">Course</th>
-                <th style="padding: 12px; text-align: left; font-size: 14px; color: #333;">Assigned Tutor</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${courseListHtml}
-            </tbody>
-          </table>
-          
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
-            <p style="color: #166534; font-size: 14px; margin: 0;">
-              <strong>What's Next?</strong><br/>
-              Log in to your Lumina Academy dashboard to access course materials, attend live classes, and connect with your tutors.
-            </p>
-          </div>
-          
-          <p style="color: #666; font-size: 14px;">
-            If you have any questions, feel free to reach out to our support team.
-          </p>
-          
-          <p style="color: #666; font-size: 14px; margin-top: 30px;">
-            Best regards,<br/>
-            <strong style="color: #333;">The Luminary Innovision Team</strong>
-          </p>
-        </div>
-        
-        <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
-          <p>© ${new Date().getFullYear()} Luminary Innovision Academy. All rights reserved.</p>
-        </div>
-      </body>
-      </html>
+    const emailContent = `
+      <p>Congratulations! You have successfully enrolled in the following course(s) at Luminary Innovision Academy:</p>
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+        <thead>
+          <tr style="background: #f8f9fa;">
+            <th style="padding: 12px; text-align: left; font-size: 14px; color: #333;">Course</th>
+            <th style="padding: 12px; text-align: left; font-size: 14px; color: #333;">Assigned Tutor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${courseListHtml}
+        </tbody>
+      </table>
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <p style="color: #166534; font-size: 14px; margin: 0;">
+          <strong>What's Next?</strong><br/>
+          Log in to your Lumina Academy dashboard to access course materials, attend live classes, and connect with your tutors.
+        </p>
+      </div>
+      <p>If you have any questions, feel free to reach out to our support team.</p>
+      <p style="margin-top: 30px;">
+        Best regards,<br/>
+        <strong>The Luminary Innovision Team</strong>
+      </p>
     `;
+
+    const emailHtml = getEmailTemplate({
+      title: '🎓 Enrollment Confirmed!',
+      name: studentName,
+      content: emailContent,
+    });
 
     const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
     
@@ -173,10 +151,11 @@ const handler = async (req: Request): Promise<Response> => {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-enrollment-confirmation:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

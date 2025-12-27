@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getEmailTemplate } from '../_shared/email-template.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,100 +15,6 @@ interface ClassUpdateRequest {
   meetingLink: string | null;
   updateType: 'scheduled' | 'updated' | 'cancelled';
 }
-
-const getEmailHtml = (
-  studentName: string,
-  classTitle: string,
-  scheduledAt: string | null,
-  meetingLink: string | null,
-  updateType: 'scheduled' | 'updated' | 'cancelled'
-) => {
-  const formattedTime = scheduledAt 
-    ? new Date(scheduledAt).toLocaleString('en-ZM', { 
-        timeZone: 'Africa/Lusaka',
-        dateStyle: 'full',
-        timeStyle: 'short'
-      })
-    : 'Time TBD';
-
-  const getTitle = () => {
-    switch (updateType) {
-      case 'scheduled':
-        return '<span class="scheduled">📅 New Class Scheduled!</span>';
-      case 'updated':
-        return '<span class="updated">📝 Class Updated</span>';
-      case 'cancelled':
-        return '<span class="cancelled">❌ Class Cancelled</span>';
-    }
-  };
-
-  const getMessage = () => {
-    switch (updateType) {
-      case 'scheduled':
-        return `Great news! A new class <strong style="color: #4ecdc4;">${classTitle}</strong> has been scheduled. Mark your calendar!`;
-      case 'updated':
-        return `The class <strong style="color: #4ecdc4;">${classTitle}</strong> has been updated. Please review the new details below.`;
-      case 'cancelled':
-        return `We regret to inform you that the class <strong style="color: #4ecdc4;">${classTitle}</strong> has been cancelled.`;
-    }
-  };
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 40px 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-        .header { background: linear-gradient(135deg, #2A5A6A 0%, #1a3d47 100%); padding: 40px 30px; text-align: center; }
-        .logo { font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: 2px; margin-bottom: 8px; }
-        .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; }
-        .content { padding: 40px 30px; }
-        h1 { color: #ffffff; font-size: 24px; margin: 0 0 20px 0; }
-        p { color: #b8b8b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; }
-        .button { display: inline-block; background: linear-gradient(135deg, #2A5A6A 0%, #3d7a8a 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
-        .info-box { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 12px; margin: 20px 0; }
-        .info-item { color: #b8b8b8; margin: 10px 0; }
-        .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-        .footer p { color: #666; font-size: 12px; margin: 0; }
-        .scheduled { color: #4ecdc4; }
-        .updated { color: #f0ad4e; }
-        .cancelled { color: #ff6b6b; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <div class="logo">LMV ACADEMY</div>
-          <div class="tagline">Luminary Innovision Academy</div>
-        </div>
-        <div class="content">
-          <h1>${getTitle()}</h1>
-          <p>Hi ${studentName},</p>
-          <p>${getMessage()}</p>
-          ${updateType !== 'cancelled' ? `
-            <div class="info-box">
-              <div class="info-item">📅 <strong>Class:</strong> ${classTitle}</div>
-              <div class="info-item">⏰ <strong>Time:</strong> ${formattedTime} (CAT)</div>
-              ${meetingLink ? `<div class="info-item">🔗 <strong>Link:</strong> <a href="${meetingLink}" style="color: #4ecdc4;">${meetingLink}</a></div>` : ''}
-            </div>
-            <p>${updateType === 'scheduled' ? 'Add this to your calendar and prepare for the class!' : 'Make sure to update your calendar with the new details!'}</p>
-            <div style="text-align: center;">
-              <a href="https://app.lmvacademy.com/home" class="button">View in App</a>
-            </div>
-          ` : `
-            <p>We apologize for any inconvenience. Please check the app for updates or contact your tutor for more information.</p>
-          `}
-        </div>
-        <div class="footer">
-          <p>© ${new Date().getFullYear()} LMV Academy. All rights reserved.</p>
-          <p>Excellence in Legal Education 🇿🇲</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-};
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -188,13 +95,58 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const student of students) {
       try {
-        const emailHtml = getEmailHtml(
-          student.fullName,
-          classTitle,
-          scheduledAt,
-          meetingLink,
-          updateType as 'scheduled' | 'updated' | 'cancelled'
-        );
+        const formattedTime = scheduledAt
+          ? new Date(scheduledAt).toLocaleString('en-ZM', {
+              timeZone: 'Africa/Lusaka',
+              dateStyle: 'full',
+              timeStyle: 'short'
+            })
+          : 'Time TBD';
+
+        let title = '';
+        let content = '';
+
+        switch (updateType) {
+          case 'scheduled':
+            title = '📅 New Class Scheduled!';
+            content = `
+              <p>Great news! A new class <strong class="highlight">${classTitle}</strong> has been scheduled. Mark your calendar!</p>
+              <div style="background: #f0f2f5; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                <p style="margin: 0 0 10px 0;"><strong>Class:</strong> ${classTitle}</p>
+                <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${formattedTime} (CAT)</p>
+                ${meetingLink ? `<p style="margin: 0;"><strong>Link:</strong> <a href="${meetingLink}">${meetingLink}</a></p>` : ''}
+              </div>
+              <p>Add this to your calendar and prepare for the class!</p>
+              <div style="text-align: center;"><a href="https://app.lmvacademy.com/home" class="button">View in App</a></div>
+            `;
+            break;
+          case 'updated':
+            title = '📝 Class Updated';
+            content = `
+              <p>The class <strong class="highlight">${classTitle}</strong> has been updated. Please review the new details below.</p>
+              <div style="background: #f0f2f5; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                <p style="margin: 0 0 10px 0;"><strong>Class:</strong> ${classTitle}</p>
+                <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${formattedTime} (CAT)</p>
+                ${meetingLink ? `<p style="margin: 0;"><strong>Link:</strong> <a href="${meetingLink}">${meetingLink}</a></p>` : ''}
+              </div>
+              <p>Make sure to update your calendar with the new details!</p>
+              <div style="text-align: center;"><a href="https://app.lmvacademy.com/home" class="button">View in App</a></div>
+            `;
+            break;
+          case 'cancelled':
+            title = '❌ Class Cancelled';
+            content = `
+              <p>We regret to inform you that the class <strong class="highlight">${classTitle}</strong> has been cancelled.</p>
+              <p>We apologize for any inconvenience. Please check the app for updates or contact your tutor for more information.</p>
+            `;
+            break;
+        }
+
+        const emailHtml = getEmailTemplate({
+          title,
+          name: student.fullName,
+          content,
+        });
 
         const emailResponse = await fetch('https://api.resend.com/emails', {
           method: 'POST',
