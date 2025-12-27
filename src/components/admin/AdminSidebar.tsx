@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -83,7 +83,11 @@ interface SidebarContentProps {
   onClose?: () => void;
 }
 
-const SidebarContent: React.FC<SidebarContentProps> = ({
+// ⚡ Bolt: Memoized SidebarContent to prevent unnecessary re-renders.
+// This component is rendered in two places in the parent, and was re-rendering
+// whenever the parent's state changed (e.g. mobile sheet open/close).
+// By wrapping it in React.memo, we ensure it only re-renders when its specific props change.
+const SidebarContent: React.FC<SidebarContentProps> = React.memo(({
   activeTab,
   onTabChange,
   pendingApplications,
@@ -167,7 +171,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   activeTab,
@@ -175,6 +179,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   pendingApplications,
 }) => {
   const [open, setOpen] = React.useState(false);
+  const handleClose = useCallback(() => setOpen(false), []);
 
   return (
     <>
@@ -194,7 +199,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             activeTab={activeTab}
             onTabChange={onTabChange}
             pendingApplications={pendingApplications}
-            onClose={() => setOpen(false)}
+            onClose={handleClose}
           />
         </SheetContent>
       </Sheet>
