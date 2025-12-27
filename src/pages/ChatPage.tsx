@@ -481,7 +481,7 @@ const ChatPage: React.FC = () => {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-lumina`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: 'POST',
           headers: {
@@ -816,7 +816,7 @@ const ChatPage: React.FC = () => {
               </div>
             ) : (
               /* Conversation Messages */
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
@@ -829,13 +829,7 @@ const ChatPage: React.FC = () => {
                     <div className="shrink-0 mt-0.5">
                       {msg.sender === 'lumina' ? (
                         <LuminaAvatar size="sm" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                          <span className="text-xs font-semibold text-primary-foreground">
-                            {displayName.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
+                      ) : null}
                     </div>
                     
                     {/* Message Content */}
