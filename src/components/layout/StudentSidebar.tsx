@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   Home,
   MessageCircle,
@@ -19,6 +19,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { haptics } from '@/lib/haptics';
 import { SidebarUserHeader } from '@/components/layout/SidebarUserHeader';
+import { useFocusSessionStore } from '@/features/focus/useFocusSession';
+import { FocusModeDialog } from '@/features/focus/FocusModeDialog';
 
 const navItems = [
   {
@@ -102,56 +104,111 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   currentPath,
   onClose,
 }) => {
+  const navigate = useNavigate();
+  const { isActive, isDialogOpen, actions } = useFocusSessionStore(state => ({
+    isActive: state.isActive,
+    isDialogOpen: state.isDialogOpen,
+    actions: state.actions,
+  }));
+
+  const handleFocusClick = () => {
+    actions.openDialog();
+  };
+
+  const handleConfirmFocus = () => {
+    actions.startSession();
+    navigate('/focus');
+    onClose?.();
+  };
+
   const handleClick = () => {
     haptics.selection();
     onClose?.();
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* User Header */}
-      <SidebarUserHeader
-        portalIcon={<GraduationCap className="w-3.5 h-3.5 text-primary" />}
-        portalName="Luminary Study"
-        portalSubtitle="Student Portal"
+    <>
+      <div className="flex flex-col h-full">
+        {/* User Header */}
+        <SidebarUserHeader
+          portalIcon={<GraduationCap className="w-3.5 h-3.5 text-primary" />}
+          portalName="Luminary Study"
+          portalSubtitle="Student Portal"
+        />
+
+        {/* Navigation */}
+        <ScrollArea className="flex-1 py-2">
+          <nav className="px-2 space-y-1">
+            {navItems.map((item) => {
+              const isActive = currentPath === item.path;
+
+              if (item.id === 'focus') {
+                return (
+                  <button
+                    key={item.id}
+                    onClick={handleFocusClick}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <item.icon className={cn('w-5 h-5 shrink-0', isActive && 'text-primary-foreground')} />
+                    <div className="flex-1 min-w-0">
+                      <span className={cn('font-medium text-sm block', isActive && 'text-primary-foreground')}>
+                        {item.label}
+                      </span>
+                       <p className={cn(
+                        'text-xs truncate',
+                        isActive ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                      )}>
+                        {item.description}
+                      </p>
+                    </div>
+                  </button>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.id}
+                  to={item.path}
+                  onClick={handleClick}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <item.icon className={cn('w-5 h-5 shrink-0', isActive && 'text-primary-foreground')} />
+                  <div className="flex-1 min-w-0">
+                    <span className={cn('font-medium text-sm block', isActive && 'text-primary-foreground')}>
+                      {item.label}
+                    </span>
+                     <p className={cn(
+                      'text-xs truncate',
+                      isActive ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                    )}>
+                      {item.description}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
+        </ScrollArea>
+      </div>
+      <FocusModeDialog
+        open={isDialogOpen}
+        onOpenChange={actions.closeDialog}
+        onConfirm={handleConfirmFocus}
+        title="Activate Focus Mode?"
+        description="Activating Focus Mode will help you concentrate by reducing distractions."
+        confirmText="Activate"
       />
-
-      {/* Navigation */}
-      <ScrollArea className="flex-1 py-2">
-        <nav className="px-2 space-y-1">
-          {navItems.map((item) => {
-            const isActive = currentPath === item.path;
-
-            return (
-              <Link
-                key={item.id}
-                to={item.path}
-                onClick={handleClick}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
-                )}
-              >
-                <item.icon className={cn('w-5 h-5 shrink-0', isActive && 'text-primary-foreground')} />
-                <div className="flex-1 min-w-0">
-                  <span className={cn('font-medium text-sm block', isActive && 'text-primary-foreground')}>
-                    {item.label}
-                  </span>
-                  <p className={cn(
-                    'text-xs truncate',
-                    isActive ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                  )}>
-                    {item.description}
-                  </p>
-                </div>
-              </Link>
-            );
-          })}
-        </nav>
-      </ScrollArea>
-    </div>
+    </>
   );
 };
 
