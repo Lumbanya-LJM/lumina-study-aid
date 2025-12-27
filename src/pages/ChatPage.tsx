@@ -481,7 +481,7 @@ const ChatPage: React.FC = () => {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-lumina`,
         {
           method: 'POST',
           headers: {
