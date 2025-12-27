@@ -1,3 +1,4 @@
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -44,10 +45,22 @@ import TutorProfilePage from "./pages/TutorProfilePage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import AdminAuthPage from "./pages/AdminAuthPage";
 import NotFound from "./pages/NotFound";
+import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  if (!supabase) {
+    return (
+      <div style={{ padding: "2rem", textAlign: "center" }}>
+        <h1>Application Configuration Error</h1>
+        <p>Supabase client could not be initialized. Please check the environment variables.</p>
+      </div>
+    );
+  }
+
+  return (
+<ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
@@ -110,6 +123,8 @@ const App = () => (
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
-);
+</ErrorBoundary>
+  );
+};
 
 export default App;
