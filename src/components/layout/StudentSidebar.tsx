@@ -12,8 +12,10 @@ import {
   FileText,
   Target,
   Menu,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -102,9 +104,16 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   currentPath,
   onClose,
 }) => {
+  const { signOut } = useAuth();
   const handleClick = () => {
     haptics.selection();
     onClose?.();
+  };
+
+  const handleLogout = () => {
+    signOut();
+    onClose?.();
+    haptics.success();
   };
 
   return (
@@ -151,6 +160,24 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           })}
         </nav>
       </ScrollArea>
+
+      {/* Logout */}
+      <div className="px-2 py-2 border-t border-border/50">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+        >
+          <LogOut className="w-5 h-5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="font-medium text-sm block">
+              Logout
+            </span>
+             <p className="text-xs truncate text-muted-foreground">
+              Sign out of your account
+            </p>
+          </div>
+        </button>
+      </div>
     </div>
   );
 };

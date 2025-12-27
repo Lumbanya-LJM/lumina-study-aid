@@ -10,9 +10,13 @@ import {
   Activity,
   Shield,
   Menu,
+  LogOut,
+  Home,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { SidebarUserHeader } from '@/components/layout/SidebarUserHeader';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -87,10 +91,21 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   pendingApplications,
   onClose,
 }) => {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
   const handleClick = (id: string) => {
     onTabChange(id);
     onClose?.();
   };
+  const handleLogout = () => {
+    signOut();
+    onClose?.();
+  };
+  const handleExitAdmin = () => {
+    navigate('/home');
+    onClose?.();
+  };
+
 
   return (
     <div className="flex flex-col h-full">
@@ -143,6 +158,39 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           })}
         </nav>
       </ScrollArea>
+
+      {/* Exit & Logout */}
+      <div className="px-2 py-2 border-t border-border/50 space-y-1">
+        <button
+          onClick={handleExitAdmin}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+        >
+          <Home className="w-5 h-5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="font-medium text-sm block">
+              Exit Admin
+            </span>
+             <p className="text-xs truncate text-muted-foreground">
+              Return to main dashboard
+            </p>
+          </div>
+        </button>
+
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+        >
+          <LogOut className="w-5 h-5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="font-medium text-sm block">
+              Logout
+            </span>
+             <p className="text-xs truncate text-muted-foreground">
+              Sign out of your account
+            </p>
+          </div>
+        </button>
+      </div>
     </div>
   );
 };
