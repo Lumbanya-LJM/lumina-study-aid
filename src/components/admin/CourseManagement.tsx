@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,10 @@ interface Course {
   created_at: string;
 }
 
+interface ApiError {
+  message: string;
+}
+
 const CourseManagement: React.FC = () => {
   const { toast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -52,11 +56,7 @@ const CourseManagement: React.FC = () => {
     is_active: true
   });
 
-  useEffect(() => {
-    loadCourses();
-  }, []);
-
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('academy_courses')
@@ -76,7 +76,11 @@ const CourseManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadCourses();
+  }, [loadCourses]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,11 +179,12 @@ const CourseManagement: React.FC = () => {
       if (error) throw error;
       loadCourses();
       toast({ title: 'Success', description: 'Course deleted successfully' });
-    } catch (error: any) {
-      console.error('Error deleting course:', error);
+    } catch (error) {
+      const apiError = error as ApiError;
+      console.error('Error deleting course:', apiError);
       toast({
         title: 'Error',
-        description: error.message?.includes('violates foreign key') 
+        description: apiError.message?.includes('violates foreign key')
           ? 'Cannot delete course with active enrollments'
           : 'Failed to delete course',
         variant: 'destructive'

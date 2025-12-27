@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,11 +31,7 @@ export const AdminManagement: React.FC = () => {
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAdmins();
-  }, []);
-
-  const loadAdmins = async () => {
+  const loadAdmins = useCallback(async () => {
     setLoading(true);
     try {
       // Get all admin roles
@@ -81,7 +77,11 @@ export const AdminManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadAdmins();
+  }, [loadAdmins]);
 
   const addAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
