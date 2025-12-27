@@ -205,7 +205,7 @@ export const TutorSidebar: React.FC<TutorSidebarProps> = ({
           <Button
             variant="outline"
             size="icon"
-            className="lg:hidden fixed bottom-20 right-4 z-50 h-12 w-12 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
+            className="lg:hidden fixed bottom-24 right-4 z-50 h-12 w-12 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Menu className="h-5 w-5" />
           </Button>
