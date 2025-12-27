@@ -136,6 +136,20 @@ const TutorApplicationsAdminPage: React.FC = () => {
     try {
       // Generate temporary password
       const temporaryPassword = generateTempPassword();
+
+      // Set the password for the user in Supabase Auth
+      const { error: passwordSetError } = await supabase.functions.invoke('set-tutor-password', {
+        body: {
+          userId: application.user_id,
+          password: temporaryPassword,
+        },
+      });
+
+      if (passwordSetError) {
+        // Log the detailed error for debugging
+        console.error('Password set error:', passwordSetError);
+        throw new Error(`Failed to set password: An internal error occurred.`);
+      }
       
       // Update application status
       const { error: updateError } = await supabase
@@ -189,7 +203,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
       });
 
       loadApplications();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error approving:', error);
       toast({
         title: 'Error',
@@ -250,11 +264,11 @@ const TutorApplicationsAdminPage: React.FC = () => {
       setShowRejectModal(null);
       setRejectionReason('');
       loadApplications();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error rejecting:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to reject application',
+        description: (error as Error).message || 'Failed to reject application',
         variant: 'destructive'
       });
     } finally {
