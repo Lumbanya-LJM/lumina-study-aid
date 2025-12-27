@@ -49,6 +49,7 @@ interface Message {
   sender: 'user' | 'lumina';
   timestamp: Date;
   attachments?: { name: string; type: string; url?: string }[];
+  streaming?: boolean;
 }
 
 interface Conversation {
@@ -86,7 +87,7 @@ const ChatPage: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [enableWebSearch, setEnableWebSearch] = useState(false);
+  const [enableWebSearch, setEnableWebSearch] = useState(true);
   const [isZambiaLiiSearchOpen, setIsZambiaLiiSearchOpen] = useState(false);
 
   // Voice input hook
@@ -139,7 +140,7 @@ const ChatPage: React.FC = () => {
     if (user) {
       loadConversations();
     }
-  }, [user]);
+  }, [user, loadConversations]);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -149,7 +150,7 @@ const ChatPage: React.FC = () => {
       setMessages([]);
       setIsLoadingHistory(false);
     }
-  }, [user, currentConversationId]);
+  }, [user, currentConversationId, loadChatHistory]);
 
   // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -158,7 +159,7 @@ const ChatPage: React.FC = () => {
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
   };
 
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     if (!user) return;
     setIsLoadingConversations(true);
 
@@ -184,9 +185,9 @@ const ChatPage: React.FC = () => {
     } finally {
       setIsLoadingConversations(false);
     }
-  };
+  }, [user, currentConversationId]);
 
-  const loadChatHistory = async (conversationId: string) => {
+  const loadChatHistory = useCallback(async (conversationId: string) => {
     if (!user) return;
     setIsLoadingHistory(true);
 
@@ -217,9 +218,9 @@ const ChatPage: React.FC = () => {
     } finally {
       setIsLoadingHistory(false);
     }
-  };
+  }, [user]);
 
-  const createNewConversation = async (title: string = 'New Chat'): Promise<string | null> => {
+  const createNewConversation = useCallback(async (title: string = 'New Chat'): Promise<string | null> => {
     if (!user) return null;
 
     try {
@@ -242,9 +243,9 @@ const ChatPage: React.FC = () => {
       console.error('Error creating conversation:', error);
       return null;
     }
-  };
+  }, [user]);
 
-  const updateConversationTitle = async (conversationId: string, title: string) => {
+  const updateConversationTitle = useCallback(async (conversationId: string, title: string) => {
     try {
       await supabase
         .from('conversations')
@@ -257,7 +258,7 @@ const ChatPage: React.FC = () => {
     } catch (error) {
       console.error('Error updating conversation title:', error);
     }
-  };
+  }, []);
 
   const deleteConversation = async (conversationId: string) => {
     if (!user) return;
@@ -301,7 +302,7 @@ const ChatPage: React.FC = () => {
     setMessages([]);
   };
 
-  const saveMessage = async (content: string, role: 'user' | 'assistant', conversationId: string) => {
+  const saveMessage = useCallback(async (content: string, role: 'user' | 'assistant', conversationId: string) => {
     if (!user) return;
 
     try {
@@ -320,7 +321,7 @@ const ChatPage: React.FC = () => {
     } catch (error) {
       console.error('Error saving message:', error);
     }
-  };
+  }, [user]);
 
   // File handling functions
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -390,7 +391,7 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const handleSend = async (customMessage?: string, action?: string) => {
+  const handleSend = useCallback(async (customMessage?: string, action?: string) => {
     const messageText = customMessage || message;
     if ((!messageText.trim() && attachments.length === 0) || isLoading) return;
 
@@ -457,7 +458,7 @@ const ChatPage: React.FC = () => {
       }));
       
       // Build the current message content with images for vision analysis
-      let currentMessageContent: any = messageText;
+      let currentMessageContent: React.ChangeEvent<HTMLInputElement> | string = messageText;
       
       // If we have image attachments, format for multimodal AI
       const imageAttachments = attachments.filter(a => a.type === 'image' && a.preview);
@@ -506,7 +507,8 @@ const ChatPage: React.FC = () => {
       // Stream the response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let assistantContent = '';
+      const assistantContent = '';
+      let streamedContent = '';
 
       // Add placeholder for assistant message
       const assistantMessageId = (Date.now() + 1).toString();
@@ -517,6 +519,7 @@ const ChatPage: React.FC = () => {
           content: '',
           sender: 'lumina',
           timestamp: new Date(),
+          streaming: true,
         },
       ]);
 
@@ -545,11 +548,11 @@ const ChatPage: React.FC = () => {
               const parsed = JSON.parse(jsonStr);
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) {
-                assistantContent += content;
+                streamedContent += content;
                 setMessages((prev) =>
                   prev.map((msg) =>
                     msg.id === assistantMessageId
-                      ? { ...msg, content: assistantContent }
+                      ? { ...msg, content: streamedContent }
                       : msg,
                   ),
                 );
@@ -563,10 +566,18 @@ const ChatPage: React.FC = () => {
         }
 
         // Save assistant response to database after streaming completes
-        if (assistantContent) {
-          await saveMessage(assistantContent, 'assistant', activeConversationId);
+        if (streamedContent) {
+          await saveMessage(streamedContent, 'assistant', activeConversationId);
         }
       }
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, streaming: false }
+            : msg,
+        ),
+      );
     } catch (error) {
       console.error('Chat error:', error);
       toast({
@@ -592,7 +603,7 @@ const ChatPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [message, attachments, isLoading, currentConversationId, createNewConversation, messages, updateConversationTitle, saveMessage, user, toast, enableWebSearch]);
 
   const handleQuickPrompt = (action: string) => {
     // Special handling for ZambiaLII search
@@ -621,7 +632,7 @@ const ChatPage: React.FC = () => {
     // Enable web search for ZambiaLII queries
     setEnableWebSearch(true);
     void handleSend(query, 'zambialii');
-  }, []);
+  }, [handleSend]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -631,7 +642,7 @@ const ChatPage: React.FC = () => {
   };
 
   const displayName =
-    (user?.user_metadata as any)?.full_name || user?.email?.split('@')[0] || 'there';
+    (user?.user_metadata as Record<string, unknown>)?.full_name || user?.email?.split('@')[0] || 'there';
 
   return (
     <MobileLayout showNav={false}>
@@ -805,7 +816,7 @@ const ChatPage: React.FC = () => {
               </div>
             ) : (
               /* Conversation Messages */
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
@@ -818,13 +829,7 @@ const ChatPage: React.FC = () => {
                     <div className="shrink-0 mt-0.5">
                       {msg.sender === 'lumina' ? (
                         <LuminaAvatar size="sm" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                          <span className="text-xs font-semibold text-primary-foreground">
-                            {displayName.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
+                      ) : null}
                     </div>
                     
                     {/* Message Content */}
@@ -866,13 +871,13 @@ const ChatPage: React.FC = () => {
                         className={cn(
                           'rounded-2xl px-4 py-3',
                           msg.sender === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted/60'
+                            ? ''
+                            : ''
                         )}
                       >
                         {msg.sender === 'lumina' ? (
                           <div className="prose-smooth text-foreground">
-                            <MarkdownRenderer content={msg.content} />
+                            <MarkdownRenderer content={msg.content} streaming={msg.streaming} />
                           </div>
                         ) : (
                           <p className="text-sm leading-relaxed whitespace-pre-wrap">

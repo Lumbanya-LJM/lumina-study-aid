@@ -135,6 +135,17 @@ const LuminaVaultPage: React.FC = () => {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
 
+    if (selectedCategory === 'all') {
+      toast({
+        title: "Please select a category",
+        description: "First, choose a category for your file, then upload.",
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
     if (!user) {
       toast({
         variant: "destructive",
@@ -145,7 +156,7 @@ const LuminaVaultPage: React.FC = () => {
     }
 
     const selectedFiles = Array.from(e.target.files);
-    const category = selectedCategory === 'all' ? 'notes' : selectedCategory;
+    const category = selectedCategory;
 
     for (const file of selectedFiles) {
       const fileId = Date.now().toString() + Math.random().toString(36).substr(2, 9);

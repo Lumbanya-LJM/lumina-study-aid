@@ -5,9 +5,10 @@ import { cn } from '@/lib/utils';
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  streaming?: boolean;
 }
 
-export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className }) => {
+export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className, streaming }) => {
   return (
     <div className={cn("text-sm leading-relaxed", className)}>
       <ReactMarkdown
@@ -126,7 +127,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
           ),
         }}
       >
-        {content}
+        {`${content}${streaming ? '▋' : ''}`}
       </ReactMarkdown>
     </div>
   );
