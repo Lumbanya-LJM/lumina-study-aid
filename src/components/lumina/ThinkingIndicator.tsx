@@ -72,8 +72,8 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
       <div className="relative">
         <span 
           className={cn(
-            "text-lg transition-all duration-300",
-            "animate-thinking"
+            "text-lg inline-block",
+            "animate-emoji-enter"
           )}
           key={currentState.emoji}
         >
@@ -81,7 +81,10 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground animate-fade-in" key={currentState.text}>
+        <span 
+          className="text-sm text-muted-foreground animate-text-fade" 
+          key={currentState.text}
+        >
           {currentState.text}
         </span>
         <div className="flex items-center gap-0.5">

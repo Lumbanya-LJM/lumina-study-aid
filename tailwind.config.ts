@@ -180,6 +180,15 @@ export default {
           "50%": { transform: "rotate(5deg) scale(1)" },
           "75%": { transform: "rotate(0deg) scale(1.05)" },
         },
+        "emoji-enter": {
+          "0%": { opacity: "0", transform: "scale(0.5) rotate(-10deg)" },
+          "50%": { opacity: "1", transform: "scale(1.15) rotate(5deg)" },
+          "100%": { opacity: "1", transform: "scale(1) rotate(0deg)" },
+        },
+        "text-fade": {
+          "0%": { opacity: "0", transform: "translateX(-5px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
         "glow-pulse": {
           "0%, 100%": { boxShadow: "0 0 20px hsl(var(--primary) / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(var(--primary) / 0.5)" },
@@ -220,6 +229,8 @@ export default {
         "bounce-soft": "bounce-soft 2s ease-in-out infinite",
         "wiggle": "wiggle 0.3s ease-in-out",
         "thinking": "thinking 1.5s ease-in-out infinite",
+        "emoji-enter": "emoji-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+        "text-fade": "text-fade 0.3s ease-out forwards",
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
         "confetti": "confetti 3s ease-out forwards",
         "celebrate": "celebrate 0.5s ease-in-out",
