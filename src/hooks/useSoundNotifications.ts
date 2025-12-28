@@ -36,17 +36,15 @@ export function useSoundNotifications() {
           const recordingUrl = payload.new.recording_url;
           const oldRecordingUrl = payload.old?.recording_url;
           
-          // Class just went live
+          // Class just went live - show notification only (no sound for classes)
           if (newStatus === 'live' && oldStatus !== 'live') {
-            await sounds.classStart();
             toast.info('🔴 Class is Live!', {
               description: `"${payload.new.title}" has started. Join now!`,
             });
           }
           
-          // Recording just became available
+          // Recording just became available - show notification only (no sound for classes)
           if (recordingUrl && !oldRecordingUrl && newStatus === 'ended') {
-            await sounds.recordingReady();
             toast.success('📹 Recording Available', {
               description: `The recording for "${payload.new.title}" is ready to watch!`,
               action: {
@@ -60,7 +58,7 @@ export function useSoundNotifications() {
       )
       .subscribe();
 
-    // Listen for new tutor updates
+    // Listen for new tutor updates - notification only, no sound
     const updateChannel = supabase
       .channel('sound-update-notifications')
       .on(
@@ -72,7 +70,6 @@ export function useSoundNotifications() {
         },
         async (payload) => {
           if (payload.new.is_published) {
-            await sounds.newUpdate();
             toast.info('📢 New Update', {
               description: `${payload.new.title}`,
             });

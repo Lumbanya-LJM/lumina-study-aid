@@ -290,13 +290,36 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      {/* LMV Logo Watermark overlay - deters screen recording */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-        <img 
-          src={lmvLogo} 
-          alt="" 
-          className="w-32 h-32 md:w-40 md:h-40 opacity-15 rotate-[-15deg] select-none"
-          draggable={false}
+      {/* Download Protection Overlay - deters screen capture tools */}
+      <div className="absolute inset-0 pointer-events-none z-[5]">
+        {/* Multiple watermarks positioned across the video */}
+        <div className="absolute top-4 left-4 opacity-10">
+          <img src={lmvLogo} alt="" className="w-12 h-12 rotate-[-10deg] select-none" draggable={false} />
+        </div>
+        <div className="absolute top-4 right-4 opacity-10">
+          <img src={lmvLogo} alt="" className="w-12 h-12 rotate-[10deg] select-none" draggable={false} />
+        </div>
+        <div className="absolute bottom-20 left-4 opacity-10">
+          <img src={lmvLogo} alt="" className="w-12 h-12 rotate-[5deg] select-none" draggable={false} />
+        </div>
+        <div className="absolute bottom-20 right-4 opacity-10">
+          <img src={lmvLogo} alt="" className="w-12 h-12 rotate-[-5deg] select-none" draggable={false} />
+        </div>
+        {/* Center watermark */}
+        <div className="flex items-center justify-center h-full">
+          <img 
+            src={lmvLogo} 
+            alt="" 
+            className="w-32 h-32 md:w-40 md:h-40 opacity-15 rotate-[-15deg] select-none"
+            draggable={false}
+          />
+        </div>
+        {/* Invisible protection layer that triggers screen capture detection */}
+        <div 
+          className="absolute inset-0 mix-blend-difference opacity-0"
+          style={{ 
+            background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.01) 10px, rgba(255,255,255,0.01) 20px)'
+          }}
         />
       </div>
 
