@@ -19,7 +19,8 @@ import {
   Download,
   Plus,
   ShoppingCart,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -110,6 +111,31 @@ const LuminaAcademyPage: React.FC = () => {
   const [updates, setUpdates] = useState<TutorUpdate[]>([]);
   const [courseTutors, setCourseTutors] = useState<CourseTutor[]>([]);
   const [loadingCourseData, setLoadingCourseData] = useState(false);
+  
+  // Dismissed updates (persisted in localStorage)
+  const [dismissedUpdates, setDismissedUpdates] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('dismissed_academy_updates');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const handleDismissUpdate = (updateId: string) => {
+    setDismissedUpdates(prev => {
+      const updated = new Set([...prev, updateId]);
+      localStorage.setItem('dismissed_academy_updates', JSON.stringify([...updated]));
+      return updated;
+    });
+    toast({
+      title: 'Update dismissed',
+      description: 'This update has been hidden.',
+    });
+  };
+
+  // Filter out dismissed updates
+  const visibleUpdates = updates.filter(u => !dismissedUpdates.has(u.id));
 
   // Check if user is a tutor
   useEffect(() => {
@@ -679,13 +705,13 @@ const LuminaAcademyPage: React.FC = () => {
 
               {/* Updates Tab */}
               <TabsContent value="updates" className="space-y-4">
-                {updates.length > 0 ? (
+                {visibleUpdates.length > 0 ? (
                   <div className="space-y-3">
-                    {updates.map((update) => {
+                    {visibleUpdates.map((update) => {
                       const Icon = getUpdateIcon(update.update_type);
                       
                       return (
-                        <div key={update.id} className="bg-card rounded-2xl p-4 border border-border/50">
+                        <div key={update.id} className="bg-card rounded-2xl p-4 border border-border/50 group">
                           <div className="flex items-start gap-3">
                             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                               <Icon className="w-5 h-5 text-primary" />
@@ -693,9 +719,18 @@ const LuminaAcademyPage: React.FC = () => {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
                                 <h3 className="font-semibold text-foreground">{update.title}</h3>
-                                <span className="text-[10px] text-muted-foreground shrink-0">
-                                  {format(new Date(update.created_at), 'MMM d')}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] text-muted-foreground shrink-0">
+                                    {format(new Date(update.created_at), 'MMM d')}
+                                  </span>
+                                  <button
+                                    onClick={() => handleDismissUpdate(update.id)}
+                                    className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Dismiss update"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </div>
                               <p className="text-sm text-muted-foreground mt-2">{update.content}</p>
                               
@@ -728,7 +763,7 @@ const LuminaAcademyPage: React.FC = () => {
                     <Bell className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
                     <p className="text-muted-foreground font-medium">No updates yet</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Tutor updates will appear here
+                      {updates.length > 0 ? 'All updates have been dismissed' : 'Tutor updates will appear here'}
                     </p>
                   </div>
                 )}
