@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Search, Sparkles, BookOpen, FileText, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const ThinkingEmoji = ({ className }: { className?: string }) => (
-  <span className={cn("text-lg", className)}>🤔</span>
-);
 
 interface ThinkingIndicatorProps {
   action?: string;
@@ -12,36 +7,36 @@ interface ThinkingIndicatorProps {
 }
 
 const thinkingStates = [
-  { text: "Understanding your question...", icon: Brain, duration: 1500 },
-  { text: "Processing your request...", icon: Sparkles, duration: 1500 },
-  { text: "Thinking...", icon: Lightbulb, duration: 1500 },
-  { text: "Formulating response...", icon: FileText, duration: 1500 },
+  { text: "Understanding your question...", emoji: "🤔", duration: 1500 },
+  { text: "Processing your request...", emoji: "🧠", duration: 1500 },
+  { text: "Thinking...", emoji: "🤔", duration: 1500 },
+  { text: "Formulating response...", emoji: "💡", duration: 1500 },
 ];
 
 const researchStates = [
-  { text: "Analyzing your query...", icon: Brain, duration: 1200 },
-  { text: "Searching the web...", icon: Search, duration: 2000 },
-  { text: "Gathering information...", icon: BookOpen, duration: 1800 },
-  { text: "Reviewing sources...", icon: FileText, duration: 1500 },
-  { text: "Synthesizing findings...", icon: Sparkles, duration: 1500 },
+  { text: "Analyzing your query...", emoji: "🤔", duration: 1200 },
+  { text: "Searching the web...", emoji: "🔍", duration: 2000 },
+  { text: "Gathering information...", emoji: "📚", duration: 1800 },
+  { text: "Reviewing sources...", emoji: "📖", duration: 1500 },
+  { text: "Synthesizing findings...", emoji: "💡", duration: 1500 },
 ];
 
 const flashcardStates = [
-  { text: "Analyzing the topic...", icon: Brain, duration: 1200 },
-  { text: "Identifying key concepts...", icon: Lightbulb, duration: 1500 },
-  { text: "Creating flashcards...", icon: FileText, duration: 2000 },
+  { text: "Analyzing the topic...", emoji: "🤔", duration: 1200 },
+  { text: "Identifying key concepts...", emoji: "🧠", duration: 1500 },
+  { text: "Creating flashcards...", emoji: "✨", duration: 2000 },
 ];
 
 const quizStates = [
-  { text: "Understanding the topic...", icon: Brain, duration: 1200 },
-  { text: "Crafting questions...", icon: Lightbulb, duration: 1500 },
-  { text: "Building your quiz...", icon: FileText, duration: 2000 },
+  { text: "Understanding the topic...", emoji: "🤔", duration: 1200 },
+  { text: "Crafting questions...", emoji: "📝", duration: 1500 },
+  { text: "Building your quiz...", emoji: "✨", duration: 2000 },
 ];
 
 const summarizeStates = [
-  { text: "Reading the case...", icon: BookOpen, duration: 1500 },
-  { text: "Extracting key points...", icon: Brain, duration: 1500 },
-  { text: "Summarizing...", icon: FileText, duration: 1800 },
+  { text: "Reading the case...", emoji: "📚", duration: 1500 },
+  { text: "Extracting key points...", emoji: "🔍", duration: 1500 },
+  { text: "Summarizing...", emoji: "💡", duration: 1800 },
 ];
 
 export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({ 
@@ -63,7 +58,6 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
   
   const states = getStates();
   const currentState = states[currentIndex];
-  const CurrentIcon = currentState.icon;
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -76,15 +70,18 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
   return (
     <div className="flex items-center gap-3">
       <div className="relative">
-        <ThinkingEmoji 
+        <span 
           className={cn(
-            "transition-all duration-300",
+            "text-lg transition-all duration-300",
             "animate-thinking"
-          )} 
-        />
+          )}
+          key={currentState.emoji}
+        >
+          {currentState.emoji}
+        </span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground animate-fade-in">
+        <span className="text-sm text-muted-foreground animate-fade-in" key={currentState.text}>
           {currentState.text}
         </span>
         <div className="flex items-center gap-0.5">
