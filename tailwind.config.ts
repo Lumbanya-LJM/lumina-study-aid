@@ -180,11 +180,6 @@ export default {
           "50%": { transform: "rotate(5deg) scale(1)" },
           "75%": { transform: "rotate(0deg) scale(1.05)" },
         },
-        "emoji-enter": {
-          "0%": { opacity: "0", transform: "scale(0.5) rotate(-10deg)" },
-          "50%": { transform: "scale(1.2) rotate(5deg)" },
-          "100%": { opacity: "1", transform: "scale(1) rotate(0deg)" },
-        },
         "glow-pulse": {
           "0%, 100%": { boxShadow: "0 0 20px hsl(var(--primary) / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(var(--primary) / 0.5)" },

@@ -69,22 +69,19 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
   
   return (
     <div className="flex items-center gap-3">
-      <div className="relative w-6 h-6 flex items-center justify-center">
+      <div className="relative">
         <span 
           className={cn(
-            "text-lg absolute inset-0 flex items-center justify-center",
-            "animate-[emoji-enter_0.3s_ease-out_forwards]"
+            "text-lg transition-all duration-300",
+            "animate-thinking"
           )}
-          key={currentState.emoji + currentIndex}
+          key={currentState.emoji}
         >
           {currentState.emoji}
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <span 
-          className="text-sm text-muted-foreground animate-fade-in" 
-          key={currentState.text}
-        >
+        <span className="text-sm text-muted-foreground animate-fade-in" key={currentState.text}>
           {currentState.text}
         </span>
         <div className="flex items-center gap-0.5">
