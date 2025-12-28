@@ -6,6 +6,127 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Helper to extract text from PDF base64 using simple pattern matching
+async function extractPdfText(base64Data: string): Promise<string> {
+  try {
+    // Remove data URL prefix if present
+    const pdfBase64 = base64Data.replace(/^data:application\/pdf;base64,/, '');
+    
+    // Decode base64 to binary
+    const binaryString = atob(pdfBase64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Simple PDF text extraction - look for text streams
+    const pdfText = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    
+    // Extract text between stream markers and clean it up
+    const textMatches: string[] = [];
+    
+    // Match text in PDF streams - look for readable text patterns
+    const streamRegex = /stream\s*([\s\S]*?)\s*endstream/gi;
+    let match;
+    while ((match = streamRegex.exec(pdfText)) !== null) {
+      const streamContent = match[1];
+      // Extract text from Tj and TJ operators (PDF text operators)
+      const tjMatches = streamContent.match(/\(([^)]+)\)\s*Tj/g);
+      if (tjMatches) {
+        tjMatches.forEach(m => {
+          const text = m.replace(/\(([^)]+)\)\s*Tj/, '$1');
+          if (text.length > 1 && /[a-zA-Z]/.test(text)) {
+            textMatches.push(text);
+          }
+        });
+      }
+      
+      // Also try TJ arrays
+      const tjArrayMatches = streamContent.match(/\[([^\]]+)\]\s*TJ/gi);
+      if (tjArrayMatches) {
+        tjArrayMatches.forEach(m => {
+          const innerText = m.match(/\(([^)]+)\)/g);
+          if (innerText) {
+            innerText.forEach(t => {
+              const text = t.replace(/[()]/g, '');
+              if (text.length > 1 && /[a-zA-Z]/.test(text)) {
+                textMatches.push(text);
+              }
+            });
+          }
+        });
+      }
+    }
+    
+    // Also extract any readable ASCII text that looks like content
+    const readableText = pdfText.match(/[\x20-\x7E]{20,}/g) || [];
+    const filteredReadable = readableText.filter(t => 
+      /[a-zA-Z]{3,}/.test(t) && // Has meaningful words
+      !/^[0-9\s.]+$/.test(t) && // Not just numbers
+      !t.includes('PDF-') && // Not PDF headers
+      !t.includes('obj') && // Not PDF objects
+      !t.includes('endobj')
+    );
+    
+    const allText = [...textMatches, ...filteredReadable].join(' ');
+    
+    // Clean up the text
+    const cleanedText = allText
+      .replace(/\s+/g, ' ')
+      .replace(/[^\x20-\x7E\n]/g, '')
+      .trim();
+    
+    if (cleanedText.length > 50) {
+      console.log("Extracted PDF text length:", cleanedText.length);
+      return cleanedText;
+    }
+    
+    return "";
+  } catch (error) {
+    console.error("PDF extraction error:", error);
+    return "";
+  }
+}
+
+// Helper to process multimodal content and extract PDF text
+async function processMessageContent(content: any): Promise<{ textContent: string; imageUrls: any[] }> {
+  let textContent = "";
+  const imageUrls: any[] = [];
+  
+  if (typeof content === 'string') {
+    return { textContent: content, imageUrls: [] };
+  }
+  
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      if (part.type === 'text') {
+        textContent += part.text + "\n";
+      } else if (part.type === 'image_url' && part.image_url?.url) {
+        const url = part.image_url.url;
+        
+        // Check if it's a PDF
+        if (url.startsWith('data:application/pdf')) {
+          console.log("Processing PDF attachment...");
+          const extractedText = await extractPdfText(url);
+          if (extractedText) {
+            textContent += `\n\n[Extracted PDF Content]:\n${extractedText}\n\n`;
+          } else {
+            // If extraction failed, note that we have a PDF but couldn't extract text
+            textContent += "\n\n[PDF Document attached - text extraction was limited. Please describe what you see or ask me to analyze specific parts.]\n\n";
+            // Still include the PDF for vision analysis as fallback
+            imageUrls.push(part);
+          }
+        } else {
+          // It's an image - keep for vision processing
+          imageUrls.push(part);
+        }
+      }
+    }
+  }
+  
+  return { textContent: textContent.trim(), imageUrls };
+}
+
 // Research keywords to detect research mode
 const RESEARCH_KEYWORDS = [
   "what does the law say",
@@ -928,15 +1049,29 @@ serve(async (req) => {
     // Get the last user message for analysis - handle both string and multimodal content
     const lastUserMessageObj = messages.filter((m: any) => m.role === 'user').pop();
     let lastUserMessage = "";
+    let hasPdfContent = false;
+    let extractedPdfText = "";
+    
     if (lastUserMessageObj) {
       if (typeof lastUserMessageObj.content === 'string') {
         lastUserMessage = lastUserMessageObj.content;
       } else if (Array.isArray(lastUserMessageObj.content)) {
-        // Extract text from multimodal content
-        const textParts = lastUserMessageObj.content.filter((p: any) => p.type === 'text');
-        lastUserMessage = textParts.map((p: any) => p.text).join(' ');
+        // Extract text from multimodal content and process PDFs
+        const processed = await processMessageContent(lastUserMessageObj.content);
+        lastUserMessage = processed.textContent;
+        
+        // Check if we extracted PDF content
+        if (lastUserMessage.includes('[Extracted PDF Content]')) {
+          hasPdfContent = true;
+          const pdfMatch = lastUserMessage.match(/\[Extracted PDF Content\]:\n([\s\S]*?)\n\n/);
+          if (pdfMatch) {
+            extractedPdfText = pdfMatch[1];
+          }
+        }
       }
     }
+    
+    console.log("Last user message length:", lastUserMessage.length, "| Has PDF:", hasPdfContent);
     
     // Check if this query needs research mode
     let researchContext = "";
@@ -1132,7 +1267,7 @@ If they want to save their reflection, USE THE create_journal_entry tool to save
     
     // Add image/document analysis context if attachments are present
     let attachmentAnalysisPrompt = "";
-    if (hasImages) {
+    if (hasImages || hasPdfContent) {
       attachmentAnalysisPrompt = `
 
 ## DOCUMENT & IMAGE ANALYSIS MODE
@@ -1147,6 +1282,21 @@ The user has shared one or more files (images or documents). You should:
 8. **For diagrams/charts**: Explain what they represent
 
 If the content is legal in nature, apply your legal expertise to help the student understand it.`;
+    }
+    
+    // If we have extracted PDF text, add it to the context
+    if (hasPdfContent && extractedPdfText) {
+      attachmentAnalysisPrompt += `
+
+## EXTRACTED PDF DOCUMENT CONTENT
+The following text was extracted from a PDF document the user uploaded:
+
+---
+${extractedPdfText.substring(0, 15000)}
+${extractedPdfText.length > 15000 ? '\n\n[Document truncated - showing first 15000 characters]' : ''}
+---
+
+Please analyze this document content and help the student with their query about it.`;
     }
 
     // Initial AI request with tools

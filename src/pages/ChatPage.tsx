@@ -1125,12 +1125,22 @@ const ChatPage: React.FC = () => {
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                 {attachments.map((att) => (
                   <div key={att.id} className="relative shrink-0 group">
-                    {att.preview ? (
+                    {att.type === 'image' && att.preview ? (
                       <img 
                         src={att.preview} 
                         alt={att.file.name}
                         className="w-14 h-14 rounded-lg object-cover border border-border"
                       />
+                    ) : att.file.type === 'application/pdf' ? (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+                        <FileText className="w-4 h-4 text-red-500" />
+                        <div className="flex flex-col">
+                          <span className="text-xs text-foreground truncate max-w-[80px]">
+                            {att.file.name}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">PDF</span>
+                        </div>
+                      </div>
                     ) : (
                       <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
                         <FileText className="w-4 h-4 text-muted-foreground" />
