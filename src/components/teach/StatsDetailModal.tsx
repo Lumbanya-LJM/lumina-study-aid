@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,8 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Bell, Video, CheckCircle2, TrendingUp, FileText, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, Users, Bell, Video, CheckCircle2, TrendingUp, FileText, Calendar, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface StatsDetailModalProps {
@@ -59,11 +61,38 @@ export const StatsDetailModal: React.FC<StatsDetailModalProps> = ({
   statType,
 }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
+
+  const handleDeleteUpdate = async (updateId: string) => {
+    if (!confirm('Are you sure you want to delete this update?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('tutor_updates')
+        .delete()
+        .eq('id', updateId);
+
+      if (error) throw error;
+
+      setUpdates(prev => prev.filter(u => u.id !== updateId));
+      toast({
+        title: 'Deleted',
+        description: 'Update deleted successfully.',
+      });
+    } catch (error) {
+      console.error('Error deleting update:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to delete update.',
+      });
+    }
+  };
 
   useEffect(() => {
     if (open && statType && user) {
@@ -325,15 +354,26 @@ export const StatsDetailModal: React.FC<StatsDetailModalProps> = ({
         ) : (
           <div className="space-y-3">
             {updates.map(update => (
-              <div key={update.id} className="p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-start justify-between">
-                  <div>
+              <div key={update.id} className="p-3 bg-muted/50 rounded-lg group">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">{update.title}</p>
                     <p className="text-xs text-primary">{update.course_name}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(update.created_at), 'MMM d, yyyy')}
-                  </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(update.created_at), 'MMM d, yyyy')}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive hover:bg-destructive/10 transition-opacity"
+                      onClick={() => handleDeleteUpdate(update.id)}
+                      title="Delete update"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{update.content}</p>
               </div>

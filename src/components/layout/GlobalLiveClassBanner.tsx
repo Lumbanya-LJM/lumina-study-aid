@@ -29,7 +29,25 @@ export const GlobalLiveClassBanner: React.FC = () => {
   const { isTutor, isAdmin } = useUserRole();
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [startingSoonClasses, setStartingSoonClasses] = useState<LiveClass[]>([]);
-  const [dismissedClasses, setDismissedClasses] = useState<Set<string>>(new Set());
+  
+  // Persist dismissed classes in localStorage so they don't reappear
+  const [dismissedClasses, setDismissedClasses] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('dismissed_class_notifications');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Clean up old entries (older than 24 hours)
+        const now = Date.now();
+        const filtered = Object.entries(parsed).filter(([, timestamp]) => 
+          now - (timestamp as number) < 24 * 60 * 60 * 1000
+        );
+        return new Set(filtered.map(([id]) => id));
+      }
+    } catch (e) {
+      console.error('Error loading dismissed notifications:', e);
+    }
+    return new Set();
+  });
   const [hasPlayedSound, setHasPlayedSound] = useState<Set<string>>(new Set());
 
   // Don't show on class page itself or auth pages
@@ -202,7 +220,19 @@ export const GlobalLiveClassBanner: React.FC = () => {
 
   const handleDismiss = (id: string) => {
     haptics.light();
-    setDismissedClasses(prev => new Set([...prev, id]));
+    setDismissedClasses(prev => {
+      const updated = new Set([...prev, id]);
+      // Persist to localStorage with timestamp
+      try {
+        const existing = localStorage.getItem('dismissed_class_notifications');
+        const parsed = existing ? JSON.parse(existing) : {};
+        parsed[id] = Date.now();
+        localStorage.setItem('dismissed_class_notifications', JSON.stringify(parsed));
+      } catch (e) {
+        console.error('Error saving dismissed notification:', e);
+      }
+      return updated;
+    });
   };
 
   const handleAction = (id: string) => {
