@@ -16,6 +16,10 @@ import {
   RefreshCw,
   AlertCircle,
   X,
+  FileText,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,6 +68,13 @@ interface WatchHistory {
   last_watched_at: string;
 }
 
+interface AISummary {
+  class_id: string;
+  summary: string;
+  key_points: string[];
+  topics_covered: string[];
+}
+
 const ClassRecordingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -73,10 +84,12 @@ const ClassRecordingsPage: React.FC = () => {
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
   const [liveClasses, setLiveClasses] = useState<UpcomingClass[]>([]);
   const [watchHistory, setWatchHistory] = useState<Map<string, WatchHistory>>(new Map());
+  const [aiSummaries, setAiSummaries] = useState<Map<string, AISummary>>(new Map());
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRecording, setSelectedRecording] = useState<ClassRecording | null>(null);
+  const [expandedSummary, setExpandedSummary] = useState<string | null>(null);
 
   const loadClasses = useCallback(async () => {
     try {
@@ -139,6 +152,34 @@ const ClassRecordingsPage: React.FC = () => {
             });
           });
           setWatchHistory(historyMap);
+        }
+      }
+
+      // Load AI summaries for all recordings
+      if (recordingsData && recordingsData.length > 0) {
+        const classIds = recordingsData.map((r) => r.id);
+        const { data: summariesData } = await supabase
+          .from("class_ai_summaries")
+          .select("*")
+          .in("class_id", classIds);
+
+        if (summariesData) {
+          const summariesMap = new Map<string, AISummary>();
+          summariesData.forEach((s) => {
+            const keyPoints = Array.isArray(s.key_points) 
+              ? s.key_points.map((k) => String(k)) 
+              : [];
+            const topicsCovered = Array.isArray(s.topics_covered) 
+              ? s.topics_covered.map((t) => String(t)) 
+              : [];
+            summariesMap.set(s.class_id, {
+              class_id: s.class_id,
+              summary: s.summary,
+              key_points: keyPoints,
+              topics_covered: topicsCovered,
+            });
+          });
+          setAiSummaries(summariesMap);
         }
       }
     } catch (error) {
@@ -486,14 +527,19 @@ const ClassRecordingsPage: React.FC = () => {
               <div className="space-y-3">
                 {filteredRecordings.map((recording) => {
                   const progress = getWatchProgress(recording.id);
+                  const summary = aiSummaries.get(recording.id);
+                  const isExpanded = expandedSummary === recording.id;
+                  
                   return (
                     <Card
                       key={recording.id}
-                      className="cursor-pointer hover:bg-accent/50 transition-colors"
-                      onClick={() => setSelectedRecording(recording)}
+                      className="overflow-hidden transition-colors"
                     >
                       <CardContent className="p-4">
-                        <div className="flex gap-4">
+                        <div 
+                          className="flex gap-4 cursor-pointer hover:bg-accent/50 rounded-lg -m-2 p-2"
+                          onClick={() => setSelectedRecording(recording)}
+                        >
                           <div className="relative h-20 w-32 bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
                             <Play className="h-8 w-8 text-primary" />
@@ -507,6 +553,12 @@ const ClassRecordingsPage: React.FC = () => {
                                   )}
                                   style={{ width: `${progress.percentage}%` }}
                                 />
+                              </div>
+                            )}
+                            {/* AI Summary indicator */}
+                            {summary && (
+                              <div className="absolute top-1 right-1 bg-primary/90 rounded-full p-1">
+                                <Sparkles className="h-3 w-3 text-primary-foreground" />
                               </div>
                             )}
                           </div>
@@ -547,6 +599,60 @@ const ClassRecordingsPage: React.FC = () => {
                             </div>
                           </div>
                         </div>
+                        
+                        {/* AI Summary preview */}
+                        {summary && (
+                          <div className="mt-3 pt-3 border-t">
+                            <button
+                              className="flex items-center gap-2 text-xs text-primary w-full text-left"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedSummary(isExpanded ? null : recording.id);
+                              }}
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              <span className="font-medium">AI Summary</span>
+                              {isExpanded ? (
+                                <ChevronUp className="h-3 w-3 ml-auto" />
+                              ) : (
+                                <ChevronDown className="h-3 w-3 ml-auto" />
+                              )}
+                            </button>
+                            
+                            {isExpanded && (
+                              <div className="mt-3 space-y-3 text-sm">
+                                <p className="text-muted-foreground">{summary.summary}</p>
+                                
+                                {summary.key_points.length > 0 && (
+                                  <div>
+                                    <h4 className="font-medium text-xs mb-2 flex items-center gap-1">
+                                      <FileText className="h-3 w-3" />
+                                      Key Points
+                                    </h4>
+                                    <ul className="space-y-1">
+                                      {summary.key_points.map((point, i) => (
+                                        <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                                          <span className="text-primary mt-0.5">•</span>
+                                          <span>{point}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                {summary.topics_covered.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {summary.topics_covered.map((topic, i) => (
+                                      <Badge key={i} variant="outline" className="text-xs">
+                                        {topic}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   );
@@ -617,8 +723,8 @@ const ClassRecordingsPage: React.FC = () => {
 
       {/* Secure Video Player Modal */}
       <Dialog open={!!selectedRecording} onOpenChange={() => setSelectedRecording(null)}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
-          <DialogHeader className="p-4 pb-0">
+        <DialogContent className="max-w-4xl p-0 overflow-hidden max-h-[90vh] flex flex-col">
+          <DialogHeader className="p-4 pb-0 shrink-0">
             <div className="flex items-center justify-between">
               <DialogTitle className="pr-8">{selectedRecording?.title}</DialogTitle>
             </div>
@@ -635,23 +741,71 @@ const ClassRecordingsPage: React.FC = () => {
               </p>
             )}
           </DialogHeader>
-          <div className="p-4 pt-2">
+          <div className="p-4 pt-2 overflow-y-auto flex-1">
             {selectedRecording && (
-              <SecureVideoPlayer
-                classId={selectedRecording.id}
-                title={selectedRecording.title}
-                initialProgress={watchHistory.get(selectedRecording.id)?.progress_seconds || 0}
-                onProgressUpdate={(progress, duration, completed) => {
-                  saveWatchProgress(selectedRecording.id, progress, duration, completed);
-                }}
-                onError={(error) => {
-                  toast({
-                    title: "Playback Error",
-                    description: error,
-                    variant: "destructive",
-                  });
-                }}
-              />
+              <>
+                <SecureVideoPlayer
+                  classId={selectedRecording.id}
+                  title={selectedRecording.title}
+                  initialProgress={watchHistory.get(selectedRecording.id)?.progress_seconds || 0}
+                  onProgressUpdate={(progress, duration, completed) => {
+                    saveWatchProgress(selectedRecording.id, progress, duration, completed);
+                  }}
+                  onError={(error) => {
+                    toast({
+                      title: "Playback Error",
+                      description: error,
+                      variant: "destructive",
+                    });
+                  }}
+                />
+                
+                {/* AI Summary in Modal */}
+                {aiSummaries.get(selectedRecording.id) && (
+                  <Card className="mt-4 bg-primary/5 border-primary/20">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <h3 className="font-medium text-sm">AI Summary</h3>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {aiSummaries.get(selectedRecording.id)?.summary}
+                      </p>
+                      
+                      {(aiSummaries.get(selectedRecording.id)?.key_points?.length ?? 0) > 0 && (
+                        <div className="mb-4">
+                          <h4 className="font-medium text-xs mb-2 flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            Key Points
+                          </h4>
+                          <ul className="space-y-2">
+                            {aiSummaries.get(selectedRecording.id)?.key_points.map((point, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                <span className="text-primary font-bold mt-0.5">•</span>
+                                <span>{point}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {(aiSummaries.get(selectedRecording.id)?.topics_covered?.length ?? 0) > 0 && (
+                        <div>
+                          <h4 className="font-medium text-xs mb-2">Topics Covered</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {aiSummaries.get(selectedRecording.id)?.topics_covered.map((topic, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {topic}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
             <p className="text-xs text-muted-foreground text-center mt-3">
               This recording is protected and can only be viewed within the Lumina app
