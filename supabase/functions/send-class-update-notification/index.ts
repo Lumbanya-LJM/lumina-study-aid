@@ -95,48 +95,56 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const student of students) {
       try {
-        const formattedTime = scheduledAt
-          ? new Date(scheduledAt).toLocaleString('en-ZM', {
-              timeZone: 'Africa/Lusaka',
-              dateStyle: 'full',
-              timeStyle: 'short'
-            })
-          : 'Time TBD';
+        // Parse the scheduled time and format it correctly for CAT timezone
+        // The scheduledAt is stored in UTC, so we need to display it in Africa/Lusaka timezone
+        let formattedTime = 'Time TBD';
+        if (scheduledAt) {
+          const date = new Date(scheduledAt);
+          // Format date parts manually to avoid timezone conversion issues
+          const options: Intl.DateTimeFormatOptions = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: 'Africa/Lusaka'
+          };
+          formattedTime = new Intl.DateTimeFormat('en-ZM', options).format(date);
+        }
 
         let title = '';
         let content = '';
 
         switch (updateType) {
           case 'scheduled':
-            title = '📅 New Class Scheduled!';
+            title = '📅 New Class Scheduled';
             content = `
-              <p>Great news! A new class <strong class="highlight">${classTitle}</strong> has been scheduled. Mark your calendar!</p>
-              <div style="background: #f0f2f5; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
-                <p style="margin: 0 0 10px 0;"><strong>Class:</strong> ${classTitle}</p>
-                <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${formattedTime} (CAT)</p>
-                ${meetingLink ? `<p style="margin: 0;"><strong>Link:</strong> <a href="${meetingLink}">${meetingLink}</a></p>` : ''}
+              <p>A new class has been scheduled for your course!</p>
+              <div style="background: linear-gradient(135deg, #1a3a4a 0%, #0d2633 100%); padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left; border-left: 4px solid #4ade80;">
+                <p style="margin: 0 0 10px 0; color: #e2e8f0;"><strong style="color: #4ade80;">Class:</strong> ${classTitle}</p>
+                <p style="margin: 0; color: #e2e8f0;"><strong style="color: #4ade80;">When:</strong> ${formattedTime} (CAT)</p>
               </div>
-              <p>Add this to your calendar and prepare for the class!</p>
-              <div style="text-align: center;"><a href="https://app.lmvacademy.com/home" class="button">View in App</a></div>
+              <p>Make sure to mark your calendar and prepare any questions you may have!</p>
+              <p style="margin-top: 20px;">Open the LMV Academy app to view class details and join when it's time.</p>
             `;
             break;
           case 'updated':
             title = '📝 Class Updated';
             content = `
-              <p>The class <strong class="highlight">${classTitle}</strong> has been updated. Please review the new details below.</p>
-              <div style="background: #f0f2f5; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
-                <p style="margin: 0 0 10px 0;"><strong>Class:</strong> ${classTitle}</p>
-                <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${formattedTime} (CAT)</p>
-                ${meetingLink ? `<p style="margin: 0;"><strong>Link:</strong> <a href="${meetingLink}">${meetingLink}</a></p>` : ''}
+              <p>The class <strong style="color: #4ade80;">${classTitle}</strong> has been updated.</p>
+              <div style="background: linear-gradient(135deg, #1a3a4a 0%, #0d2633 100%); padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left; border-left: 4px solid #fbbf24;">
+                <p style="margin: 0 0 10px 0; color: #e2e8f0;"><strong style="color: #fbbf24;">Class:</strong> ${classTitle}</p>
+                <p style="margin: 0; color: #e2e8f0;"><strong style="color: #fbbf24;">New Time:</strong> ${formattedTime} (CAT)</p>
               </div>
-              <p>Make sure to update your calendar with the new details!</p>
-              <div style="text-align: center;"><a href="https://app.lmvacademy.com/home" class="button">View in App</a></div>
+              <p>Please update your calendar with the new details. Open the app for more information.</p>
             `;
             break;
           case 'cancelled':
             title = '❌ Class Cancelled';
             content = `
-              <p>We regret to inform you that the class <strong class="highlight">${classTitle}</strong> has been cancelled.</p>
+              <p>We regret to inform you that the class <strong style="color: #ef4444;">${classTitle}</strong> has been cancelled.</p>
               <p>We apologize for any inconvenience. Please check the app for updates or contact your tutor for more information.</p>
             `;
             break;
