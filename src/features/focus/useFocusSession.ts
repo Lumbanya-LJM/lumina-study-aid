@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
@@ -137,40 +137,35 @@ export const useFocusSession = () => {
 
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
-  const calculateTimeLeft = useCallback(() => {
-    if (!isActive || !startTime) {
-      return null;
-    }
-
-    const duration = phase === 'focus' ? settings.focusDuration : settings.breakDuration;
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-
-    // Check if the current phase is over
-    if (elapsed >= duration) {
-      actions.startNextPhase();
-      const nextPhase = phase === 'focus' ? 'break' : 'focus';
-      return nextPhase === 'focus' ? settings.focusDuration : settings.breakDuration;
-    }
-
-    return duration - elapsed;
-  }, [isActive, startTime, phase, settings, actions]);
-
   useEffect(() => {
-    // Set initial time left when the component mounts or session starts
-    setTimeLeft(calculateTimeLeft());
-
-    if (!isActive) {
+    if (!isActive || !startTime) {
+      setTimeLeft(null);
       return;
     }
 
-    // Set up an interval to update the timer every second
+    const computeTimeLeft = () => {
+      const duration = phase === 'focus' ? settings.focusDuration : settings.breakDuration;
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+
+      if (elapsed >= duration) {
+        actions.startNextPhase();
+        const nextPhase = phase === 'focus' ? 'break' : 'focus';
+        return nextPhase === 'focus' ? settings.focusDuration : settings.breakDuration;
+      }
+
+      return duration - elapsed;
+    };
+
+    setTimeLeft(computeTimeLeft());
+
     const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
+      setTimeLeft(computeTimeLeft());
     }, 1000);
 
-    // Clean up the interval when the component unmounts or session ends
     return () => clearInterval(timer);
-  }, [isActive, calculateTimeLeft]);
+    // Note: we intentionally omit `actions` from deps since it's stable from Zustand
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, startTime, phase, settings.focusDuration, settings.breakDuration]);
 
   // Expose state and actions
   return {
