@@ -17,6 +17,8 @@ interface UseUserRoleResult {
 
 export const useUserRole = (): UseUserRoleResult => {
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
+
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export const useUserRole = (): UseUserRoleResult => {
   const refresh = useCallback(() => setRefreshIndex((x) => x + 1), []);
 
   const checkRoles = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setRole(null);
       setError(null);
       setLoading(false);
@@ -39,8 +41,8 @@ export const useUserRole = (): UseUserRoleResult => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         const [isAdminRes, isTutorRes] = await Promise.all([
-          supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
-          supabase.rpc('has_role', { _user_id: user.id, _role: 'moderator' }),
+          supabase.rpc('has_role', { _user_id: userId, _role: 'admin' }),
+          supabase.rpc('has_role', { _user_id: userId, _role: 'moderator' }),
         ]);
 
         if (isAdminRes.data) {
@@ -54,7 +56,6 @@ export const useUserRole = (): UseUserRoleResult => {
         setLoading(false);
         return;
       } catch (e) {
-        // Retry transient network errors instead of defaulting to "student".
         if (attempt < maxAttempts - 1) {
           await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
           continue;
@@ -66,7 +67,7 @@ export const useUserRole = (): UseUserRoleResult => {
         setLoading(false);
       }
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     if (!authLoading) {
