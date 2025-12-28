@@ -20,10 +20,58 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Create a Supabase client with the user's JWT
+    const authHeader = req.headers.get("Authorization");
+
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Authorization header is missing" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const userSupabaseClient = createClient(
+      SUPABASE_URL!,
+      SUPABASE_SERVICE_ROLE_KEY!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: userError } = await userSupabaseClient.auth.getUser();
+
+    if (userError) {
+      console.error("Authentication error:", userError);
+      return new Response(JSON.stringify({ error: "Authentication failed" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: "User not found" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     const { classId } = await req.json();
 
-    console.log("Generating summary for class:", classId);
+    console.log(`User ${user.id} generating summary for class: ${classId}`);
+
+    // Fetch class details to check for the course ID
+    const { data: classDataForAuth, error: classAuthError } = await supabase
+      .from("live_classes")
+      .select("course_id")
+      .eq("id", classId)
+      .single();
+
+    if (classAuthError) {
+      throw new Error(`Failed to fetch class for auth check: ${classAuthError.message}`);
+    }
+
+    // Check if the user is enrolled in the course
+    const { data: enrollment, error: enrollmentError } = await supabase
+      .from("student_course_enrollments")
+      .select("id")
+      .eq("student_id", user.id)
+      .eq("course_id", classDataForAuth.course_id)
+      .single();
+
+    if (enrollmentError || !enrollment) {
+      console.warn(`Authorization failed for user ${user.id} on class ${classId}`);
+      return new Response(JSON.stringify({ error: "You are not authorized to view this class summary." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Fetch all transcripts for this class
     const { data: transcripts, error: transcriptError } = await supabase
