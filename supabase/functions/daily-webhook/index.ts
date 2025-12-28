@@ -37,7 +37,7 @@ serve(async (req) => {
       // Find the live class by room name
       const { data: liveClass, error: findError } = await supabase
         .from("live_classes")
-        .select("id, course_id, title, host_id")
+        .select("id, course_id, title, host_id, description")
         .eq("daily_room_name", roomName)
         .maybeSingle();
 
@@ -222,6 +222,20 @@ serve(async (req) => {
                     classId: liveClass.id,
                     url: "/recordings",
                   },
+                },
+              },
+            });
+            
+            // Also send email notifications
+            console.log("Sending email notifications for recording availability");
+            await supabase.functions.invoke("send-student-notification", {
+              body: {
+                type: "recording_ready",
+                courseId: liveClass.course_id,
+                data: {
+                  title: liveClass.title,
+                  classId: liveClass.id,
+                  description: liveClass.description || undefined,
                 },
               },
             });
