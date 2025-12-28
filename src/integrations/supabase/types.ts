@@ -1246,6 +1246,48 @@ export type Database = {
         }
         Relationships: []
       }
+      tutor_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          full_name: string | null
+          id: string
+          invitation_token: string
+          invited_by: string | null
+          selected_courses: string[] | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          invitation_token: string
+          invited_by?: string | null
+          selected_courses?: string[] | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          invitation_token?: string
+          invited_by?: string | null
+          selected_courses?: string[] | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       tutor_updates: {
         Row: {
           class_link: string | null
