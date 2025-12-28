@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Shield, 
@@ -25,9 +26,21 @@ import {
   GraduationCap,
   Calendar,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Settings,
+  Save
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
 
 interface Course {
   id: string;
@@ -62,6 +75,11 @@ const TutorApplicationsAdminPage: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
   const [expandedCourses, setExpandedCourses] = useState<string | null>(null);
+  
+  // Course assignment modal state
+  const [editingCourses, setEditingCourses] = useState<TutorApplication | null>(null);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [savingCourses, setSavingCourses] = useState(false);
 
   useEffect(() => {
     if (isAdmin) {
@@ -263,6 +281,50 @@ const TutorApplicationsAdminPage: React.FC = () => {
     }
   };
 
+  const openCourseEditor = (application: TutorApplication) => {
+    setEditingCourses(application);
+    setSelectedCourseIds(application.selected_courses || []);
+  };
+
+  const handleSaveCourses = async () => {
+    if (!editingCourses) return;
+    
+    setSavingCourses(true);
+    try {
+      const { error } = await supabase
+        .from('tutor_applications')
+        .update({ selected_courses: selectedCourseIds })
+        .eq('id', editingCourses.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Courses Updated',
+        description: `${editingCourses.full_name}'s courses have been updated.`,
+      });
+
+      setEditingCourses(null);
+      loadApplications();
+    } catch (error: any) {
+      console.error('Error updating courses:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update courses',
+        variant: 'destructive'
+      });
+    } finally {
+      setSavingCourses(false);
+    }
+  };
+
+  const toggleCourseSelection = (courseId: string) => {
+    setSelectedCourseIds(prev => 
+      prev.includes(courseId)
+        ? prev.filter(id => id !== courseId)
+        : [...prev, courseId]
+    );
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -279,6 +341,10 @@ const TutorApplicationsAdminPage: React.FC = () => {
   const navigate = useNavigate();
 
   const pendingCount = applications.filter(a => a.status === 'pending').length;
+  
+  // Separate courses by institution
+  const undergraduateCourses = courses.filter(c => c.institution !== 'ZIALE');
+  const zialeCourses = courses.filter(c => c.institution === 'ZIALE');
 
   return (
     <AdminLayout
@@ -464,6 +530,21 @@ const TutorApplicationsAdminPage: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Edit Courses Button for approved tutors */}
+                  {app.status === 'approved' && (
+                    <div className="pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openCourseEditor(app)}
+                        className="w-full"
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Manage Assigned Courses
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Reject Modal */}
                   {showRejectModal === app.id && (
                     <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
@@ -502,6 +583,112 @@ const TutorApplicationsAdminPage: React.FC = () => {
           })
         )}
       </div>
+
+      {/* Course Assignment Dialog */}
+      <Dialog open={!!editingCourses} onOpenChange={() => setEditingCourses(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GraduationCap className="w-5 h-5" />
+              Manage Courses for {editingCourses?.full_name}
+            </DialogTitle>
+            <DialogDescription>
+              Select which courses this tutor can teach. They will be able to create classes and materials for these courses.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[50vh] pr-4">
+            <div className="space-y-6">
+              {undergraduateCourses.length > 0 && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Undergraduate Courses</Label>
+                  <div className="space-y-2">
+                    {undergraduateCourses.map((course) => (
+                      <div
+                        key={course.id}
+                        className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                      >
+                        <Checkbox
+                          id={course.id}
+                          checked={selectedCourseIds.includes(course.id)}
+                          onCheckedChange={() => toggleCourseSelection(course.id)}
+                        />
+                        <Label
+                          htmlFor={course.id}
+                          className="flex-1 cursor-pointer text-sm"
+                        >
+                          {course.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {zialeCourses.length > 0 && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    ZIALE Courses
+                    <Badge variant="secondary" className="text-xs">Professional</Badge>
+                  </Label>
+                  <div className="space-y-2">
+                    {zialeCourses.map((course) => (
+                      <div
+                        key={course.id}
+                        className="flex items-center space-x-3 p-3 rounded-lg border border-accent/30 hover:bg-accent/10 transition-colors"
+                      >
+                        <Checkbox
+                          id={course.id}
+                          checked={selectedCourseIds.includes(course.id)}
+                          onCheckedChange={() => toggleCourseSelection(course.id)}
+                        />
+                        <Label
+                          htmlFor={course.id}
+                          className="flex-1 cursor-pointer text-sm"
+                        >
+                          {course.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {courses.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No courses available</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="text-sm text-muted-foreground">
+              {selectedCourseIds.length} course{selectedCourseIds.length !== 1 ? 's' : ''} selected
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setEditingCourses(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveCourses}
+                disabled={savingCourses}
+              >
+                {savingCourses ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Save Changes
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
