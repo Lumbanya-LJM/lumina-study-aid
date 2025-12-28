@@ -368,49 +368,59 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="liveTitle">Class Title *</Label>
-            <Input
-              id="liveTitle"
-              placeholder="e.g., Constitutional Law Discussion"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              maxLength={100}
-            />
-          </div>
+          {!courseId ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground">
+                You don't have any courses assigned yet. Please contact an admin to assign courses to your profile.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="liveTitle">Class Title *</Label>
+                <Input
+                  id="liveTitle"
+                  placeholder="e.g., Constitutional Law Discussion"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  maxLength={100}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="liveNotes">Topic/Notes</Label>
-            <Textarea
-              id="liveNotes"
-              placeholder="Brief description for students..."
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              rows={2}
-              maxLength={500}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="liveNotes">Topic/Notes</Label>
+                <Textarea
+                  id="liveNotes"
+                  placeholder="Brief description for students..."
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  rows={2}
+                  maxLength={500}
+                />
+              </div>
 
-          <Button 
-            onClick={handleStartLiveClass} 
-            className="w-full gradient-primary" 
-            disabled={creatingLiveClass || !courseId || !formData.title.trim()}
-          >
-            {creatingLiveClass ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Creating Classroom...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <Video className="w-4 h-4" />
-                Go Live Now
-              </span>
-            )}
-          </Button>
-          <p className="text-xs text-muted-foreground text-center">
-            Classes are recorded automatically with AI transcription
-          </p>
+              <Button 
+                onClick={handleStartLiveClass} 
+                className="w-full gradient-primary" 
+                disabled={creatingLiveClass || !formData.title.trim()}
+              >
+                {creatingLiveClass ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating Classroom...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Video className="w-4 h-4" />
+                    Go Live Now
+                  </span>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Classes are recorded automatically with AI transcription
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
 
