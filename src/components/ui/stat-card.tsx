@@ -11,6 +11,7 @@ interface StatCardProps {
     positive: boolean;
   };
   className?: string;
+  onClick?: () => void;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -19,12 +20,16 @@ export const StatCard: React.FC<StatCardProps> = ({
   value,
   trend,
   className,
+  onClick,
 }) => {
   return (
-    <div className={cn(
-      "bg-card rounded-2xl p-4 shadow-card border border-border/50 transition-all duration-300 hover:shadow-premium hover:scale-[1.02] hover:border-primary/20 active:scale-[0.98] cursor-pointer",
-      className
-    )}>
+    <div 
+      className={cn(
+        "bg-card rounded-2xl p-4 shadow-card border border-border/50 transition-all duration-300 hover:shadow-premium hover:scale-[1.02] hover:border-primary/20 active:scale-[0.98] cursor-pointer",
+        className
+      )}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between mb-3">
         <div className="p-2 rounded-xl bg-primary/10">
           <Icon className="w-5 h-5 text-primary" />
