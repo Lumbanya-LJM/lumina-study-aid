@@ -27,21 +27,25 @@ const FocusView: React.FC = () => {
   const totalTime = phase === 'focus' ? settings.focusDuration : settings.breakDuration;
   const progress = timeLeft !== null ? ((totalTime - timeLeft) / totalTime) * 100 : 0;
 
-  const getPhaseLabel = () => {
+  const getPhaseLabel = (): string => {
     switch (phase) {
       case 'focus':
         return 'Focus Time';
       case 'break':
         return 'Break Time';
+      default:
+        return 'Focus Time';
     }
   };
 
-  const getPhaseColor = () => {
+  const getPhaseColor = (): string => {
     switch (phase) {
       case 'focus':
         return 'bg-primary';
       case 'break':
         return 'bg-emerald-600';
+      default:
+        return 'bg-primary';
     }
   };
 

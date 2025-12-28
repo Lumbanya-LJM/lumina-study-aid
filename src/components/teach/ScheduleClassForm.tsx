@@ -27,6 +27,17 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
     classLink: ''
   });
 
+  // Reset form when course changes
+  React.useEffect(() => {
+    setFormData({
+      title: '',
+      content: '',
+      classDate: '',
+      classTime: '',
+      classLink: ''
+    });
+  }, [courseId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
