@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { sounds, initSoundState, isSoundEnabledState, setSoundEnabled } from '@/lib/sounds';
-import { useToast } from './use-toast';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 export function useSoundNotifications() {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const navigate = useNavigate();
   const [isEnabled, setIsEnabled] = useState(true);
 
   // Initialize sound state
@@ -32,13 +33,27 @@ export function useSoundNotifications() {
         async (payload) => {
           const newStatus = payload.new.status;
           const oldStatus = payload.old?.status;
+          const recordingUrl = payload.new.recording_url;
+          const oldRecordingUrl = payload.old?.recording_url;
           
           // Class just went live
           if (newStatus === 'live' && oldStatus !== 'live') {
             await sounds.classStart();
-            toast({
-              title: '🔴 Class is Live!',
+            toast.info('🔴 Class is Live!', {
               description: `"${payload.new.title}" has started. Join now!`,
+            });
+          }
+          
+          // Recording just became available
+          if (recordingUrl && !oldRecordingUrl && newStatus === 'ended') {
+            await sounds.recordingReady();
+            toast.success('📹 Recording Available', {
+              description: `The recording for "${payload.new.title}" is ready to watch!`,
+              action: {
+                label: 'Watch Now',
+                onClick: () => navigate('/recordings'),
+              },
+              duration: 10000,
             });
           }
         }
@@ -58,8 +73,7 @@ export function useSoundNotifications() {
         async (payload) => {
           if (payload.new.is_published) {
             await sounds.newUpdate();
-            toast({
-              title: '📢 New Update',
+            toast.info('📢 New Update', {
               description: `${payload.new.title}`,
             });
           }
@@ -71,7 +85,7 @@ export function useSoundNotifications() {
       supabase.removeChannel(classChannel);
       supabase.removeChannel(updateChannel);
     };
-  }, [user, toast]);
+  }, [user, navigate]);
 
   const toggleSound = useCallback(() => {
     const newState = !isEnabled;

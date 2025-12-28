@@ -35,6 +35,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { haptics } from '@/lib/haptics';
+import { useLuminaTaskNotification } from '@/hooks/useLuminaTaskNotification';
 
 interface Attachment {
   id: string;
@@ -78,6 +79,7 @@ const ChatPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { notify } = useLuminaTaskNotification();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -632,6 +634,22 @@ const ChatPage: React.FC = () => {
         // Save assistant response to database after streaming completes
         if (streamedContent) {
           await saveMessage(streamedContent, 'assistant', activeConversationId);
+          
+          // Check if Lumina completed a task and notify user
+          const lowerContent = streamedContent.toLowerCase();
+          if (lowerContent.includes('created') || lowerContent.includes('added') || lowerContent.includes('updated') || lowerContent.includes('done!') || lowerContent.includes('completed')) {
+            if (lowerContent.includes('flashcard') || lowerContent.includes('deck')) {
+              notify({ taskType: 'flashcards', description: 'Your flashcard deck is ready to review.' });
+            } else if (lowerContent.includes('quiz') || lowerContent.includes('questions')) {
+              notify({ taskType: 'quiz', description: 'Your practice quiz is ready.' });
+            } else if (lowerContent.includes('task') || lowerContent.includes('schedule') || lowerContent.includes('planner')) {
+              notify({ taskType: 'task', description: 'Your study planner has been updated.' });
+            } else if (lowerContent.includes('journal') || lowerContent.includes('entry')) {
+              notify({ taskType: 'journal' });
+            } else if (lowerContent.includes('summar')) {
+              notify({ taskType: 'summary', description: 'Your summary is ready.' });
+            }
+          }
         }
       }
 

@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useLuminaTaskNotification } from '@/hooks/useLuminaTaskNotification';
 
 interface Card {
   id: number;
@@ -39,6 +40,7 @@ const FlashcardsPage: React.FC = () => {
   const navigate = useNavigate();
   const { deckId } = useParams();
   const { toast } = useToast();
+  const { notifyFlashcardsReady } = useLuminaTaskNotification();
   
   const [deck, setDeck] = useState<Deck | null>(null);
   const [currentCard, setCurrentCard] = useState(0);
@@ -124,7 +126,7 @@ const FlashcardsPage: React.FC = () => {
         cards: deckData.cards as Card[]
       });
       setTopic('');
-      toast({ title: "Flashcards ready!", description: "Start reviewing to boost your memory" });
+      notifyFlashcardsReady(deckData.title);
     } catch (error) {
       toast({ 
         variant: "destructive", 

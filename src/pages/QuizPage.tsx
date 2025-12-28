@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useLuminaTaskNotification } from '@/hooks/useLuminaTaskNotification';
 
 interface Question {
   id: number;
@@ -43,6 +44,7 @@ const QuizPage: React.FC = () => {
   const { quizId } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { notifyQuizReady } = useLuminaTaskNotification();
   
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -130,7 +132,7 @@ const QuizPage: React.FC = () => {
         questions: quizData.questions as Question[]
       });
       setTopic('');
-      toast({ title: "Quiz ready!", description: "Let's test your knowledge" });
+      notifyQuizReady(quizData.title);
     } catch (error) {
       toast({ 
         variant: "destructive", 
