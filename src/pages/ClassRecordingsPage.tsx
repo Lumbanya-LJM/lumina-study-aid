@@ -20,8 +20,13 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  MoreVertical,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,7 +38,24 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ClassRecording {
   id: string;
@@ -90,6 +112,13 @@ const ClassRecordingsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRecording, setSelectedRecording] = useState<ClassRecording | null>(null);
   const [expandedSummary, setExpandedSummary] = useState<string | null>(null);
+  const [editingRecording, setEditingRecording] = useState<ClassRecording | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [recordingToDelete, setRecordingToDelete] = useState<ClassRecording | null>(null);
 
   const loadClasses = useCallback(async () => {
     try {
@@ -284,6 +313,87 @@ const ClassRecordingsPage: React.FC = () => {
       });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  // Open edit modal
+  const handleEditRecording = (recording: ClassRecording) => {
+    setEditingRecording(recording);
+    setEditTitle(recording.title);
+    setEditDescription(recording.description || "");
+  };
+
+  // Save edited recording
+  const handleSaveEdit = async () => {
+    if (!editingRecording || !editTitle.trim()) return;
+    
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("live_classes")
+        .update({
+          title: editTitle.trim(),
+          description: editDescription.trim() || null,
+        })
+        .eq("id", editingRecording.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Recording Updated",
+        description: "The recording details have been saved.",
+      });
+
+      setEditingRecording(null);
+      loadClasses();
+    } catch (error) {
+      console.error("Error updating recording:", error);
+      toast({
+        title: "Update Failed",
+        description: "Could not update recording. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Confirm delete
+  const handleDeleteConfirm = (recording: ClassRecording) => {
+    setRecordingToDelete(recording);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Delete recording
+  const handleDeleteRecording = async () => {
+    if (!recordingToDelete) return;
+    
+    setDeletingId(recordingToDelete.id);
+    try {
+      const { error } = await supabase
+        .from("live_classes")
+        .delete()
+        .eq("id", recordingToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Recording Deleted",
+        description: "The recording has been permanently removed.",
+      });
+
+      setDeleteConfirmOpen(false);
+      setRecordingToDelete(null);
+      loadClasses();
+    } catch (error) {
+      console.error("Error deleting recording:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Could not delete recording. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -534,6 +644,32 @@ const ClassRecordingsPage: React.FC = () => {
                       className="overflow-hidden transition-colors"
                     >
                       <CardContent className="p-4">
+                        {/* Host actions menu */}
+                        {recording.host_id === user?.id && (
+                          <div className="flex justify-end mb-2 -mt-1 -mr-2">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditRecording(recording)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Edit Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteConfirm(recording)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Recording
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )}
+                        
                         <div 
                           className="flex gap-4 cursor-pointer hover:bg-accent/50 rounded-lg -m-2 p-2"
                           onClick={() => setSelectedRecording(recording)}
@@ -835,6 +971,73 @@ const ClassRecordingsPage: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Recording Dialog */}
+      <Dialog open={!!editingRecording} onOpenChange={(open) => !open && setEditingRecording(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Recording Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Recording title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Brief description of what this class covered..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingRecording(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={saving || !editTitle.trim()}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Recording?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{recordingToDelete?.title}"? This action cannot be undone and the recording will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRecordingToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteRecording}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingId === recordingToDelete?.id ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MobileLayout>
   );
 };
