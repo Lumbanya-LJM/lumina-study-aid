@@ -15,12 +15,20 @@ import {
   Loader2,
   RefreshCw,
   AlertCircle,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
+import SecureVideoPlayer from "@/components/recordings/SecureVideoPlayer";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ClassRecording {
   id: string;
@@ -58,6 +66,7 @@ const ClassRecordingsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRecording, setSelectedRecording] = useState<ClassRecording | null>(null);
 
   const loadClasses = useCallback(async () => {
     try {
@@ -141,14 +150,14 @@ const ClassRecordingsPage: React.FC = () => {
       
       for (const pending of pendingRecordings) {
         try {
-          const { data } = await supabase.functions.invoke("zoom-meeting", {
+          const { data } = await supabase.functions.invoke("daily-room", {
             body: {
-              action: "check-recording-status",
-              classId: pending.id,
+              action: "get-recordings",
+              roomName: pending.daily_room_name,
             },
           });
 
-          if (data?.status === "available") {
+          if (data?.recordings?.length > 0) {
             console.log(`Recording now available for class ${pending.id}`);
             loadClasses();
             break;
@@ -165,16 +174,28 @@ const ClassRecordingsPage: React.FC = () => {
   const handleSyncRecordings = async () => {
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("sync-zoom-recordings");
+      // Check for recordings on all pending classes
+      let syncedCount = 0;
       
-      if (error) throw error;
+      for (const pending of pendingRecordings) {
+        if (!pending.daily_room_name) continue;
+        
+        const { data } = await supabase.functions.invoke("daily-room", {
+          body: {
+            action: "get-recordings",
+            roomName: pending.daily_room_name,
+          },
+        });
 
-      const synced = data?.synced?.filter((r: { status: string }) => r.status === "synced") || [];
-      
-      if (synced.length > 0) {
+        if (data?.recordings?.length > 0) {
+          syncedCount++;
+        }
+      }
+
+      if (syncedCount > 0) {
         toast({
           title: "Recordings Synced",
-          description: `${synced.length} new recording(s) are now available.`,
+          description: `${syncedCount} new recording(s) are now available.`,
         });
         loadClasses();
       } else {
@@ -294,7 +315,7 @@ const ClassRecordingsPage: React.FC = () => {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground mb-2">
-                {pendingRecordings.length} recording(s) are being processed by Zoom.
+                {pendingRecordings.length} recording(s) are being processed.
                 They will appear automatically when ready.
               </p>
               <div className="flex flex-wrap gap-2">
@@ -348,6 +369,12 @@ const ClassRecordingsPage: React.FC = () => {
               />
             </div>
 
+            {/* Info about streaming-only */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+              <Video className="h-3 w-3 flex-shrink-0" />
+              <span>Recordings stream in-app only • No downloads</span>
+            </div>
+
             {/* Recordings List */}
             {filteredRecordings.length === 0 ? (
               <Card>
@@ -365,16 +392,13 @@ const ClassRecordingsPage: React.FC = () => {
                   <Card
                     key={recording.id}
                     className="cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => {
-                      if (recording.recording_url) {
-                        window.open(recording.recording_url, "_blank");
-                      }
-                    }}
+                    onClick={() => setSelectedRecording(recording)}
                   >
                     <CardContent className="p-4">
                       <div className="flex gap-4">
-                        <div className="relative h-20 w-32 bg-muted rounded-lg flex items-center justify-center shrink-0">
-                          <Play className="h-8 w-8 text-muted-foreground" />
+                        <div className="relative h-20 w-32 bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
+                          <Play className="h-8 w-8 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium truncate">
@@ -467,6 +491,40 @@ const ClassRecordingsPage: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Secure Video Player Modal */}
+      <Dialog open={!!selectedRecording} onOpenChange={() => setSelectedRecording(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="pr-8">{selectedRecording?.title}</DialogTitle>
+            </div>
+            {selectedRecording?.academy_courses && (
+              <Badge variant="secondary" className="w-fit text-xs">
+                {selectedRecording.academy_courses.name}
+              </Badge>
+            )}
+          </DialogHeader>
+          <div className="p-4 pt-2">
+            {selectedRecording && (
+              <SecureVideoPlayer
+                classId={selectedRecording.id}
+                title={selectedRecording.title}
+                onError={(error) => {
+                  toast({
+                    title: "Playback Error",
+                    description: error,
+                    variant: "destructive",
+                  });
+                }}
+              />
+            )}
+            <p className="text-xs text-muted-foreground text-center mt-3">
+              This recording is protected and can only be viewed within the Lumina app
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MobileLayout>
   );
 };
