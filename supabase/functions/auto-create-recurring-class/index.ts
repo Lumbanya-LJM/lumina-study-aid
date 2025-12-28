@@ -174,6 +174,49 @@ serve(async (req) => {
 
     console.log("New recurring class created:", newClass.id);
 
+    // Notify enrolled students about the new recurring class
+    if (newClass.course_id) {
+      try {
+        // Get tutor name
+        const { data: tutorProfile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", endedClass.host_id)
+          .single();
+
+        const notificationResponse = await fetch(
+          `${supabaseUrl}/functions/v1/send-student-notification`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              type: "recurring_class_created",
+              courseId: newClass.course_id,
+              data: {
+                title: newClass.title,
+                description: newClass.description,
+                classId: newClass.id,
+                scheduledAt: nextDate.toISOString(),
+                tutorName: tutorProfile?.full_name || "Your Tutor",
+              },
+            }),
+          }
+        );
+
+        if (notificationResponse.ok) {
+          const notifResult = await notificationResponse.json();
+          console.log("Student notifications sent:", notifResult);
+        } else {
+          console.error("Failed to send notifications:", await notificationResponse.text());
+        }
+      } catch (notifError) {
+        console.error("Error sending notifications:", notifError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
