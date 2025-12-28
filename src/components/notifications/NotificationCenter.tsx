@@ -142,10 +142,10 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
         <span className="text-emerald-500 text-sm font-medium">Dismiss</span>
       </div>
 
-      {/* Main notification card */}
+      {/* Main notification card - compact design */}
       <div
         className={cn(
-          "relative rounded-xl p-3 border shadow-lg overflow-hidden backdrop-blur-md transition-transform",
+          "relative rounded-lg p-2 border shadow-md overflow-hidden backdrop-blur-md transition-transform",
           `bg-gradient-to-r ${styles.gradient} ${styles.border}`
         )}
         style={{
@@ -156,63 +156,53 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="absolute inset-0 bg-background/85 backdrop-blur-sm -z-10" />
+        <div className="absolute inset-0 bg-background/90 backdrop-blur-sm -z-10" />
 
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             {notification.type === 'live' ? (
               <div className="relative flex-shrink-0">
-                <span className="relative flex h-3 w-3">
+                <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
                 </span>
               </div>
             ) : (
-              <Video className={cn("w-4 h-4 flex-shrink-0", styles.accent)} />
+              <Video className={cn("w-3 h-3 flex-shrink-0", styles.accent)} />
             )}
 
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={cn("text-xs font-bold uppercase tracking-wide", styles.accent)}>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className={cn("text-[10px] font-bold uppercase tracking-wide", styles.accent)}>
                   {getLabel()}
                 </span>
-                {notification.isHost && <Crown className="w-3 h-3 text-primary" />}
-                {notification.isRecurring && <RefreshCw className="w-3 h-3 text-muted-foreground" />}
-                {notification.subtitle && (
-                  <span className="text-xs text-muted-foreground hidden sm:inline">
-                    • {notification.subtitle}
-                  </span>
-                )}
+                {notification.isHost && <Crown className="w-2.5 h-2.5 text-primary" />}
+                {notification.isRecurring && <RefreshCw className="w-2.5 h-2.5 text-muted-foreground" />}
               </div>
-              <h3 className="font-semibold text-foreground text-sm truncate">
+              <p className="font-medium text-foreground text-xs truncate">
                 {notification.title}
-              </h3>
-              {(notification.type === 'starting-soon' || notification.type === 'started') && scheduledTime && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {hasStarted
-                    ? `Started ${Math.abs(minutesUntil)} min ago`
-                    : `Starts in ${minutesUntil} min`}
-                </p>
-              )}
+                {notification.subtitle && (
+                  <span className="text-muted-foreground font-normal"> • {notification.subtitle}</span>
+                )}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <Button
               onClick={() => onDismiss(notification.id)}
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
             >
               <X className="w-3 h-3" />
             </Button>
             <Button
               onClick={() => onAction(notification.id)}
               size="sm"
-              className={cn("font-semibold shadow-md text-white text-xs h-8", styles.button)}
+              className={cn("font-medium shadow-sm text-white text-[10px] h-6 px-2", styles.button)}
             >
-              <Play className="w-3 h-3 mr-1 fill-current" />
+              <Play className="w-2.5 h-2.5 mr-0.5 fill-current" />
               {getActionLabel()}
             </Button>
           </div>
@@ -227,6 +217,7 @@ interface NotificationCenterProps {
   onDismiss: (id: string) => void;
   onAction: (id: string) => void;
   maxVisible?: number;
+  showViewAll?: boolean;
   className?: string;
 }
 
@@ -234,7 +225,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   notifications,
   onDismiss,
   onAction,
-  maxVisible = 3,
+  maxVisible = 2,
+  showViewAll = true,
   className,
 }) => {
   const [expanded, setExpanded] = useState(false);
@@ -247,8 +239,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const hasMore = hiddenCount > 0;
 
   return (
-    <div className={cn("fixed top-0 left-0 right-0 z-50 p-2 md:p-3 pointer-events-none", className)}>
-      <div className="max-w-2xl mx-auto space-y-2 pointer-events-auto">
+    <div className={cn("fixed top-0 left-0 right-0 z-50 p-1.5 md:p-2 pointer-events-none", className)}>
+      <div className="max-w-xl mx-auto space-y-1 pointer-events-auto">
         {visibleNotifications.map((notification, index) => (
           <SwipeableNotification
             key={notification.id}
@@ -266,11 +258,11 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               haptics.light();
               setExpanded(true);
             }}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-muted/80 backdrop-blur-sm border border-border/50 text-sm text-muted-foreground hover:bg-muted transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-muted/80 backdrop-blur-sm border border-border/50 text-xs text-muted-foreground hover:bg-muted transition-colors"
           >
-            <Bell className="w-4 h-4" />
-            <span>+{hiddenCount} more notification{hiddenCount > 1 ? 's' : ''}</span>
-            <ChevronDown className="w-4 h-4" />
+            <Bell className="w-3 h-3" />
+            <span>+{hiddenCount} more</span>
+            <ChevronDown className="w-3 h-3" />
           </button>
         )}
 
@@ -281,23 +273,23 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               haptics.light();
               setExpanded(false);
             }}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-muted/80 backdrop-blur-sm border border-border/50 text-sm text-muted-foreground hover:bg-muted transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-muted/80 backdrop-blur-sm border border-border/50 text-xs text-muted-foreground hover:bg-muted transition-colors"
           >
             <span>Show less</span>
-            <ChevronUp className="w-4 h-4" />
+            <ChevronUp className="w-3 h-3" />
           </button>
         )}
 
         {/* Quick link to notification center */}
-        {notifications.length > 0 && (
+        {showViewAll && notifications.length > 0 && (
           <button
             onClick={() => {
               haptics.light();
               navigate('/notifications');
             }}
-            className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+            className="w-full text-center text-[10px] text-muted-foreground hover:text-foreground transition-colors py-0.5"
           >
-            View all notifications →
+            View all →
           </button>
         )}
       </div>
