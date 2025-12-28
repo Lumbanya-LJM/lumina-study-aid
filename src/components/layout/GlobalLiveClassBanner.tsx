@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Video, Play, X, Clock, Crown, RefreshCw } from 'lucide-react';
+import { Video, Play, X, Clock, Crown, RefreshCw, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { haptics } from '@/lib/haptics';
 import { sounds, isSoundEnabledState } from '@/lib/sounds';
-import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
+import { differenceInMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 
 interface LiveClass {
   id: string;
@@ -33,6 +34,7 @@ export const GlobalLiveClassBanner: React.FC = () => {
   const [startingSoonClasses, setStartingSoonClasses] = useState<LiveClass[]>([]);
   const [dismissedClasses, setDismissedClasses] = useState<Set<string>>(new Set());
   const [hasPlayedSound, setHasPlayedSound] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState(false);
 
   // Don't show on class page itself or auth pages
   const isOnClassPage = location.pathname.includes('/class/') || location.pathname.includes('/live-class/');
