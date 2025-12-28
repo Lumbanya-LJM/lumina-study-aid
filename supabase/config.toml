@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.lumina-daily-checkin]
 verify_jwt = false
+
+[functions.send-student-notification]
+verify_jwt = false

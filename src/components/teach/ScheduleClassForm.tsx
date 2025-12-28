@@ -155,21 +155,19 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
         // Send email notifications via edge function
         try {
-          const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-class-update-notification', {
+          await supabase.functions.invoke('send-student-notification', {
             body: {
-              classId: liveClassData?.id,
+              type: 'class_scheduled',
               courseId,
-              classTitle: formData.title.trim(),
-              scheduledAt: classDateTime.toISOString(),
-              meetingLink: roomUrl || null,
-              updateType: 'scheduled'
+              data: {
+                title: formData.title.trim(),
+                description: formData.content?.trim() || undefined,
+                classId: liveClassData?.id,
+                scheduledAt: classDateTime.toISOString(),
+              }
             }
           });
-          if (emailError) {
-            console.error('Email notification error:', emailError);
-          } else {
-            console.log('Email notification result:', emailResult);
-          }
+          console.log('Email notification sent for class scheduled');
         } catch (e) {
           console.error('Failed to send email notifications:', e);
         }

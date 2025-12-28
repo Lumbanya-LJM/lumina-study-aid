@@ -110,6 +110,8 @@ const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSu
 
       if (enrollments && enrollments.length > 0) {
         const userIds = enrollments.map(e => e.user_id);
+        
+        // Send push notifications
         supabase.functions.invoke('send-push-notification', {
           body: {
             userIds,
@@ -117,6 +119,19 @@ const PostUpdateForm: React.FC<PostUpdateFormProps> = ({ courseId, tutorId, onSu
               title: `📢 ${formData.title}`,
               body: formData.content.substring(0, 100) + (formData.content.length > 100 ? '...' : ''),
               tag: 'tutor-update'
+            }
+          }
+        });
+        
+        // Send email notifications
+        supabase.functions.invoke('send-student-notification', {
+          body: {
+            type: 'tutor_update',
+            courseId: courseId,
+            data: {
+              title: formData.title,
+              description: formData.content,
+              updateType: formData.updateType,
             }
           }
         });

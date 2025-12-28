@@ -133,6 +133,23 @@ const CourseMaterialsManager: React.FC<CourseMaterialsManagerProps> = ({ courseI
 
       if (contentError) throw contentError;
 
+      // Send email notification to enrolled students
+      try {
+        await supabase.functions.invoke('send-student-notification', {
+          body: {
+            type: 'new_material',
+            courseId: courseId,
+            data: {
+              title: 'New Course Material',
+              materialTitle: formData.title.trim(),
+            }
+          }
+        });
+        console.log('Email notification sent for new material');
+      } catch (e) {
+        console.error('Failed to send email notifications:', e);
+      }
+
       toast({
         title: 'Success',
         description: 'Material uploaded successfully!',
