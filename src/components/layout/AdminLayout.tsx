@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/hooks/useAdmin';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { AdminSearch } from '@/components/admin/AdminSearch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, Shield, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -91,37 +92,53 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       <main className="flex-1 min-w-0 overflow-auto">
         <div className="p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 max-w-6xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3 min-w-0">
               {showBackButton ? (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => navigate(-1)}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground shrink-0"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
               ) : (
-                <Link to="/profile" className="text-muted-foreground hover:text-foreground lg:hidden">
+                <Link to="/profile" className="text-muted-foreground hover:text-foreground lg:hidden shrink-0">
                   <ArrowLeft className="w-5 h-5" />
                 </Link>
               )}
               <div className="hidden lg:flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
                   <Shield className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <h1 className="text-xl font-bold text-foreground">{title}</h1>
+                <div className="min-w-0">
+                  <h1 className="text-xl font-bold text-foreground truncate">{title}</h1>
                   {subtitle && (
-                    <p className="text-sm text-muted-foreground">{subtitle}</p>
+                    <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
                   )}
                 </div>
               </div>
-              <h1 className="text-lg font-bold lg:hidden">{mobileTitle || title}</h1>
+              <h1 className="text-lg font-bold lg:hidden truncate">{mobileTitle || title}</h1>
             </div>
-            <RoleSwitcher />
+
+            {/* Search and Role Switcher */}
+            <div className="flex items-center gap-3">
+              {showSidebar && (
+                <div className="hidden sm:block">
+                  <AdminSearch onTabChange={onTabChange} />
+                </div>
+              )}
+              <RoleSwitcher />
+            </div>
           </div>
+
+          {/* Mobile Search Bar */}
+          {showSidebar && (
+            <div className="sm:hidden mb-4">
+              <AdminSearch onTabChange={onTabChange} />
+            </div>
+          )}
 
           {/* Mobile Tab Indicator */}
           {showSidebar && activeTab && (
