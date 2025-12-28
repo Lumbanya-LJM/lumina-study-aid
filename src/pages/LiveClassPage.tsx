@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, Users, PhoneOff } from "lucide-react";
+import { Loader2, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, Users, PhoneOff, MonitorUp } from "lucide-react";
 import { format } from "date-fns";
 
 interface LiveClass {
@@ -31,11 +31,14 @@ const LiveClassPage: React.FC = () => {
   const [joining, setJoining] = useState(false);
   const [ending, setEnding] = useState(false);
   const [inCall, setInCall] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [meetingToken, setMeetingToken] = useState<string | null>(null);
   const [participantCount, setParticipantCount] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const callFrameRef = useRef<any>(null);
+
+  // Get user display name from profile
+  const getUserName = useCallback(() => {
+    return user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student";
+  }, [user]);
 
   useEffect(() => {
     const loadClass = async () => {
@@ -103,11 +106,13 @@ const LiveClassPage: React.FC = () => {
   // Listen for Daily.co iframe messages
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      // Handle Daily.co postMessage events
       if (event.data?.action === "participant-counts-updated") {
         setParticipantCount(event.data.participants?.present || 0);
       }
-      if (event.data?.action === "left-meeting") {
+      if (event.data?.action === "left-meeting" || event.data?.action === "meeting-ended") {
         setInCall(false);
+        setMeetingToken(null);
       }
     };
 
@@ -116,7 +121,7 @@ const LiveClassPage: React.FC = () => {
   }, []);
 
   const handleJoinMeeting = async () => {
-    if (!liveClass?.daily_room_url) {
+    if (!liveClass?.daily_room_name || !liveClass?.daily_room_url) {
       toast({
         title: "No Meeting Room",
         description: "This class doesn't have a valid video room.",
@@ -128,54 +133,69 @@ const LiveClassPage: React.FC = () => {
     setJoining(true);
 
     try {
+      const isHost = liveClass.host_id === user?.id;
+
+      // Get meeting token from backend - this authenticates the user
+      const { data: tokenData, error: tokenError } = await supabase.functions.invoke("daily-room", {
+        body: {
+          action: "get-token",
+          roomName: liveClass.daily_room_name,
+          userName: getUserName(),
+          userId: user?.id,
+          isOwner: isHost, // Host gets owner privileges
+        },
+      });
+
+      if (tokenError || !tokenData?.success) {
+        throw new Error(tokenError?.message || tokenData?.error || "Failed to get meeting token");
+      }
+
+      console.log("Meeting token obtained, joining room...");
+      setMeetingToken(tokenData.token);
+
       // Record participation
-      await supabase.from("class_participants").insert({
+      await supabase.from("class_participants").upsert({
         class_id: liveClass.id,
         user_id: user?.id,
-      });
+        joined_at: new Date().toISOString(),
+      }, {
+        onConflict: 'class_id,user_id'
+      }).select();
 
       setInCall(true);
 
       toast({
         title: "Joining Class",
-        description: "Loading the video room...",
+        description: "Connecting to video room...",
       });
     } catch (error) {
       console.error("Error joining meeting:", error);
+      toast({
+        title: "Failed to Join",
+        description: error instanceof Error ? error.message : "Could not connect to video room.",
+        variant: "destructive",
+      });
     } finally {
       setJoining(false);
     }
   };
 
-  const handleLeaveCall = () => {
-    if (iframeRef.current) {
-      iframeRef.current.contentWindow?.postMessage({ action: "leave" }, "*");
+  const handleLeaveCall = async () => {
+    // Update participation end time
+    if (user?.id && liveClass?.id) {
+      await supabase
+        .from("class_participants")
+        .update({ left_at: new Date().toISOString() })
+        .eq("class_id", liveClass.id)
+        .eq("user_id", user.id);
     }
+
     setInCall(false);
+    setMeetingToken(null);
     toast({
       title: "Left Class",
       description: "You have left the video call.",
     });
-  };
-
-  const toggleMute = () => {
-    if (iframeRef.current) {
-      iframeRef.current.contentWindow?.postMessage(
-        { action: "set-audio", audio: isMuted },
-        "*"
-      );
-    }
-    setIsMuted(!isMuted);
-  };
-
-  const toggleVideo = () => {
-    if (iframeRef.current) {
-      iframeRef.current.contentWindow?.postMessage(
-        { action: "set-video", video: isVideoOff },
-        "*"
-      );
-    }
-    setIsVideoOff(!isVideoOff);
   };
 
   const handleEndClass = async () => {
@@ -244,23 +264,17 @@ const LiveClassPage: React.FC = () => {
 
   const isHost = liveClass.host_id === user?.id;
 
-  // Build Daily.co room URL with user name
-  const getUserName = () => {
-    return user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student";
-  };
-
+  // Build Daily.co room URL with token for authentication
   const getDailyRoomUrl = () => {
-    if (!liveClass.daily_room_url) return "";
-    const url = new URL(liveClass.daily_room_url);
-    url.searchParams.set("t", "token"); // Would need meeting token for production
-    url.searchParams.set("userName", getUserName());
-    return url.toString();
+    if (!liveClass.daily_room_url || !meetingToken) return "";
+    // Add token as query parameter - this authenticates the user
+    return `${liveClass.daily_room_url}?t=${meetingToken}`;
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="border-b bg-card/50 backdrop-blur-sm px-4 py-3">
+      <div className="border-b bg-card/50 backdrop-blur-sm px-4 py-3 z-10">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-4">
             {!inCall && (
@@ -279,6 +293,11 @@ const LiveClassPage: React.FC = () => {
                 <span className="text-xs font-medium text-primary uppercase tracking-wide">
                   {liveClass.status === "live" ? "🔴 Live" : "Scheduled"}
                 </span>
+                {isHost && (
+                  <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                    Host
+                  </span>
+                )}
               </div>
               <h1 className="font-semibold truncate max-w-md">{liveClass.title}</h1>
             </div>
@@ -288,7 +307,7 @@ const LiveClassPage: React.FC = () => {
             {inCall && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="h-4 w-4" />
-                <span>{participantCount}</span>
+                <span>{participantCount} in class</span>
               </div>
             )}
             {(liveClass.started_at || liveClass.scheduled_at) && (
@@ -305,9 +324,9 @@ const LiveClassPage: React.FC = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {inCall ? (
+        {inCall && meetingToken ? (
           <>
-            {/* Video iframe container */}
+            {/* Video iframe container - Full embedded experience */}
             <div className="flex-1 bg-black relative">
               <iframe
                 ref={iframeRef}
@@ -318,34 +337,17 @@ const LiveClassPage: React.FC = () => {
               />
             </div>
 
-            {/* Controls bar */}
+            {/* Bottom controls bar */}
             <div className="bg-card border-t p-4">
-              <div className="flex items-center justify-center gap-4 max-w-md mx-auto">
+              <div className="flex items-center justify-center gap-4 max-w-lg mx-auto">
                 <Button
-                  variant={isMuted ? "destructive" : "secondary"}
+                  variant="outline"
                   size="lg"
-                  className="rounded-full w-14 h-14"
-                  onClick={toggleMute}
-                >
-                  {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                </Button>
-
-                <Button
-                  variant={isVideoOff ? "destructive" : "secondary"}
-                  size="lg"
-                  className="rounded-full w-14 h-14"
-                  onClick={toggleVideo}
-                >
-                  {isVideoOff ? <CameraOff className="h-5 w-5" /> : <Camera className="h-5 w-5" />}
-                </Button>
-
-                <Button
-                  variant="destructive"
-                  size="lg"
-                  className="rounded-full w-14 h-14"
                   onClick={handleLeaveCall}
+                  className="gap-2"
                 >
-                  <PhoneOff className="h-5 w-5" />
+                  <PhoneOff className="h-4 w-4" />
+                  Leave Class
                 </Button>
 
                 {isHost && (
@@ -354,15 +356,18 @@ const LiveClassPage: React.FC = () => {
                     size="lg"
                     onClick={handleEndClass}
                     disabled={ending}
-                    className="ml-4"
+                    className="gap-2"
                   >
                     {ending ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         Ending...
                       </>
                     ) : (
-                      "End Class"
+                      <>
+                        <MonitorUp className="h-4 w-4" />
+                        End Class for All
+                      </>
                     )}
                   </Button>
                 )}
@@ -383,6 +388,9 @@ const LiveClassPage: React.FC = () => {
                     {liveClass.description && (
                       <p className="text-sm text-muted-foreground">{liveClass.description}</p>
                     )}
+                    <p className="text-sm text-muted-foreground">
+                      Joining as <span className="font-medium text-foreground">{getUserName()}</span>
+                    </p>
                   </div>
 
                   <div className="space-y-3">
@@ -395,7 +403,7 @@ const LiveClassPage: React.FC = () => {
                       {joining ? (
                         <>
                           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Joining...
+                          Connecting...
                         </>
                       ) : (
                         <>
@@ -412,14 +420,18 @@ const LiveClassPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
                     <p className="flex items-center gap-2">
                       <Mic className="h-3 w-3" />
-                      Make sure your microphone is working
+                      Your microphone will be requested
                     </p>
                     <p className="flex items-center gap-2">
                       <Camera className="h-3 w-3" />
                       Camera is optional but encouraged
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <Users className="h-3 w-3" />
+                      You'll join with your Lumina name
                     </p>
                   </div>
                 </CardContent>
