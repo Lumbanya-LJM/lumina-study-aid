@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { TutorOnboardingTutorial } from '@/components/onboarding/TutorOnboardingTutorial';
 import { TutorSidebar } from '@/components/teach/TutorSidebar';
@@ -660,8 +660,8 @@ const TeachDashboardPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="w-full whitespace-nowrap">
-              <div className="flex gap-2">
+            <ScrollArea className="w-full whitespace-nowrap pb-2">
+              <div className="flex gap-2 pb-1">
                 {courses.map((course) => (
                   <Button
                     key={course.id}
@@ -677,6 +677,7 @@ const TeachDashboardPage: React.FC = () => {
                   </Button>
                 ))}
               </div>
+              <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </CardContent>
         </Card>
@@ -847,8 +848,8 @@ const TeachDashboardPage: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="w-full whitespace-nowrap">
-                  <div className="flex gap-2">
+                <ScrollArea className="w-full whitespace-nowrap pb-2">
+                  <div className="flex gap-2 pb-1">
                     {courses.map((course) => (
                       <Button
                         key={course.id}
@@ -864,6 +865,7 @@ const TeachDashboardPage: React.FC = () => {
                       </Button>
                     ))}
                   </div>
+                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               </CardContent>
             </Card>
