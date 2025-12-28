@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.send-student-notification]
 verify_jwt = false
+
+[functions.send-tutor-daily-schedule]
+verify_jwt = false

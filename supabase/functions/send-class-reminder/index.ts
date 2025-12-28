@@ -25,6 +25,39 @@ interface StudentNotification {
   scheduledAt: string;
 }
 
+interface TutorNotification {
+  userId: string;
+  email: string;
+  fullName: string;
+  classTitle: string;
+  minutesUntil: number;
+  classId: string;
+  scheduledAt: string;
+  roomUrl: string | null;
+}
+
+// Helper to format time in Zambia timezone (CAT - UTC+2)
+const formatTimeZambia = (isoString: string): string => {
+  const date = new Date(isoString);
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Africa/Lusaka'
+  });
+};
+
+const formatDateZambia = (isoString: string): string => {
+  const date = new Date(isoString);
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'Africa/Lusaka'
+  });
+};
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -34,15 +67,16 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Checking for upcoming classes to send reminders...");
 
     const now = new Date();
-    const notifications: StudentNotification[] = [];
+    const studentNotifications: StudentNotification[] = [];
+    const tutorNotifications: TutorNotification[] = [];
 
-    // Check for classes starting in ~30 minutes (28-32 min window)
+    // Check for classes starting in exactly 30 minutes (28-32 min window)
     const thirtyMinWindowStart = new Date(now.getTime() + 28 * 60 * 1000);
     const thirtyMinWindowEnd = new Date(now.getTime() + 32 * 60 * 1000);
 
     const { data: thirtyMinClasses, error: thirtyMinError } = await supabase
       .from("live_classes")
-      .select("id, title, course_id, scheduled_at")
+      .select("id, title, course_id, scheduled_at, host_id, daily_room_url")
       .eq("status", "scheduled")
       .gte("scheduled_at", thirtyMinWindowStart.toISOString())
       .lt("scheduled_at", thirtyMinWindowEnd.toISOString());
@@ -53,45 +87,68 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`Found ${thirtyMinClasses?.length || 0} classes starting in ~30 minutes`);
       
       for (const liveClass of thirtyMinClasses || []) {
-        if (!liveClass.course_id) continue;
+        // Notify tutor
+        const { data: tutorProfile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", liveClass.host_id)
+          .maybeSingle();
 
-        const { data: enrollments } = await supabase
-          .from("academy_enrollments")
-          .select("user_id")
-          .eq("course_id", liveClass.course_id)
-          .eq("status", "active");
+        const { data: { user: tutorData } } = await supabase.auth.admin.getUserById(liveClass.host_id);
 
-        for (const enrollment of enrollments || []) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("user_id", enrollment.user_id)
-            .maybeSingle();
+        if (tutorData?.email) {
+          tutorNotifications.push({
+            userId: liveClass.host_id,
+            email: tutorData.email,
+            fullName: tutorProfile?.full_name || "Tutor",
+            classTitle: liveClass.title,
+            minutesUntil: 30,
+            classId: liveClass.id,
+            scheduledAt: liveClass.scheduled_at,
+            roomUrl: liveClass.daily_room_url,
+          });
+        }
 
-          const { data: { user: userData } } = await supabase.auth.admin.getUserById(enrollment.user_id);
+        // Notify students
+        if (liveClass.course_id) {
+          const { data: enrollments } = await supabase
+            .from("academy_enrollments")
+            .select("user_id")
+            .eq("course_id", liveClass.course_id)
+            .eq("status", "active");
 
-          if (userData?.email) {
-            notifications.push({
-              userId: enrollment.user_id,
-              email: userData.email,
-              fullName: profile?.full_name || "Student",
-              classTitle: liveClass.title,
-              minutesUntil: 30,
-              classId: liveClass.id,
-              scheduledAt: liveClass.scheduled_at,
-            });
+          for (const enrollment of enrollments || []) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("user_id", enrollment.user_id)
+              .maybeSingle();
+
+            const { data: { user: userData } } = await supabase.auth.admin.getUserById(enrollment.user_id);
+
+            if (userData?.email) {
+              studentNotifications.push({
+                userId: enrollment.user_id,
+                email: userData.email,
+                fullName: profile?.full_name || "Student",
+                classTitle: liveClass.title,
+                minutesUntil: 30,
+                classId: liveClass.id,
+                scheduledAt: liveClass.scheduled_at,
+              });
+            }
           }
         }
       }
     }
 
-    // Check for classes starting in ~5 minutes (3-7 min window)
+    // Check for classes starting in exactly 5 minutes (3-7 min window)
     const fiveMinWindowStart = new Date(now.getTime() + 3 * 60 * 1000);
     const fiveMinWindowEnd = new Date(now.getTime() + 7 * 60 * 1000);
 
     const { data: fiveMinClasses, error: fiveMinError } = await supabase
       .from("live_classes")
-      .select("id, title, course_id, scheduled_at")
+      .select("id, title, course_id, scheduled_at, host_id, daily_room_url")
       .eq("status", "scheduled")
       .gte("scheduled_at", fiveMinWindowStart.toISOString())
       .lt("scheduled_at", fiveMinWindowEnd.toISOString());
@@ -102,45 +159,68 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`Found ${fiveMinClasses?.length || 0} classes starting in ~5 minutes`);
       
       for (const liveClass of fiveMinClasses || []) {
-        if (!liveClass.course_id) continue;
+        // Notify tutor
+        const { data: tutorProfile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", liveClass.host_id)
+          .maybeSingle();
 
-        const { data: enrollments } = await supabase
-          .from("academy_enrollments")
-          .select("user_id")
-          .eq("course_id", liveClass.course_id)
-          .eq("status", "active");
+        const { data: { user: tutorData } } = await supabase.auth.admin.getUserById(liveClass.host_id);
 
-        for (const enrollment of enrollments || []) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("user_id", enrollment.user_id)
-            .maybeSingle();
+        if (tutorData?.email) {
+          tutorNotifications.push({
+            userId: liveClass.host_id,
+            email: tutorData.email,
+            fullName: tutorProfile?.full_name || "Tutor",
+            classTitle: liveClass.title,
+            minutesUntil: 5,
+            classId: liveClass.id,
+            scheduledAt: liveClass.scheduled_at,
+            roomUrl: liveClass.daily_room_url,
+          });
+        }
 
-          const { data: { user: userData } } = await supabase.auth.admin.getUserById(enrollment.user_id);
+        // Notify students
+        if (liveClass.course_id) {
+          const { data: enrollments } = await supabase
+            .from("academy_enrollments")
+            .select("user_id")
+            .eq("course_id", liveClass.course_id)
+            .eq("status", "active");
 
-          if (userData?.email) {
-            notifications.push({
-              userId: enrollment.user_id,
-              email: userData.email,
-              fullName: profile?.full_name || "Student",
-              classTitle: liveClass.title,
-              minutesUntil: 5,
-              classId: liveClass.id,
-              scheduledAt: liveClass.scheduled_at,
-            });
+          for (const enrollment of enrollments || []) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("user_id", enrollment.user_id)
+              .maybeSingle();
+
+            const { data: { user: userData } } = await supabase.auth.admin.getUserById(enrollment.user_id);
+
+            if (userData?.email) {
+              studentNotifications.push({
+                userId: enrollment.user_id,
+                email: userData.email,
+                fullName: profile?.full_name || "Student",
+                classTitle: liveClass.title,
+                minutesUntil: 5,
+                classId: liveClass.id,
+                scheduledAt: liveClass.scheduled_at,
+              });
+            }
           }
         }
       }
     }
 
-    console.log(`Sending ${notifications.length} reminder notifications`);
+    console.log(`Sending ${studentNotifications.length} student and ${tutorNotifications.length} tutor reminders`);
 
     let pushSent = 0;
     let emailSent = 0;
 
-    // Send notifications
-    for (const notification of notifications) {
+    // Send student notifications
+    for (const notification of studentNotifications) {
       // Send push notification
       try {
         await supabase.functions.invoke("send-push-notification", {
@@ -160,13 +240,9 @@ const handler = async (req: Request): Promise<Response> => {
         console.error("Error sending push notification:", err);
       }
 
-      // Send email reminder via Resend
+      // Send email reminder
       try {
-        const formattedTime = new Date(notification.scheduledAt).toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        });
+        const formattedTime = formatTimeZambia(notification.scheduledAt);
 
         const title = notification.minutesUntil === 5 ? '🔴 Class Starting Soon!' : '📚 Class Reminder';
         const content = `
@@ -178,7 +254,7 @@ const handler = async (req: Request): Promise<Response> => {
           </p>
           <div style="background: #f0f2f5; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
             <p style="margin: 0 0 10px 0;"><strong>Class:</strong> ${notification.classTitle}</p>
-            <p style="margin: 0;"><strong>Time:</strong> ${formattedTime}</p>
+            <p style="margin: 0;"><strong>Time:</strong> ${formattedTime} (Zambia Time)</p>
           </div>
           <p>
             ${notification.minutesUntil === 5
@@ -187,7 +263,7 @@ const handler = async (req: Request): Promise<Response> => {
             }
           </p>
           <div style="text-align: center;">
-            <a href="https://app.lmvacademy.com/class/${notification.classId}" class="button">Join Class Now</a>
+            <a href="https://app.lmvacademy.com/live-class/${notification.classId}" class="button">Join Class Now</a>
           </div>
         `;
 
@@ -213,12 +289,87 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // Send tutor notifications
+    for (const notification of tutorNotifications) {
+      // Send push notification to tutor
+      try {
+        await supabase.functions.invoke("send-push-notification", {
+          body: {
+            userIds: [notification.userId],
+            title: notification.minutesUntil === 5 ? "🔴 Your Class Starts in 5 Minutes!" : "⏰ Class in 30 Minutes",
+            body: `${notification.classTitle} - Get ready to start teaching!`,
+            icon: "/pwa-192x192.png",
+            data: { 
+              type: "tutor_class_reminder",
+              classId: notification.classId,
+            },
+          },
+        });
+        pushSent++;
+      } catch (err) {
+        console.error("Error sending tutor push notification:", err);
+      }
+
+      // Send email reminder to tutor
+      try {
+        const formattedTime = formatTimeZambia(notification.scheduledAt);
+        const hostLink = notification.roomUrl || `https://app.lmvacademy.com/live-class/${notification.classId}`;
+
+        const title = notification.minutesUntil === 5 ? '🔴 Your Class Starts in 5 Minutes!' : '⏰ Class Starting in 30 Minutes';
+        const content = `
+          <p>
+            ${notification.minutesUntil === 5
+              ? `Your class <strong class="highlight">${notification.classTitle}</strong> is starting in just <strong class="highlight">5 minutes</strong>!`
+              : `This is a reminder that your class <strong class="highlight">${notification.classTitle}</strong> starts in <strong>30 minutes</strong>.`
+            }
+          </p>
+          <div style="background: #f0f2f5; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+            <p style="margin: 0 0 10px 0;"><strong>Class:</strong> ${notification.classTitle}</p>
+            <p style="margin: 0;"><strong>Time:</strong> ${formattedTime} (Zambia Time)</p>
+          </div>
+          <p>
+            ${notification.minutesUntil === 5
+              ? "Your students are waiting! Click below to start teaching."
+              : "Get ready to engage with your students. Make sure your setup is ready."
+            }
+          </p>
+          <div style="text-align: center;">
+            <a href="${hostLink}" class="button">Start Your Class</a>
+          </div>
+          <p style="font-size: 12px; color: #666; margin-top: 20px;">
+            You can also access your class from the Teach Dashboard in the app.
+          </p>
+        `;
+
+        const emailHtml = getEmailTemplate({
+          title,
+          name: notification.fullName,
+          content,
+        });
+
+        const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
+
+        await resend.emails.send({
+          from: `LMV Academy <${fromEmail}>`,
+          to: [notification.email],
+          subject: notification.minutesUntil === 5 
+            ? `🔴 Your class "${notification.classTitle}" starts in 5 minutes!`
+            : `⏰ Reminder: Your class "${notification.classTitle}" at ${formattedTime}`,
+          html: emailHtml,
+        });
+        emailSent++;
+      } catch (err) {
+        console.error("Error sending tutor email:", err);
+      }
+    }
+
     console.log(`Sent ${pushSent} push notifications and ${emailSent} emails`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        notificationsSent: notifications.length,
+        studentNotificationsSent: studentNotifications.length,
+        tutorNotificationsSent: tutorNotifications.length,
         pushSent,
         emailSent,
         thirtyMinClasses: thirtyMinClasses?.length || 0,
