@@ -68,3 +68,9 @@ verify_jwt = false
 
 [functions.send-enrollment-confirmation]
 verify_jwt = false
+
+[functions.daily-room]
+verify_jwt = false
+
+[functions.daily-webhook]
+verify_jwt = false
