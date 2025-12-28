@@ -652,7 +652,7 @@ const ChatPage: React.FC = () => {
   };
 
   const displayName =
-    (user?.user_metadata as Record<string, unknown>)?.full_name || user?.email?.split('@')[0] || 'there';
+    ((user?.user_metadata as Record<string, unknown>)?.full_name as string) || user?.email?.split('@')[0] || 'there';
 
   return (
     <MobileLayout showNav={false}>
