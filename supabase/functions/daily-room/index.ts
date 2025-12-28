@@ -18,14 +18,16 @@ serve(async (req) => {
       throw new Error("DAILY_API_KEY is not configured");
     }
 
-    const { action, roomName, classId, title, expiresInMinutes = 120 } = await req.json();
-    console.log("Daily room action:", action, { roomName, classId, title });
+    const { action, roomName, classId, title, userName, userId, isOwner, expiresInMinutes = 180 } = await req.json();
+    console.log("Daily room action:", action, { roomName, classId, title, userName, isOwner });
 
     if (action === "create") {
       // Create a new Daily.co room with recording enabled
+      const generatedRoomName = roomName || `lumina-${Date.now()}`;
+      
       const roomData = {
-        name: roomName || `lumina-${Date.now()}`,
-        privacy: "public", // Anyone with link can join
+        name: generatedRoomName,
+        privacy: "private", // Private room - requires token to join
         properties: {
           enable_chat: true,
           enable_screenshare: true,
@@ -34,7 +36,7 @@ serve(async (req) => {
           start_video_off: false,
           start_audio_off: false,
           max_participants: 100,
-          exp: Math.floor(Date.now() / 1000) + (expiresInMinutes * 60), // Expiry time
+          exp: Math.floor(Date.now() / 1000) + (expiresInMinutes * 60),
           eject_at_room_exp: true,
           enable_prejoin_ui: true,
           enable_network_ui: true,
@@ -70,6 +72,51 @@ serve(async (req) => {
           roomUrl: room.url,
           roomId: room.id,
         }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "get-token") {
+      // Generate a meeting token for a user to join
+      // This authenticates the user without requiring external login
+      if (!roomName) {
+        throw new Error("roomName is required for get-token");
+      }
+
+      const tokenData: any = {
+        properties: {
+          room_name: roomName,
+          user_name: userName || "Student",
+          user_id: userId || undefined,
+          is_owner: isOwner === true, // Owner can record, mute others, etc.
+          enable_recording: isOwner === true ? "cloud" : undefined,
+          start_cloud_recording: isOwner === true, // Auto-start recording for host
+          exp: Math.floor(Date.now() / 1000) + (expiresInMinutes * 60),
+        },
+      };
+
+      console.log("Generating meeting token:", tokenData);
+
+      const response = await fetch("https://api.daily.co/v1/meeting-tokens", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${DAILY_API_KEY}`,
+        },
+        body: JSON.stringify(tokenData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Token generation error:", response.status, errorText);
+        throw new Error(`Token generation failed: ${response.status}`);
+      }
+
+      const { token } = await response.json();
+      console.log("Meeting token generated successfully");
+
+      return new Response(
+        JSON.stringify({ success: true, token }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -132,7 +179,6 @@ serve(async (req) => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Failed to start recording:", response.status, errorText);
-        // Don't throw - recording might already be in progress
         return new Response(
           JSON.stringify({ success: false, error: errorText }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -148,24 +194,21 @@ serve(async (req) => {
     }
 
     if (action === "stop-recording") {
-      // Stop cloud recording for a room
       console.log("Stopping recording for room:", roomName);
       
-      const response = await fetch(`https://api.daily.co/v1/rooms/${roomName}/recordings`, {
+      await fetch(`https://api.daily.co/v1/rooms/${roomName}/recordings`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${DAILY_API_KEY}`,
         },
       });
 
-      // Recording stopping is async, so just acknowledge
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (action === "get-recordings") {
-      // Get recordings for a room
       console.log("Getting recordings for room:", roomName);
       
       const response = await fetch(`https://api.daily.co/v1/recordings?room_name=${roomName}`, {
@@ -181,34 +224,7 @@ serve(async (req) => {
       }
 
       const data = await response.json();
-      console.log("Recordings found:", data);
-
       return new Response(JSON.stringify({ success: true, recordings: data.data || [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (action === "get-transcription") {
-      // Get transcription for a recording
-      const { recordingId } = await req.json();
-      console.log("Getting transcription for recording:", recordingId);
-      
-      const response = await fetch(`https://api.daily.co/v1/recordings/${recordingId}/transcript`, {
-        headers: {
-          Authorization: `Bearer ${DAILY_API_KEY}`,
-        },
-      });
-
-      if (!response.ok) {
-        console.log("Transcription not ready yet or not available");
-        return new Response(
-          JSON.stringify({ success: false, status: "not_ready" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const transcript = await response.json();
-      return new Response(JSON.stringify({ success: true, transcript }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
