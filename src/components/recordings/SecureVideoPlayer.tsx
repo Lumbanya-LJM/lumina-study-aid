@@ -4,6 +4,7 @@ import { Loader2, Play, Pause, Volume2, VolumeX, Maximize, RotateCcw } from "luc
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import lmvLogo from "@/assets/lmv-logo.png";
 import { useAuth } from "@/hooks/useAuth";
 
 interface SecureVideoPlayerProps {
@@ -289,11 +290,14 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      {/* Watermark overlay - deters screen recording */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-10">
-        <div className="text-white text-4xl font-bold rotate-[-30deg] select-none">
-          LUMINA
-        </div>
+      {/* LMV Logo Watermark overlay - deters screen recording */}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+        <img 
+          src={lmvLogo} 
+          alt="" 
+          className="w-32 h-32 md:w-40 md:h-40 opacity-15 rotate-[-15deg] select-none"
+          draggable={false}
+        />
       </div>
 
       {/* Custom Controls */}

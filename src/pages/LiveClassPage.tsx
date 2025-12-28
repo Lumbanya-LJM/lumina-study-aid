@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Video, ArrowLeft, Clock, Mic, Camera, Users, PhoneOff, MonitorUp, ExternalLink, Minimize2, Maximize2, Home, Crown, PictureInPicture2, Circle, Sparkles, Timer } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import lmvLogo from "@/assets/lmv-logo.png";
 
 interface LiveClass {
   id: string;
@@ -523,6 +524,15 @@ const LiveClassPage: React.FC = () => {
             className="w-full h-full absolute inset-0"
             style={{ border: "none" }}
           />
+          {/* LMV Logo Watermark */}
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+            <img 
+              src={lmvLogo} 
+              alt="" 
+              className="w-16 h-16 opacity-15 rotate-[-15deg] select-none"
+              draggable={false}
+            />
+          </div>
         </div>
         <div className="p-2 flex items-center justify-between gap-2 bg-card">
           <Button
@@ -649,6 +659,15 @@ const LiveClassPage: React.FC = () => {
                 className="w-full h-full absolute inset-0"
                 style={{ border: "none" }}
               />
+              {/* LMV Logo Watermark - deters screen recording */}
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+                <img 
+                  src={lmvLogo} 
+                  alt="" 
+                  className="w-32 h-32 md:w-40 md:h-40 opacity-15 rotate-[-15deg] select-none"
+                  draggable={false}
+                />
+              </div>
             </div>
 
             {/* Bottom controls bar */}
