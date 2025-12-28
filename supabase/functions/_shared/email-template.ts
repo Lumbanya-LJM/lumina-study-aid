@@ -18,7 +18,7 @@ export const getEmailTemplate = ({ title, name, content, footerText }: EmailTemp
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-          background-color: #f0f2f5;
+          background-color: #f5f7fa;
           margin: 0;
           padding: 20px;
           -webkit-font-smoothing: antialiased;
@@ -28,13 +28,13 @@ export const getEmailTemplate = ({ title, name, content, footerText }: EmailTemp
           max-width: 600px;
           margin: 0 auto;
           background-color: #ffffff;
-          border-radius: 12px;
+          border-radius: 16px;
           overflow: hidden;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-          border: 1px solid #e0e0e0;
+          box-shadow: 0 10px 40px rgba(42, 90, 106, 0.1);
+          border: 1px solid #e8edf2;
         }
         .header {
-          background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
+          background: linear-gradient(135deg, #2A5A6A 0%, #1e4a58 50%, #163945 100%);
           padding: 40px;
           text-align: center;
         }
@@ -42,58 +42,109 @@ export const getEmailTemplate = ({ title, name, content, footerText }: EmailTemp
           color: #ffffff;
           font-size: 28px;
           font-weight: 700;
-          letter-spacing: 1px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+        }
+        .logo-subtitle {
+          color: rgba(255, 255, 255, 0.85);
+          font-size: 12px;
+          font-weight: 500;
+          letter-spacing: 3px;
+          margin-top: 8px;
+          text-transform: uppercase;
         }
         .main-content {
           padding: 40px;
-          color: #333333;
+          color: #2c3e50;
         }
         h1 {
           font-size: 24px;
           font-weight: 600;
           margin: 0 0 20px 0;
-          color: #1b263b;
+          color: #2A5A6A;
         }
         p, ul, li {
           font-size: 16px;
           line-height: 1.7;
           margin: 0 0 20px 0;
+          color: #4a5568;
         }
         ul {
           padding-left: 25px;
         }
+        li {
+          margin-bottom: 10px;
+        }
+        strong {
+          color: #2A5A6A;
+        }
         .button {
           display: inline-block;
-          background-color: #2a6fdb;
+          background: linear-gradient(135deg, #2A5A6A 0%, #1e4a58 100%);
           color: #ffffff !important;
           text-decoration: none;
-          padding: 14px 28px;
-          border-radius: 8px;
+          padding: 16px 32px;
+          border-radius: 10px;
           font-weight: 600;
           margin: 20px 0;
           text-align: center;
+          box-shadow: 0 4px 15px rgba(42, 90, 106, 0.3);
+        }
+        .button:hover {
+          background: linear-gradient(135deg, #1e4a58 0%, #163945 100%);
+        }
+        .info-box {
+          background: linear-gradient(135deg, #f0f7f9 0%, #e8f4f8 100%);
+          border-left: 4px solid #2A5A6A;
+          padding: 20px;
+          border-radius: 0 10px 10px 0;
+          margin: 20px 0;
+        }
+        .info-box p {
+          margin: 0;
+          color: #2A5A6A;
         }
         .footer {
-          padding: 30px;
+          padding: 30px 40px;
           text-align: center;
-          background-color: #f8f9fa;
-          border-top: 1px solid #e0e0e0;
+          background: linear-gradient(180deg, #f8f9fa 0%, #f0f2f5 100%);
+          border-top: 1px solid #e8edf2;
         }
         .footer p {
-          color: #888888;
-          font-size: 12px;
-          margin: 0;
+          color: #718096;
+          font-size: 13px;
+          margin: 0 0 10px 0;
+        }
+        .footer a {
+          color: #2A5A6A;
+          text-decoration: none;
+          font-weight: 500;
+        }
+        .footer-logo {
+          font-size: 14px;
+          font-weight: 700;
+          color: #2A5A6A;
+          letter-spacing: 1px;
+          margin-bottom: 10px;
         }
         .highlight {
-          color: #2a6fdb;
+          color: #2A5A6A;
           font-weight: 600;
+        }
+        .divider {
+          height: 1px;
+          background: linear-gradient(90deg, transparent, #e8edf2, transparent);
+          margin: 30px 0;
         }
         @media (max-width: 600px) {
           body {
             padding: 10px;
           }
           .header, .main-content {
-            padding: 30px;
+            padding: 30px 20px;
+          }
+          .footer {
+            padding: 25px 20px;
           }
         }
       </style>
@@ -102,6 +153,7 @@ export const getEmailTemplate = ({ title, name, content, footerText }: EmailTemp
       <div class="email-container">
         <div class="header">
           <div class="logo">LMV ACADEMY</div>
+          <div class="logo-subtitle">Legal Excellence • Professional Growth</div>
         </div>
         <div class="main-content">
           <h1>${title}</h1>
@@ -109,8 +161,9 @@ export const getEmailTemplate = ({ title, name, content, footerText }: EmailTemp
           ${content}
         </div>
         <div class="footer">
+          <div class="footer-logo">LMV ACADEMY</div>
           <p>${footerText || `© ${currentYear} LMV Academy. All rights reserved.`}</p>
-          <p>If you have any questions, please contact us at <a href="mailto:admin@lmvacademy.com">admin@lmvacademy.com</a>.</p>
+          <p>Questions? Contact us at <a href="mailto:admin@lmvacademy.com">admin@lmvacademy.com</a></p>
         </div>
       </div>
     </body>

@@ -54,7 +54,8 @@ export const RoleSwitcher: React.FC = () => {
     checkRoles();
   }, [user?.id]);
 
-  // Don't show if user only has one role
+  // Only show for users with admin OR tutor roles
+  // Student-only users don't need a switcher
   const hasMultipleRoles = roles.isAdmin || roles.isTutor;
   if (loading || !hasMultipleRoles) return null;
 
@@ -66,6 +67,9 @@ export const RoleSwitcher: React.FC = () => {
 
   const currentView = getCurrentView();
 
+  // Only show roles the user actually has - remove student option for non-admin/tutor toggle
+  // Tutors who are admins can switch between admin and tutor only
+  // Regular tutors don't need a switcher (only one elevated role)
   const roleOptions: { view: RoleView; label: string; icon: React.ElementType; path: string; available: boolean }[] = [
     { view: 'admin', label: 'Admin Portal', icon: Shield, path: '/admin', available: roles.isAdmin },
     { view: 'tutor', label: 'Tutor Dashboard', icon: GraduationCap, path: '/teach', available: roles.isTutor },
