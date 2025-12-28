@@ -11,6 +11,16 @@ import { TutorSidebar } from '@/components/teach/TutorSidebar';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { StatsDetailModal } from '@/components/teach/StatsDetailModal';
 import { EditClassModal } from '@/components/teach/EditClassModal';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   GraduationCap, 
   Users, 
@@ -114,6 +124,8 @@ const TeachDashboardPage: React.FC = () => {
   const [editClassModalOpen, setEditClassModalOpen] = useState(false);
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [endingClassId, setEndingClassId] = useState<string | null>(null);
+  const [endClassConfirmOpen, setEndClassConfirmOpen] = useState(false);
+  const [classToEnd, setClassToEnd] = useState<{ id: string; title: string; dailyRoomName: string | null } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -253,6 +265,19 @@ const TeachDashboardPage: React.FC = () => {
     } finally {
       setLoadingStudents(false);
     }
+  };
+
+  const openEndClassConfirm = (classId: string, title: string, dailyRoomName: string | null) => {
+    setClassToEnd({ id: classId, title, dailyRoomName });
+    setEndClassConfirmOpen(true);
+  };
+
+  const handleConfirmEndClass = async () => {
+    if (!classToEnd) return;
+    
+    setEndClassConfirmOpen(false);
+    await handleEndClass(classToEnd.id, classToEnd.dailyRoomName);
+    setClassToEnd(null);
   };
 
   const handleEndClass = async (classId: string, dailyRoomName: string | null) => {
@@ -504,7 +529,7 @@ const TeachDashboardPage: React.FC = () => {
                           variant="destructive"
                           className="gap-1.5"
                           disabled={endingClassId === cls.id}
-                          onClick={() => handleEndClass(cls.id, cls.daily_room_name)}
+                          onClick={() => openEndClassConfirm(cls.id, cls.title, cls.daily_room_name)}
                         >
                           {endingClassId === cls.id ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -747,7 +772,7 @@ const TeachDashboardPage: React.FC = () => {
                             variant="destructive"
                             className="gap-2"
                             disabled={endingClassId === cls.id}
-                            onClick={() => handleEndClass(cls.id, cls.daily_room_name)}
+                            onClick={() => openEndClassConfirm(cls.id, cls.title, cls.daily_room_name)}
                           >
                             {endingClassId === cls.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1010,6 +1035,28 @@ const TeachDashboardPage: React.FC = () => {
         classId={editingClassId}
         onSuccess={loadData}
       />
+
+      {/* End Class Confirmation Dialog */}
+      <AlertDialog open={endClassConfirmOpen} onOpenChange={setEndClassConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>End Class?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to end <span className="font-semibold">"{classToEnd?.title}"</span>? 
+              This will stop the class for all participants and the recording will be processed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setClassToEnd(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmEndClass}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              End Class
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
