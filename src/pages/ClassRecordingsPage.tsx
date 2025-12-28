@@ -569,6 +569,18 @@ const ClassRecordingsPage: React.FC = () => {
                                 {recording.academy_courses.name}
                               </Badge>
                             )}
+                            
+                            {/* AI Brief Description - Always visible */}
+                            {summary ? (
+                              <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
+                                {summary.summary.split('.').slice(0, 2).join('.') + '.'}
+                              </p>
+                            ) : recording.description ? (
+                              <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
+                                {recording.description}
+                              </p>
+                            ) : null}
+                            
                             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
@@ -594,11 +606,18 @@ const ClassRecordingsPage: React.FC = () => {
                                   {progress.resumeText}
                                 </Badge>
                               )}
+                              {/* AI indicator */}
+                              {summary && (
+                                <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30">
+                                  <Sparkles className="h-2.5 w-2.5" />
+                                  AI
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
                         
-                        {/* AI Summary preview */}
+                        {/* AI Summary full details */}
                         {summary && (
                           <div className="mt-3 pt-3 border-t">
                             <button
@@ -609,7 +628,9 @@ const ClassRecordingsPage: React.FC = () => {
                               }}
                             >
                               <Sparkles className="h-3 w-3" />
-                              <span className="font-medium">AI Summary</span>
+                              <span className="font-medium">
+                                {isExpanded ? "Hide Details" : "View Full Summary & Key Points"}
+                              </span>
                               {isExpanded ? (
                                 <ChevronUp className="h-3 w-3 ml-auto" />
                               ) : (
@@ -619,7 +640,10 @@ const ClassRecordingsPage: React.FC = () => {
                             
                             {isExpanded && (
                               <div className="mt-3 space-y-3 text-sm">
-                                <p className="text-muted-foreground">{summary.summary}</p>
+                                <div>
+                                  <h4 className="font-medium text-xs mb-1.5 text-foreground">What This Class Covered</h4>
+                                  <p className="text-muted-foreground text-xs leading-relaxed">{summary.summary}</p>
+                                </div>
                                 
                                 {summary.key_points.length > 0 && (
                                   <div>
