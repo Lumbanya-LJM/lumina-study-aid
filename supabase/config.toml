@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.auto-create-recurring-class]
 verify_jwt = false
+
+[functions.sync-recordings]
+verify_jwt = false

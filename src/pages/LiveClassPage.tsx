@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Video, ArrowLeft, Clock, Mic, Camera, Users, PhoneOff, MonitorUp, ExternalLink, Minimize2, Maximize2, Home, Crown, PictureInPicture2 } from "lucide-react";
+import { Loader2, Video, ArrowLeft, Clock, Mic, Camera, Users, PhoneOff, MonitorUp, ExternalLink, Minimize2, Maximize2, Home, Crown, PictureInPicture2, Circle, Sparkles, Timer } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -36,13 +36,29 @@ const LiveClassPage: React.FC = () => {
   const [participantCount, setParticipantCount] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isPipActive, setIsPipActive] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingStarting, setRecordingStarting] = useState(false);
+  const [classDuration, setClassDuration] = useState(0);
+  const [aiAssistEnabled, setAiAssistEnabled] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get user display name from profile
   const getUserName = useCallback(() => {
     return user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student";
   }, [user]);
+
+  // Format duration as HH:MM:SS
+  const formatDuration = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     const loadClass = async () => {
@@ -91,6 +107,16 @@ const LiveClassPage: React.FC = () => {
           
           setLiveClass(prev => prev ? { ...prev, status: "live", started_at: new Date().toISOString() } : null);
         }
+
+        // Load participant count from database
+        const { count } = await supabase
+          .from("class_participants")
+          .select("*", { count: "exact", head: true })
+          .eq("class_id", classId)
+          .is("left_at", null);
+        
+        setParticipantCount(count || 0);
+
       } catch (error) {
         console.error("Error loading class:", error);
         toast({
@@ -107,6 +133,60 @@ const LiveClassPage: React.FC = () => {
     loadClass();
   }, [classId, user?.id, navigate, toast]);
 
+  // Duration timer
+  useEffect(() => {
+    if (inCall && liveClass?.started_at) {
+      const startTime = new Date(liveClass.started_at).getTime();
+      
+      const updateDuration = () => {
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        setClassDuration(elapsed);
+      };
+
+      updateDuration(); // Initial update
+      durationIntervalRef.current = setInterval(updateDuration, 1000);
+
+      return () => {
+        if (durationIntervalRef.current) {
+          clearInterval(durationIntervalRef.current);
+        }
+      };
+    }
+  }, [inCall, liveClass?.started_at]);
+
+  // Subscribe to participant changes in realtime
+  useEffect(() => {
+    if (!classId || !inCall) return;
+
+    const channel = supabase
+      .channel(`participants-${classId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'class_participants',
+          filter: `class_id=eq.${classId}`
+        },
+        async () => {
+          // Refetch participant count
+          const { count } = await supabase
+            .from("class_participants")
+            .select("*", { count: "exact", head: true })
+            .eq("class_id", classId)
+            .is("left_at", null);
+          
+          setParticipantCount(count || 0);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [classId, inCall]);
+
   // Listen for Daily.co iframe messages
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -117,6 +197,13 @@ const LiveClassPage: React.FC = () => {
       if (event.data?.action === "left-meeting" || event.data?.action === "meeting-ended") {
         setInCall(false);
         setMeetingToken(null);
+      }
+      if (event.data?.action === "recording-started") {
+        setIsRecording(true);
+        setRecordingStarting(false);
+      }
+      if (event.data?.action === "recording-stopped") {
+        setIsRecording(false);
       }
     };
 
@@ -216,11 +303,80 @@ const LiveClassPage: React.FC = () => {
         .eq("user_id", user.id);
     }
 
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+    }
+
     setInCall(false);
     setMeetingToken(null);
+    setIsRecording(false);
     toast({
       title: "Left Class",
       description: "You have left the video call.",
+    });
+  };
+
+  const handleStartRecording = async () => {
+    if (!liveClass?.daily_room_name) return;
+    
+    setRecordingStarting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("daily-room", {
+        body: {
+          action: "start-recording",
+          roomName: liveClass.daily_room_name,
+        },
+      });
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || "Failed to start recording");
+      }
+
+      setIsRecording(true);
+      toast({
+        title: "Recording Started",
+        description: "The class is now being recorded.",
+      });
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast({
+        title: "Recording Failed",
+        description: error instanceof Error ? error.message : "Could not start recording.",
+        variant: "destructive",
+      });
+    } finally {
+      setRecordingStarting(false);
+    }
+  };
+
+  const handleStopRecording = async () => {
+    if (!liveClass?.daily_room_name) return;
+    
+    try {
+      await supabase.functions.invoke("daily-room", {
+        body: {
+          action: "stop-recording",
+          roomName: liveClass.daily_room_name,
+        },
+      });
+
+      setIsRecording(false);
+      toast({
+        title: "Recording Stopped",
+        description: "The recording will be processed shortly.",
+      });
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+    }
+  };
+
+  const toggleAiAssist = () => {
+    setAiAssistEnabled(!aiAssistEnabled);
+    toast({
+      title: aiAssistEnabled ? "AI Assist Disabled" : "AI Assist Enabled",
+      description: aiAssistEnabled 
+        ? "AI note-taking has been turned off." 
+        : "AI will take notes and generate a summary after class.",
     });
   };
 
@@ -231,7 +387,7 @@ const LiveClassPage: React.FC = () => {
 
     try {
       // Stop recording via Daily.co API
-      if (liveClass.daily_room_name) {
+      if (liveClass.daily_room_name && isRecording) {
         console.log("Stopping recording for room:", liveClass.daily_room_name);
         
         await supabase.functions.invoke("daily-room", {
@@ -270,6 +426,10 @@ const LiveClassPage: React.FC = () => {
           title: "Next Class Scheduled",
           description: `Your next recurring class has been automatically scheduled.`,
         });
+      }
+
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
       }
 
       toast({
@@ -335,12 +495,15 @@ const LiveClassPage: React.FC = () => {
       <div className="fixed bottom-20 right-4 z-50 w-80 md:w-96 shadow-2xl rounded-xl overflow-hidden border border-border bg-card">
         <div className="bg-card/95 backdrop-blur-sm px-3 py-2 flex items-center justify-between border-b">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-            </span>
+            {isRecording && (
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              </span>
+            )}
             <span className="text-xs font-medium truncate">{liveClass.title}</span>
             {isHost && <Crown className="w-3 h-3 text-primary flex-shrink-0" />}
+            <span className="text-xs text-muted-foreground font-mono">{formatDuration(classDuration)}</span>
           </div>
           <div className="flex items-center gap-1">
             <Button
@@ -430,10 +593,26 @@ const LiveClassPage: React.FC = () => {
           <div className="flex items-center gap-4">
             {inCall && (
               <>
+                {/* Duration counter */}
+                <div className="flex items-center gap-1.5 text-sm bg-muted/50 px-2.5 py-1 rounded-full">
+                  <Timer className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-mono font-medium">{formatDuration(classDuration)}</span>
+                </div>
+                
+                {/* Recording indicator */}
+                {isRecording && (
+                  <div className="flex items-center gap-1.5 text-sm bg-red-500/10 text-red-500 px-2.5 py-1 rounded-full">
+                    <Circle className="h-3 w-3 fill-red-500 animate-pulse" />
+                    <span className="font-medium">REC</span>
+                  </div>
+                )}
+                
+                {/* Participant count */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Users className="h-4 w-4" />
                   <span>{participantCount} in class</span>
                 </div>
+                
                 <Button
                   variant="outline"
                   size="sm"
@@ -445,7 +624,7 @@ const LiveClassPage: React.FC = () => {
                 </Button>
               </>
             )}
-            {(liveClass.started_at || liveClass.scheduled_at) && (
+            {(liveClass.started_at || liveClass.scheduled_at) && !inCall && (
               <div className="hidden sm:flex items-center gap-1 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 {liveClass.started_at
@@ -474,7 +653,50 @@ const LiveClassPage: React.FC = () => {
 
             {/* Bottom controls bar */}
             <div className="bg-card border-t p-4">
-              <div className="flex items-center justify-center gap-4 max-w-lg mx-auto">
+              <div className="flex items-center justify-center gap-3 max-w-2xl mx-auto flex-wrap">
+                {/* AI Assist Toggle */}
+                <Button
+                  variant={aiAssistEnabled ? "default" : "outline"}
+                  size="lg"
+                  onClick={toggleAiAssist}
+                  className={cn("gap-2", aiAssistEnabled && "bg-primary")}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  AI Assist
+                </Button>
+
+                {/* Recording controls - Host only */}
+                {isHost && (
+                  <>
+                    {isRecording ? (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={handleStopRecording}
+                        className="gap-2 border-red-500/50 text-red-500 hover:bg-red-500/10"
+                      >
+                        <Circle className="h-4 w-4 fill-red-500" />
+                        Stop Recording
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={handleStartRecording}
+                        disabled={recordingStarting}
+                        className="gap-2"
+                      >
+                        {recordingStarting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-red-500" />
+                        )}
+                        Start Recording
+                      </Button>
+                    )}
+                  </>
+                )}
+
                 <Button
                   variant="outline"
                   size="lg"
@@ -649,10 +871,12 @@ const LiveClassPage: React.FC = () => {
                         <Video className="h-4 w-4 text-green-500" />
                       </div>
                       <div>
-                        <h3 className="font-medium text-sm">Auto-Recording Enabled</h3>
+                        <h3 className="font-medium text-sm">Recording Controls Available</h3>
                         <p className="text-xs text-muted-foreground">
-                          This class is recorded automatically. The recording and AI summary 
-                          will be available after the class ends.
+                          {isHost 
+                            ? "You can start/stop recording during the class. AI will generate a summary after."
+                            : "The host can record this class. The recording and AI summary will be available after class."
+                          }
                         </p>
                       </div>
                     </div>

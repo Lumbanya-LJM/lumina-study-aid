@@ -145,12 +145,13 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
       {/* Main notification card - compact design */}
       <div
         className={cn(
-          "relative rounded-lg p-2 border shadow-md overflow-hidden backdrop-blur-md transition-transform",
+          "relative rounded-lg p-2 border shadow-md overflow-hidden backdrop-blur-md",
           `bg-gradient-to-r ${styles.gradient} ${styles.border}`
         )}
         style={{
           transform: `translateX(${translateX}px)`,
-          transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+          transition: isDragging ? 'none' : 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          willChange: 'transform',
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
