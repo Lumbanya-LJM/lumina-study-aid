@@ -25,6 +25,8 @@ import {
   Trash2,
   CheckSquare,
   Square,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,6 +73,7 @@ interface ClassRecording {
   host_id: string;
   status?: string;
   daily_room_name?: string | null;
+  is_archived?: boolean;
   academy_courses?: { name: string } | null;
 }
 
@@ -105,6 +108,7 @@ const ClassRecordingsPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [recordings, setRecordings] = useState<ClassRecording[]>([]);
+  const [archivedRecordings, setArchivedRecordings] = useState<ClassRecording[]>([]);
   const [pendingRecordings, setPendingRecordings] = useState<ClassRecording[]>([]);
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
   const [liveClasses, setLiveClasses] = useState<UpcomingClass[]>([]);
@@ -125,18 +129,31 @@ const ClassRecordingsPage: React.FC = () => {
   const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [archiving, setArchiving] = useState<string | null>(null);
 
   const loadClasses = useCallback(async () => {
     try {
-      // Load recordings (ended classes with recordings)
+      // Load active recordings (ended classes with recordings, not archived)
       const { data: recordingsData } = await supabase
         .from("live_classes")
         .select("*, academy_courses(name)")
         .eq("status", "ended")
+        .eq("is_archived", false)
         .not("recording_url", "is", null)
         .order("ended_at", { ascending: false });
 
       setRecordings(recordingsData || []);
+
+      // Load archived recordings (only for hosts)
+      const { data: archivedData } = await supabase
+        .from("live_classes")
+        .select("*, academy_courses(name)")
+        .eq("status", "ended")
+        .eq("is_archived", true)
+        .not("recording_url", "is", null)
+        .order("ended_at", { ascending: false });
+
+      setArchivedRecordings(archivedData || []);
 
       // Load pending recordings (ended classes without recordings)
       const { data: pendingData } = await supabase
@@ -403,6 +420,37 @@ const ClassRecordingsPage: React.FC = () => {
     }
   };
 
+  // Archive recording
+  const handleArchiveRecording = async (recording: ClassRecording, archive: boolean) => {
+    setArchiving(recording.id);
+    try {
+      const { error } = await supabase
+        .from("live_classes")
+        .update({ is_archived: archive })
+        .eq("id", recording.id);
+
+      if (error) throw error;
+
+      toast({
+        title: archive ? "Recording Archived" : "Recording Restored",
+        description: archive 
+          ? "The recording has been moved to the archive." 
+          : "The recording has been restored.",
+      });
+
+      loadClasses();
+    } catch (error) {
+      console.error("Error archiving recording:", error);
+      toast({
+        title: archive ? "Archive Failed" : "Restore Failed",
+        description: "Could not update recording. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setArchiving(null);
+    }
+  };
+
   // Toggle selection for bulk delete
   const toggleBulkSelection = (recordingId: string) => {
     setSelectedForBulk((prev) => {
@@ -650,19 +698,28 @@ const ClassRecordingsPage: React.FC = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="recordings" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="recordings" className="gap-2">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="recordings" className="gap-1 text-xs sm:text-sm">
               <Video className="h-4 w-4" />
-              Recordings
+              <span className="hidden sm:inline">Recordings</span>
               {recordings.length > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
                   {recordings.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="upcoming" className="gap-2">
+            <TabsTrigger value="archived" className="gap-1 text-xs sm:text-sm">
+              <Archive className="h-4 w-4" />
+              <span className="hidden sm:inline">Archived</span>
+              {archivedRecordings.filter(r => r.host_id === user?.id).length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {archivedRecordings.filter(r => r.host_id === user?.id).length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="upcoming" className="gap-1 text-xs sm:text-sm">
               <Calendar className="h-4 w-4" />
-              Upcoming
+              <span className="hidden sm:inline">Upcoming</span>
               {upcomingClasses.length > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
                   {upcomingClasses.length}
@@ -770,11 +827,22 @@ const ClassRecordingsPage: React.FC = () => {
                                   Edit Details
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
+                                  onClick={() => handleArchiveRecording(recording, true)}
+                                  disabled={archiving === recording.id}
+                                >
+                                  {archiving === recording.id ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Archive className="h-4 w-4 mr-2" />
+                                  )}
+                                  Archive Recording
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
                                   onClick={() => handleDeleteConfirm(recording)}
                                   className="text-destructive focus:text-destructive"
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete Recording
+                                  Delete Permanently
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -926,6 +994,101 @@ const ClassRecordingsPage: React.FC = () => {
                     </Card>
                   );
                 })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Archived Recordings Tab */}
+          <TabsContent value="archived" className="space-y-4">
+            {archivedRecordings.filter(r => r.host_id === user?.id).length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-medium mb-2">No Archived Recordings</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Archived recordings will appear here.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {archivedRecordings
+                  .filter(r => r.host_id === user?.id)
+                  .map((recording) => (
+                    <Card key={recording.id} className="opacity-80">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <Archive className="h-3 w-3" />
+                            Archived
+                          </Badge>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={() => handleArchiveRecording(recording, false)}
+                                disabled={archiving === recording.id}
+                              >
+                                {archiving === recording.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <ArchiveRestore className="h-4 w-4 mr-2" />
+                                )}
+                                Restore Recording
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteConfirm(recording)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Permanently
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div 
+                          className="flex gap-4 cursor-pointer hover:bg-accent/50 rounded-lg -m-2 p-2"
+                          onClick={() => setSelectedRecording(recording)}
+                        >
+                          <div className="relative h-20 w-32 bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-muted-foreground/20 to-muted-foreground/5" />
+                            <Play className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium truncate">{recording.title}</h3>
+                            {recording.academy_courses && (
+                              <Badge variant="secondary" className="mt-1 text-xs">
+                                {recording.academy_courses.name}
+                              </Badge>
+                            )}
+                            {recording.description && (
+                              <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
+                                {recording.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDuration(recording.recording_duration_seconds)}
+                              </span>
+                              {recording.ended_at && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDistanceToNow(new Date(recording.ended_at), {
+                                    addSuffix: true,
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             )}
           </TabsContent>

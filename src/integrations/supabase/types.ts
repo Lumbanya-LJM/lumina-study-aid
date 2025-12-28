@@ -612,6 +612,7 @@ export type Database = {
           ended_at: string | null
           host_id: string
           id: string
+          is_archived: boolean
           is_purchasable: boolean | null
           is_recurring: boolean | null
           live_class_price: number | null
@@ -636,6 +637,7 @@ export type Database = {
           ended_at?: string | null
           host_id: string
           id?: string
+          is_archived?: boolean
           is_purchasable?: boolean | null
           is_recurring?: boolean | null
           live_class_price?: number | null
@@ -660,6 +662,7 @@ export type Database = {
           ended_at?: string | null
           host_id?: string
           id?: string
+          is_archived?: boolean
           is_purchasable?: boolean | null
           is_recurring?: boolean | null
           live_class_price?: number | null
