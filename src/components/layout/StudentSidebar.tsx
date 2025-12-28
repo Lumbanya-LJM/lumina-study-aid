@@ -212,7 +212,23 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
 
 export const StudentSidebar: React.FC = () => {
   const [open, setOpen] = React.useState(false);
+  const [isAtTop, setIsAtTop] = React.useState(false);
+  const lastScrollY = React.useRef(0);
   const location = useLocation();
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const isScrollingDown = currentScrollY > lastScrollY.current;
+      const isNearBottom = window.innerHeight + currentScrollY >= document.documentElement.scrollHeight - 100;
+      
+      setIsAtTop(isScrollingDown && currentScrollY > 100 || isNearBottom);
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <>
@@ -222,7 +238,10 @@ export const StudentSidebar: React.FC = () => {
           <Button
             variant="outline"
             size="icon"
-            className="lg:hidden fixed bottom-24 right-4 z-50 h-12 w-12 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
+            className={cn(
+              "lg:hidden fixed z-50 h-12 w-12 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300",
+              isAtTop ? "top-4 left-4" : "bottom-24 right-4"
+            )}
           >
             <Menu className="h-5 w-5" />
           </Button>
