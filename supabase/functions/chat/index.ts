@@ -25,6 +25,429 @@ const RESEARCH_KEYWORDS = [
   "leading case",
 ];
 
+// Tool definitions for Lumina's in-app actions
+const LUMINA_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "add_study_task",
+      description: "Add a new study task to the user's planner. Use this when the user asks to add, schedule, or create a task.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "The task title" },
+          description: { type: "string", description: "Optional task description" },
+          scheduled_date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today if not specified." },
+          scheduled_time: { type: "string", description: "Time in HH:MM format (24h). Optional." },
+          duration_minutes: { type: "number", description: "Estimated duration in minutes. Default 30." },
+          task_type: { type: "string", enum: ["study", "revision", "assignment", "reading", "practice"], description: "Type of task" }
+        },
+        required: ["title"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "complete_task",
+      description: "Mark a study task as completed. Use when user says they finished a task.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_id: { type: "string", description: "The UUID of the task to complete" },
+          task_title: { type: "string", description: "If task_id not known, provide the task title to find and complete" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_today_schedule",
+      description: "Get the user's tasks and schedule for today. Use when asked about today's plan or what to study.",
+      parameters: { type: "object", properties: {} }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_flashcard_deck",
+      description: "Create and save a new flashcard deck from the current topic. Use when user asks to save or create flashcards.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Deck title" },
+          subject: { type: "string", description: "Subject area (e.g., Contract Law, Criminal Law)" },
+          cards: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                question: { type: "string" },
+                answer: { type: "string" }
+              },
+              required: ["question", "answer"]
+            },
+            description: "Array of flashcard objects with question and answer"
+          }
+        },
+        required: ["title", "subject", "cards"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_quiz",
+      description: "Create and save a practice quiz. Use when user asks to save a quiz for later practice.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Quiz title" },
+          subject: { type: "string", description: "Subject area" },
+          questions: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                question: { type: "string" },
+                options: { type: "array", items: { type: "string" } },
+                correct_answer: { type: "number", description: "Index of correct option (0-based)" },
+                explanation: { type: "string" }
+              },
+              required: ["question", "options", "correct_answer"]
+            }
+          }
+        },
+        required: ["title", "subject", "questions"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_journal_entry",
+      description: "Create a reflective journal entry for the user. Use when they want to save thoughts or reflections.",
+      parameters: {
+        type: "object",
+        properties: {
+          content: { type: "string", description: "The journal entry content" },
+          mood: { type: "string", enum: ["great", "good", "okay", "struggling", "stressed"], description: "Current mood" }
+        },
+        required: ["content"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_user_progress",
+      description: "Get the user's study progress statistics. Use when asked about progress, stats, or achievements.",
+      parameters: { type: "object", properties: {} }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_upcoming_classes",
+      description: "Get the user's upcoming live classes. Use when asked about classes or schedule.",
+      parameters: { type: "object", properties: {} }
+    }
+  }
+];
+
+// Tool execution functions
+async function executeToolCall(supabase: any, userId: string, toolName: string, args: any): Promise<any> {
+  const today = new Date().toISOString().split('T')[0];
+  
+  try {
+    switch (toolName) {
+      case "add_study_task": {
+        const { data, error } = await supabase
+          .from('study_tasks')
+          .insert({
+            user_id: userId,
+            title: args.title,
+            description: args.description || null,
+            scheduled_date: args.scheduled_date || today,
+            scheduled_time: args.scheduled_time || null,
+            duration_minutes: args.duration_minutes || 30,
+            task_type: args.task_type || 'study',
+            completed: false
+          })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return { success: true, message: `Task "${args.title}" added to your planner for ${args.scheduled_date || 'today'}!`, task: data };
+      }
+      
+      case "complete_task": {
+        let taskId = args.task_id;
+        
+        // If no ID, try to find by title
+        if (!taskId && args.task_title) {
+          const { data: tasks } = await supabase
+            .from('study_tasks')
+            .select('id, title')
+            .eq('user_id', userId)
+            .eq('completed', false)
+            .ilike('title', `%${args.task_title}%`)
+            .limit(1);
+          
+          if (tasks && tasks.length > 0) {
+            taskId = tasks[0].id;
+          }
+        }
+        
+        if (!taskId) {
+          return { success: false, message: "I couldn't find that task. Could you be more specific about which task to complete?" };
+        }
+        
+        const { error } = await supabase
+          .from('study_tasks')
+          .update({ completed: true })
+          .eq('id', taskId)
+          .eq('user_id', userId);
+        
+        if (error) throw error;
+        
+        // Increment tasks_completed in profile
+        await supabase.rpc('increment_counter', { row_id: userId, column_name: 'tasks_completed' }).catch(() => {});
+        
+        return { success: true, message: "Great job! I've marked that task as complete. Keep up the momentum!" };
+      }
+      
+      case "get_today_schedule": {
+        const { data: tasks } = await supabase
+          .from('study_tasks')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('scheduled_date', today)
+          .order('scheduled_time', { ascending: true });
+        
+        const { data: classes } = await supabase
+          .from('live_classes')
+          .select('id, title, scheduled_at, course_id')
+          .gte('scheduled_at', `${today}T00:00:00`)
+          .lte('scheduled_at', `${today}T23:59:59`)
+          .eq('status', 'scheduled');
+        
+        return {
+          success: true,
+          tasks: tasks || [],
+          classes: classes || [],
+          summary: `You have ${tasks?.length || 0} tasks and ${classes?.length || 0} classes scheduled for today.`
+        };
+      }
+      
+      case "create_flashcard_deck": {
+        const { data, error } = await supabase
+          .from('flashcard_decks')
+          .insert({
+            user_id: userId,
+            title: args.title,
+            subject: args.subject,
+            cards: args.cards
+          })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return { success: true, message: `Created flashcard deck "${args.title}" with ${args.cards.length} cards! You can review them in the Flashcards section.`, deck_id: data.id };
+      }
+      
+      case "create_quiz": {
+        const { data, error } = await supabase
+          .from('quizzes')
+          .insert({
+            user_id: userId,
+            title: args.title,
+            subject: args.subject,
+            questions: args.questions,
+            total_questions: args.questions.length
+          })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return { success: true, message: `Created quiz "${args.title}" with ${args.questions.length} questions! You can take it anytime in the Quiz section.`, quiz_id: data.id };
+      }
+      
+      case "create_journal_entry": {
+        const { data, error } = await supabase
+          .from('journal_entries')
+          .insert({
+            user_id: userId,
+            content: args.content,
+            mood: args.mood || null,
+            is_private: true
+          })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return { success: true, message: "I've saved that reflection to your journal. Taking time to reflect is a powerful study habit!" };
+      }
+      
+      case "get_user_progress": {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('streak_days, total_study_hours, tasks_completed, cases_read')
+          .eq('user_id', userId)
+          .single();
+        
+        const { count: flashcardCount } = await supabase
+          .from('flashcard_decks')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        
+        const { count: quizCount } = await supabase
+          .from('quizzes')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        
+        return {
+          success: true,
+          stats: {
+            streak_days: profile?.streak_days || 0,
+            study_hours: profile?.total_study_hours || 0,
+            tasks_completed: profile?.tasks_completed || 0,
+            cases_read: profile?.cases_read || 0,
+            flashcard_decks: flashcardCount || 0,
+            quizzes_taken: quizCount || 0
+          }
+        };
+      }
+      
+      case "get_upcoming_classes": {
+        const now = new Date().toISOString();
+        const { data: classes } = await supabase
+          .from('live_classes')
+          .select(`
+            id, title, description, scheduled_at, status,
+            academy_courses(name)
+          `)
+          .gte('scheduled_at', now)
+          .eq('status', 'scheduled')
+          .order('scheduled_at', { ascending: true })
+          .limit(5);
+        
+        return {
+          success: true,
+          classes: classes || [],
+          summary: classes?.length ? `You have ${classes.length} upcoming classes.` : "No upcoming classes scheduled."
+        };
+      }
+      
+      default:
+        return { success: false, message: `Unknown tool: ${toolName}` };
+    }
+  } catch (error) {
+    console.error(`Tool execution error (${toolName}):`, error);
+    return { success: false, message: `Failed to execute ${toolName}: ${error instanceof Error ? error.message : 'Unknown error'}` };
+  }
+}
+
+// Helper to get comprehensive user context
+async function getUserContext(supabase: any, userId: string): Promise<string> {
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date().toISOString();
+  
+  try {
+    // Fetch all user data in parallel
+    const [profileRes, tasksRes, classesRes, filesRes, enrollmentsRes] = await Promise.all([
+      supabase.from('profiles').select('*').eq('user_id', userId).single(),
+      supabase.from('study_tasks').select('*').eq('user_id', userId).eq('scheduled_date', today).order('scheduled_time'),
+      supabase.from('live_classes').select('id, title, scheduled_at, status, academy_courses(name)')
+        .gte('scheduled_at', now).eq('status', 'scheduled').order('scheduled_at').limit(3),
+      supabase.from('user_files').select('file_name, category').eq('user_id', userId).limit(10),
+      supabase.from('academy_enrollments').select('course_id, academy_courses(name)').eq('user_id', userId).eq('status', 'active')
+    ]);
+    
+    const profile = profileRes.data;
+    const tasks = tasksRes.data || [];
+    const classes = classesRes.data || [];
+    const files = filesRes.data || [];
+    const enrollments = enrollmentsRes.data || [];
+    
+    let context = "\n\n## 🎯 CURRENT USER CONTEXT (Use this to personalize responses)\n\n";
+    
+    // Profile info
+    if (profile) {
+      context += `### Student Profile\n`;
+      context += `- Name: ${profile.full_name || 'Student'}\n`;
+      context += `- University: ${profile.university || 'Not set'}\n`;
+      context += `- Year of Study: ${profile.year_of_study || 'Not set'}\n`;
+      context += `- Study Streak: ${profile.streak_days || 0} days 🔥\n`;
+      context += `- Total Study Hours: ${profile.total_study_hours || 0}\n`;
+      context += `- Tasks Completed: ${profile.tasks_completed || 0}\n`;
+      context += `- Cases Read: ${profile.cases_read || 0}\n\n`;
+    }
+    
+    // Today's tasks
+    context += `### Today's Schedule (${today})\n`;
+    if (tasks.length > 0) {
+      const pending = tasks.filter((t: any) => !t.completed);
+      const completed = tasks.filter((t: any) => t.completed);
+      context += `- Pending tasks: ${pending.length}\n`;
+      context += `- Completed tasks: ${completed.length}\n`;
+      pending.forEach((t: any) => {
+        context += `  • ${t.title}${t.scheduled_time ? ` at ${t.scheduled_time}` : ''} (${t.task_type})\n`;
+      });
+    } else {
+      context += "- No tasks scheduled for today\n";
+    }
+    context += "\n";
+    
+    // Upcoming classes
+    context += `### Upcoming Classes\n`;
+    if (classes.length > 0) {
+      classes.forEach((c: any) => {
+        const date = new Date(c.scheduled_at).toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        context += `- ${c.title} (${date})\n`;
+      });
+    } else {
+      context += "- No upcoming classes\n";
+    }
+    context += "\n";
+    
+    // Enrolled courses
+    if (enrollments.length > 0) {
+      context += `### Enrolled Courses\n`;
+      enrollments.forEach((e: any) => {
+        context += `- ${e.academy_courses?.name || 'Unknown course'}\n`;
+      });
+      context += "\n";
+    }
+    
+    // StudyLocker files
+    if (files.length > 0) {
+      context += `### StudyLocker Files\n`;
+      files.forEach((f: any) => {
+        context += `- ${f.file_name} (${f.category || 'other'})\n`;
+      });
+      context += "\n";
+    }
+    
+    context += `### Available Actions\n`;
+    context += `You can execute these actions for the user:\n`;
+    context += `- Add study tasks to their planner\n`;
+    context += `- Mark tasks as completed\n`;
+    context += `- Create and save flashcard decks\n`;
+    context += `- Create and save practice quizzes\n`;
+    context += `- Create journal entries\n`;
+    context += `- Show their progress and statistics\n`;
+    context += `- Show upcoming classes\n\n`;
+    context += `When the user asks to do any of these, USE THE APPROPRIATE TOOL to actually perform the action.\n`;
+    
+    return context;
+  } catch (error) {
+    console.error("Error fetching user context:", error);
+    return "";
+  }
+}
+
 // Helper to create slugified cache key
 function slugify(text: string): string {
   return text
@@ -302,29 +725,6 @@ async function performWebSearch(query: string): Promise<string> {
   }
 }
 
-// Helper to get user files for context
-async function getUserFiles(userId: string): Promise<string> {
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    const { data: files, error } = await supabase
-      .from('user_files')
-      .select('file_name, category, file_type')
-      .eq('user_id', userId)
-      .limit(20);
-    
-    if (error || !files || files.length === 0) return "";
-    
-    const fileList = files.map(f => `- ${f.file_name} (${f.category || 'other'})`).join('\n');
-    return `\n\n## User's StudyLocker Files:\n${fileList}`;
-  } catch (error) {
-    console.error("Error fetching user files:", error);
-    return "";
-  }
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -369,11 +769,8 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user files using authenticated user's ID
-    let userFilesContext = "";
-    if (authenticatedUserId) {
-      userFilesContext = await getUserFiles(authenticatedUserId);
-    }
+    // Get comprehensive user context
+    const userContext = await getUserContext(supabase, authenticatedUserId);
 
     // Get the last user message for analysis - handle both string and multimodal content
     const lastUserMessageObj = messages.filter((m: any) => m.role === 'user').pop();
@@ -450,10 +847,6 @@ serve(async (req) => {
     }
 
     // Build dynamic sections for the prompt
-    const studyLockerSection = userFilesContext 
-      ? 'The student has uploaded files to their StudyLocker. You can reference these when relevant.' 
-      : 'Students can upload study materials to their StudyLocker for you to reference.';
-    
     let researchSection = '';
     if (researchContext) {
       researchSection = '\n## ✅ VERIFIED RESEARCH RESULTS\n**The following information comes from authoritative sources. You MAY cite this with confidence:**\n\n' + researchContext;
@@ -463,8 +856,6 @@ serve(async (req) => {
     } else {
       researchSection = '\n## ⚠️ NO VERIFIED RESEARCH AVAILABLE\nNo external research was performed for this query. You MUST:\n- Base your response on general legal principles ONLY\n- NOT cite specific case names or citations\n- Provide ZambiaLII SEARCH links for the student to find cases themselves\n- Clearly indicate when information should be verified';
     }
-    
-    const userFilesSection = userFilesContext ? '\n\n' + userFilesContext : '';
 
     // Build system prompt using string concatenation to avoid Deno template literal parsing issues
     let systemPrompt = 'You are Lumina, an elite AI study companion for students at Luminary Innovision Academy (LMV). Your persona is that of a professional, encouraging, and highly knowledgeable academic coach. Your purpose is to help students understand, revise, and think critically about their learning materials. You are committed to the highest standards of academic integrity and ethical conduct.\n\n';
@@ -486,20 +877,28 @@ serve(async (req) => {
     systemPrompt += '### 2. Permitted Actions\n';
     systemPrompt += '- Explain Concepts, Provide Examples, Summarize Content\n';
     systemPrompt += '- Structure Thinking, Create Study Tools, Guide Research\n\n';
-    systemPrompt += '## IN-APP INTEGRATION\n\n';
-    systemPrompt += '### Study Planner Integration\n';
-    systemPrompt += 'You can help students manage their study schedule with tasks.\n\n';
-    systemPrompt += '### Journal Integration\n';
-    systemPrompt += 'Encourage students to reflect on their learning in their journal.\n\n';
+    
+    systemPrompt += '## 🛠️ IN-APP TOOL CAPABILITIES\n\n';
+    systemPrompt += 'You have access to tools that let you perform actions in the app. When the user asks you to do something (add a task, create flashcards, etc.), USE THE APPROPRIATE TOOL. Do not just describe what you would do - actually do it!\n\n';
+    systemPrompt += '### Available Tools:\n';
+    systemPrompt += '- **add_study_task**: Add tasks to the user\'s study planner\n';
+    systemPrompt += '- **complete_task**: Mark a task as completed\n';
+    systemPrompt += '- **get_today_schedule**: Show today\'s tasks and classes\n';
+    systemPrompt += '- **create_flashcard_deck**: Create and save flashcards\n';
+    systemPrompt += '- **create_quiz**: Create and save practice quizzes\n';
+    systemPrompt += '- **create_journal_entry**: Save a reflective journal entry\n';
+    systemPrompt += '- **get_user_progress**: Show study statistics and achievements\n';
+    systemPrompt += '- **get_upcoming_classes**: Show upcoming live classes\n\n';
+    systemPrompt += 'When you use a tool, confirm what you did to the user.\n\n';
+    
     systemPrompt += '## ACADEMIC RESEARCH & INTEGRITY\n\n';
     systemPrompt += '### Hallucination Prevention\n';
     systemPrompt += '- NEVER invent sources, citations, or authors.\n';
     systemPrompt += '- NEVER fabricate facts, statistics, or quotes.\n';
     systemPrompt += '- If uncertain, state your uncertainty clearly.\n\n';
-    systemPrompt += '## StudyLocker Integration\n';
-    systemPrompt += studyLockerSection + '\n\n';
     systemPrompt += researchSection + '\n\n';
-    systemPrompt += '**FINAL REMINDER**: It is FAR better to say "I don\'t have verified cases on this, but here\'s how to search..." than to invent fake cases.' + userFilesSection;
+    systemPrompt += userContext;
+    systemPrompt += '\n**FINAL REMINDER**: It is FAR better to say "I don\'t have verified cases on this, but here\'s how to search..." than to invent fake cases.';
 
     // Adjust system prompt based on action
     if (action === 'summarise') {
@@ -529,31 +928,21 @@ Why this case matters in Zambian law`;
       systemPrompt += `
 
 ## Current Task: Create Flashcards
-Generate 5-10 flashcards in this format:
+Generate 5-10 flashcards and SAVE THEM using the create_flashcard_deck tool.
 
-**Card 1**
+Format each card as:
 **Q:** [Clear, specific question]
 **A:** [Concise but complete answer]
 
-Focus on key principles, definitions, elements of offences/torts, and important case ratios.`;
+Focus on key principles, definitions, elements of offences/torts, and important case ratios.
+After generating, USE THE TOOL to save them so the user can review later.`;
     } else if (action === 'quiz') {
       systemPrompt += `
 
 ## Current Task: Practice Quiz
-Create a quiz with:
-- 5 multiple choice questions
-- Each with 4 options (A, B, C, D)
-- Mark the **correct answer** clearly
-- Include a brief explanation for each
-
-Format:
-**Question 1:** [Question text]
-A) Option A
-B) Option B
-C) Option C
-D) Option D
-
-**Answer:** [Letter] - [Brief explanation]`;
+Create a quiz with 5 multiple choice questions and SAVE IT using the create_quiz tool.
+Each question should have 4 options and a clear correct answer with explanation.
+USE THE TOOL to save the quiz so the user can take it later.`;
     } else if (action === 'zambialii') {
       systemPrompt += `
 
@@ -574,42 +963,19 @@ The student wants help finding cases on ZambiaLII. Your role is to:
 - ✅ Explain what type of cases they should look for
 - ✅ Provide search links with relevant keywords
 - ✅ Suggest they verify cases directly on ZambiaLII
-- ✅ Mention well-known landmark cases IF you are certain they exist
-
-**Example response format:**
-
-### Research: [Topic]
-
-**Key legal principles to look for:**
-- [Principle 1]
-- [Principle 2]
-
-**Suggested ZambiaLII searches:**
-1. 🔍 [Search for cases on topic](https://zambialii.org/zm/judgment?search_api_fulltext=[encoded terms])
-2. 🔍 [Search for related topic](https://zambialii.org/zm/judgment?search_api_fulltext=[encoded terms])
-
-**What to look for in cases:**
-- [Guidance on identifying relevant holdings]
-
-Remember: It's better to guide the student to find real cases than to invent citations.`;
+- ✅ Mention well-known landmark cases IF you are certain they exist`;
     } else if (action === 'journal') {
       systemPrompt += `
 
 ## Current Task: Journal Response
-The student is sharing their thoughts or feelings. Respond with:
-- Genuine empathy and validation
-- Encouragement without being dismissive
-- Practical suggestions if appropriate
-- Reminder that challenges are part of growth`;
+The student is sharing their thoughts or feelings. Respond with empathy and validation.
+If they want to save their reflection, USE THE create_journal_entry tool to save it.`;
     }
 
-    console.log("Sending request to AI Gateway with action:", action || "general chat", "| Research mode:", needsResearch, "| Has images:", hasImages);
+    console.log("Sending request to AI Gateway with action:", action || "general chat", "| Research mode:", needsResearch, "| Has images:", hasImages, "| Tools enabled: true");
 
     // Use gemini-2.5-flash which supports both text and vision
     const model = "google/gemini-2.5-flash";
-    
-    // Build the system message
-    const systemMessage = { role: "system", content: systemPrompt };
     
     // Add image analysis context if images are present
     let imageAnalysisPrompt = "";
@@ -621,12 +987,13 @@ The user has shared one or more images. You should:
 1. **Carefully analyze** the visual content of each image
 2. **Describe** what you see in detail if asked
 3. **Extract text** from documents, notes, or screenshots if present
-4. **Provide relevant study guidance** based on the image content (e.g., if it's a case excerpt, legal document, lecture slide, or handwritten notes)
+4. **Provide relevant study guidance** based on the image content
 5. **Answer questions** about the image content accurately
 
 If the image contains legal content, apply your legal expertise to help the student understand it.`;
     }
 
+    // Initial AI request with tools
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -639,7 +1006,9 @@ If the image contains legal content, apply your legal expertise to help the stud
           { role: "system", content: systemPrompt + imageAnalysisPrompt },
           ...messages,
         ],
-        stream: true,
+        tools: LUMINA_TOOLS,
+        tool_choice: "auto",
+        stream: false, // Disable streaming for tool calls
       }),
     });
 
@@ -666,7 +1035,92 @@ If the image contains legal content, apply your legal expertise to help the stud
       });
     }
 
-    return new Response(response.body, {
+    const aiResponse = await response.json();
+    const assistantMessage = aiResponse.choices?.[0]?.message;
+    
+    // Check if the AI wants to use tools
+    if (assistantMessage?.tool_calls && assistantMessage.tool_calls.length > 0) {
+      console.log("Tool calls detected:", assistantMessage.tool_calls.length);
+      
+      // Execute all tool calls
+      const toolResults: any[] = [];
+      for (const toolCall of assistantMessage.tool_calls) {
+        const toolName = toolCall.function.name;
+        let toolArgs = {};
+        try {
+          toolArgs = JSON.parse(toolCall.function.arguments || "{}");
+        } catch (e) {
+          console.error("Failed to parse tool arguments:", e);
+        }
+        
+        console.log(`Executing tool: ${toolName}`, toolArgs);
+        const result = await executeToolCall(supabase, authenticatedUserId, toolName, toolArgs);
+        console.log(`Tool result:`, result);
+        
+        toolResults.push({
+          tool_call_id: toolCall.id,
+          role: "tool",
+          content: JSON.stringify(result)
+        });
+      }
+      
+      // Send tool results back to AI for final response
+      const followUpMessages = [
+        { role: "system", content: systemPrompt + imageAnalysisPrompt },
+        ...messages,
+        assistantMessage,
+        ...toolResults
+      ];
+      
+      const followUpResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: followUpMessages,
+          stream: true, // Stream the final response
+        }),
+      });
+      
+      if (!followUpResponse.ok) {
+        console.error("Follow-up response error:", followUpResponse.status);
+        // Return a simple response with tool results
+        const toolSummary = toolResults.map(r => JSON.parse(r.content).message || "Action completed").join("\n");
+        return new Response(
+          `data: ${JSON.stringify({ choices: [{ delta: { content: toolSummary } }] })}\n\ndata: [DONE]\n\n`,
+          { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } }
+        );
+      }
+      
+      return new Response(followUpResponse.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+    
+    // No tool calls - stream the response normally
+    // Since we already have the response (non-streaming), convert it to SSE format
+    const content = assistantMessage?.content || "";
+    
+    // Create a streaming response from the non-streamed content
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        // Send content in chunks to simulate streaming
+        const chunkSize = 50;
+        for (let i = 0; i < content.length; i += chunkSize) {
+          const chunk = content.slice(i, i + chunkSize);
+          const data = JSON.stringify({ choices: [{ delta: { content: chunk } }] });
+          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      }
+    });
+    
+    return new Response(stream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {
