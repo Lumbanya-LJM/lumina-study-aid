@@ -11,6 +11,7 @@ import TutorActivityDashboard from '@/components/admin/TutorActivityDashboard';
 import StudentManagement from '@/components/admin/StudentManagement';
 import BulkEnrollmentManager from '@/components/admin/BulkEnrollmentManager';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
+import { AdminOnboardingTutorial } from '@/components/onboarding/AdminOnboardingTutorial';
 import { 
   Shield, Users, BookOpen, FileText, GraduationCap, 
   TrendingUp, AlertCircle, CheckCircle, Clock, 
@@ -41,6 +42,9 @@ interface RecentActivity {
 const AdminDashboardPage: React.FC = () => {
   const { isAdmin, loading: adminLoading } = useAdmin();
   const [activeTab, setActiveTab] = useState('overview');
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('luminary_admin_onboarding_complete');
+  });
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalCourses: 0,
@@ -146,6 +150,10 @@ const AdminDashboardPage: React.FC = () => {
         </div>
       </MobileLayout>
     );
+  }
+
+  if (showOnboarding && isAdmin) {
+    return <AdminOnboardingTutorial onComplete={() => setShowOnboarding(false)} />;
   }
 
   if (!isAdmin) {

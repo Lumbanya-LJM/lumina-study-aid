@@ -5,7 +5,7 @@ import { MarkdownRenderer } from '@/components/lumina/MarkdownRenderer';
 import { ConversationSidebar } from '@/components/lumina/ConversationSidebar';
 import { ConversationSearch } from '@/components/lumina/ConversationSearch';
 import { ZambiaLiiChatSearch } from '@/components/lumina/ZambiaLiiChatSearch';
-import { FloatingQuickTip } from '@/components/ui/quick-tip';
+
 import {
   ArrowLeft,
   Send,
@@ -540,6 +540,21 @@ const ChatPage: React.FC = () => {
 
       if (reader) {
         let buffer = '';
+        let pendingUpdate = false;
+        
+        const flushUpdate = () => {
+          if (streamedContent) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: streamedContent }
+                  : msg,
+              ),
+            );
+          }
+          pendingUpdate = false;
+        };
+        
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -564,13 +579,11 @@ const ChatPage: React.FC = () => {
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) {
                 streamedContent += content;
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: streamedContent }
-                      : msg,
-                  ),
-                );
+                // Use requestAnimationFrame for smooth, batched updates
+                if (!pendingUpdate) {
+                  pendingUpdate = true;
+                  requestAnimationFrame(flushUpdate);
+                }
               }
             } catch {
               // Partial JSON, put it back
@@ -579,6 +592,9 @@ const ChatPage: React.FC = () => {
             }
           }
         }
+        
+        // Final flush to ensure all content is displayed
+        flushUpdate();
 
         // Save assistant response to database after streaming completes
         if (streamedContent) {
@@ -1091,9 +1107,6 @@ const ChatPage: React.FC = () => {
           </div>
         </footer>
 
-        {/* Floating Quick Tips */}
-        <FloatingQuickTip tipId="chat_voice" anchor="bottom-left" />
-        <FloatingQuickTip tipId="chat_zambialii" anchor="bottom-right" />
       </div>
     </MobileLayout>
   );
