@@ -154,11 +154,6 @@ serve(async (req) => {
           }
         }
 
-        if (updateError) {
-          console.error(`Error updating class ${liveClass.id}:`, updateError);
-          continue;
-        }
-
         console.log(`Successfully synced recording for: ${liveClass.title}`);
         results.synced++;
 
