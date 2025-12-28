@@ -38,8 +38,8 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, showNav = 
       
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <main className={cn("flex-1 overflow-y-auto no-scrollbar", showNav && "pb-24 lg:pb-0")}>
-          <div className="content-container p-4 lg:p-6">
+        <main className={cn("flex-1 overflow-y-auto no-scrollbar ios-scroll", showNav && "pb-24 lg:pb-0")}>
+          <div className="content-container p-4 lg:p-6 touch-manipulation">
             {children}
           </div>
         </main>

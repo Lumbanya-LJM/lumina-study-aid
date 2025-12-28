@@ -59,6 +59,46 @@ const AdminDashboardPage: React.FC = () => {
   useEffect(() => {
     if (isAdmin) {
       loadDashboardData();
+      
+      // Set up real-time subscriptions for live updates
+      const profilesChannel = supabase
+        .channel('admin-profiles')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+          loadDashboardData();
+        })
+        .subscribe();
+
+      const enrollmentsChannel = supabase
+        .channel('admin-enrollments')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'academy_enrollments' }, () => {
+          loadDashboardData();
+        })
+        .subscribe();
+
+      const applicationsChannel = supabase
+        .channel('admin-applications')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tutor_applications' }, () => {
+          loadDashboardData();
+        })
+        .subscribe();
+
+      const classesChannel = supabase
+        .channel('admin-classes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'live_classes' }, () => {
+          loadDashboardData();
+        })
+        .subscribe();
+
+      // Refresh data every 30 seconds as backup
+      const interval = setInterval(loadDashboardData, 30000);
+
+      return () => {
+        supabase.removeChannel(profilesChannel);
+        supabase.removeChannel(enrollmentsChannel);
+        supabase.removeChannel(applicationsChannel);
+        supabase.removeChannel(classesChannel);
+        clearInterval(interval);
+      };
     }
   }, [isAdmin]);
 
