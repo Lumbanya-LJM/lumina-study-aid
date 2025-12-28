@@ -55,14 +55,31 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
 
   useEffect(() => {
     const loadCourses = async () => {
-      const { data } = await supabase
-        .from("academy_courses")
-        .select("id, name")
-        .eq("is_active", true);
-      setCourses(data || []);
+      if (!user) return;
+
+      // Get tutor's approved application to find their assigned courses
+      const { data: tutorApp } = await supabase
+        .from("tutor_applications")
+        .select("selected_courses")
+        .eq("user_id", user.id)
+        .eq("status", "approved")
+        .single();
+
+      const tutorCourseIds = tutorApp?.selected_courses || [];
+
+      if (tutorCourseIds.length > 0) {
+        const { data } = await supabase
+          .from("academy_courses")
+          .select("id, name")
+          .eq("is_active", true)
+          .in("id", tutorCourseIds);
+        setCourses(data || []);
+      } else {
+        setCourses([]);
+      }
     };
     loadCourses();
-  }, []);
+  }, [user]);
 
   const handleCreate = async () => {
     if (!formData.title) {

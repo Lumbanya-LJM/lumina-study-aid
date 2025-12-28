@@ -232,15 +232,32 @@ const TeachDashboardPage: React.FC = () => {
     if (!user) return;
     
     try {
-      const { data: coursesData, error: coursesError } = await supabase
-        .from('academy_courses')
-        .select('*')
-        .eq('is_active', true);
+      // First, get the tutor's approved application to find their assigned courses
+      const { data: tutorApp } = await supabase
+        .from('tutor_applications')
+        .select('selected_courses')
+        .eq('user_id', user.id)
+        .eq('status', 'approved')
+        .single();
 
-      if (coursesError) throw coursesError;
-      setCourses(coursesData || []);
+      const tutorCourseIds = tutorApp?.selected_courses || [];
+
+      // If tutor has assigned courses, filter by them; otherwise show empty
+      let coursesData: Course[] = [];
+      if (tutorCourseIds.length > 0) {
+        const { data, error: coursesError } = await supabase
+          .from('academy_courses')
+          .select('*')
+          .eq('is_active', true)
+          .in('id', tutorCourseIds);
+
+        if (coursesError) throw coursesError;
+        coursesData = data || [];
+      }
+
+      setCourses(coursesData);
       
-      if (coursesData && coursesData.length > 0) {
+      if (coursesData.length > 0) {
         setSelectedCourse(coursesData[0].id);
       }
 
