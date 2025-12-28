@@ -8,6 +8,8 @@ import { HomePageSkeleton } from '@/components/ui/skeletons';
 import { StudyRemindersCard } from '@/components/lumina/StudyRemindersCard';
 import { OnboardingTutorial } from '@/components/onboarding/OnboardingTutorial';
 import { StudentStatsDetailModal, StudentStatType } from '@/components/student/StudentStatsDetailModal';
+import { PersonalizedGreeting, useGreeting } from '@/components/premium/PersonalizedGreeting';
+import { useCelebration } from '@/components/premium/ProgressCelebration';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundNotifications } from '@/hooks/useSoundNotifications';
@@ -29,7 +31,11 @@ import {
   BarChart3,
   Users,
   GraduationCap,
-  Sparkles
+  Sparkles,
+  Sunrise,
+  Sun,
+  Sunset,
+  Moon
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -56,11 +62,14 @@ const HomePage: React.FC = () => {
   useSoundNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [todaysTasks, setTodaysTasks] = useState<StudyTask[]>([]);
-  const [greeting, setGreeting] = useState('Good morning');
   const [isLoading, setIsLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [statsModalOpen, setStatsModalOpen] = useState(false);
   const [statsModalType, setStatsModalType] = useState<StudentStatType>(null);
+  const [lastStreakCelebrated, setLastStreakCelebrated] = useState<number>(0);
+  
+  const greetingData = useGreeting();
+  const { celebrate } = useCelebration();
 
   useEffect(() => {
     // Check if onboarding has been completed
@@ -71,15 +80,25 @@ const HomePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) setGreeting('Good morning');
-    else if (hour >= 12 && hour < 17) setGreeting('Good afternoon');
-    else setGreeting('Good evening');
-
     if (user) {
       fetchData();
     }
   }, [user]);
+  
+  // Celebrate streak milestones
+  useEffect(() => {
+    const streakDays = profile?.streak_days || 0;
+    const savedStreak = parseInt(localStorage.getItem('last_celebrated_streak') || '0');
+    
+    if (streakDays > 0 && streakDays > savedStreak && streakDays % 7 === 0) {
+      celebrate({
+        type: 'streak',
+        title: `${streakDays} Day Streak!`,
+        subtitle: "You're on fire! Keep up the amazing work.",
+      });
+      localStorage.setItem('last_celebrated_streak', streakDays.toString());
+    }
+  }, [profile?.streak_days, celebrate]);
 
   const fetchData = async () => {
     if (!user) return;
@@ -207,7 +226,7 @@ const HomePage: React.FC = () => {
           <div className="flex items-center gap-4 relative z-10">
             <LuminaAvatar size="lg" isActive />
             <div className="flex-1">
-              <p className="text-primary-foreground/80 text-sm mb-1">{greeting}, {firstName}!</p>
+              <p className="text-primary-foreground/80 text-sm mb-1">{greetingData.greeting}, {firstName}!</p>
               <h1 className="text-primary-foreground text-xl font-bold mb-2">Ready to excel today?</h1>
               <button 
                 onClick={() => { haptics.medium(); navigate('/chat'); }}
