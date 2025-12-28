@@ -37,7 +37,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { haptics } from '@/lib/haptics';
-import { sounds, isSoundEnabledState } from '@/lib/sounds';
+import { sounds } from '@/lib/sounds';
 import { useLuminaTaskNotification } from '@/hooks/useLuminaTaskNotification';
 
 interface Attachment {
@@ -636,13 +636,11 @@ const ChatPage: React.FC = () => {
         let buffer = '';
         let updateScheduled = false;
         
-        // Start typing sound effect if sounds are enabled and typing sound is enabled
-        const typingSoundEnabled = localStorage.getItem('lumina_typing_sound') !== 'false';
-        if (isSoundEnabledState() && typingSoundEnabled) {
-          typingSoundIntervalRef.current = setInterval(() => {
-            sounds.typing();
-          }, 120);
-        }
+        // Start typing sound effect if Lumina sounds are enabled
+        // (The sounds.typing() function checks internally if sounds are enabled)
+        typingSoundIntervalRef.current = setInterval(() => {
+          sounds.typing();
+        }, 120);
         
         // Use a more frequent update mechanism for smoother streaming
         const scheduleUpdate = () => {

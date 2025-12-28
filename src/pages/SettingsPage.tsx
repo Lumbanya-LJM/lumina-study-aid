@@ -240,9 +240,9 @@ const SettingsPage: React.FC = () => {
     return saved === 'true';
   });
 
-  const [typingSoundEnabled, setTypingSoundEnabled] = useState(() => {
-    const saved = localStorage.getItem('lumina_typing_sound');
-    return saved !== 'false'; // Default to true
+  const [luminaSoundsEnabled, setLuminaSoundsEnabled] = useState(() => {
+    const saved = localStorage.getItem('lumina_sounds_enabled');
+    return saved === 'true'; // Default to OFF (false)
   });
 
   const notificationOptions = [
@@ -608,30 +608,30 @@ const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Typing Sound Settings */}
+              {/* Lumina Sounds Settings */}
               <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 rounded-xl bg-primary/10">
-                    {typingSoundEnabled ? (
+                    {luminaSoundsEnabled ? (
                       <Volume2 className="w-5 h-5 text-primary" />
                     ) : (
                       <VolumeX className="w-5 h-5 text-muted-foreground" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <h2 className="font-semibold text-foreground">Typing Sound Effect</h2>
-                    <p className="text-xs text-muted-foreground">Play subtle sounds while Lumina responds</p>
+                    <h2 className="font-semibold text-foreground">Lumina Sound Effects</h2>
+                    <p className="text-xs text-muted-foreground">Play sounds for typing and task completion</p>
                   </div>
                   <Switch
-                    checked={typingSoundEnabled}
+                    checked={luminaSoundsEnabled}
                     onCheckedChange={(checked) => {
-                      setTypingSoundEnabled(checked);
-                      localStorage.setItem('lumina_typing_sound', String(checked));
+                      setLuminaSoundsEnabled(checked);
+                      localStorage.setItem('lumina_sounds_enabled', String(checked));
                       toast({
-                        title: checked ? "Typing Sound Enabled" : "Typing Sound Disabled",
+                        title: checked ? "Lumina Sounds Enabled" : "Lumina Sounds Disabled",
                         description: checked 
-                          ? "You'll hear subtle sounds while Lumina types" 
-                          : "Lumina will respond silently",
+                          ? "You'll hear sounds when Lumina types and completes tasks" 
+                          : "Lumina will work silently",
                       });
                     }}
                   />
@@ -639,8 +639,8 @@ const SettingsPage: React.FC = () => {
                 
                 <div className="p-3 bg-secondary/50 rounded-xl">
                   <p className="text-xs text-muted-foreground">
-                    Creates a more immersive experience with soft typing sounds 
-                    as Lumina generates responses.
+                    Includes subtle typing sounds as Lumina generates responses 
+                    and completion sounds when study materials are created.
                   </p>
                 </div>
               </div>
