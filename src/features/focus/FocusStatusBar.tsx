@@ -7,10 +7,8 @@ import { FocusModeDialog } from './FocusModeDialog';
 
 export const FocusStatusBar: React.FC = () => {
   const { isActive, phase, formattedTimeLeft } = useFocusSession();
-  const { isDialogOpen, actions } = useFocusSessionStore(state => ({
-    isDialogOpen: state.isDialogOpen,
-    actions: state.actions,
-  }));
+  const isDialogOpen = useFocusSessionStore((s) => s.isDialogOpen);
+  const actions = useFocusSessionStore((s) => s.actions);
 
   if (!isActive) {
     return null;

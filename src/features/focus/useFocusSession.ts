@@ -131,9 +131,12 @@ export const useFocusSessionStore = create<FocusSessionState>()(
 
 // 4. Custom hook to manage the timer and interact with the store
 export const useFocusSession = () => {
-  const { isActive, phase, startTime, settings, actions } = useFocusSessionStore(
-    (state) => ({ ...state, actions: state.actions })
-  );
+  // Select primitives individually to avoid creating new objects every render
+  const isActive = useFocusSessionStore((s) => s.isActive);
+  const phase = useFocusSessionStore((s) => s.phase);
+  const startTime = useFocusSessionStore((s) => s.startTime);
+  const settings = useFocusSessionStore((s) => s.settings);
+  const actions = useFocusSessionStore((s) => s.actions);
 
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
@@ -163,11 +166,8 @@ export const useFocusSession = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-    // Note: we intentionally omit `actions` from deps since it's stable from Zustand
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, startTime, phase, settings.focusDuration, settings.breakDuration]);
+  }, [isActive, startTime, phase, settings.focusDuration, settings.breakDuration, actions]);
 
-  // Expose state and actions
   return {
     isActive,
     phase,
@@ -176,7 +176,12 @@ export const useFocusSession = () => {
     startSession: actions.startSession,
     endSession: actions.endSession,
     updateSettings: actions.updateSettings,
-    formattedTimeLeft: timeLeft !== null ? `${Math.floor(timeLeft / 60).toString().padStart(2, '0')}:${(timeLeft % 60).toString().padStart(2, '0')}` : '00:00',
+    formattedTimeLeft:
+      timeLeft !== null
+        ? `${Math.floor(timeLeft / 60)
+            .toString()
+            .padStart(2, '0')}:${(timeLeft % 60).toString().padStart(2, '0')}`
+        : '00:00',
   };
 };
 

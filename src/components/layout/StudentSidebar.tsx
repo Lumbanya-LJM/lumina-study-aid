@@ -105,11 +105,9 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   onClose,
 }) => {
   const navigate = useNavigate();
-  const { isActive, isDialogOpen, actions } = useFocusSessionStore(state => ({
-    isActive: state.isActive,
-    isDialogOpen: state.isDialogOpen,
-    actions: state.actions,
-  }));
+  const isActive = useFocusSessionStore((s) => s.isActive);
+  const isDialogOpen = useFocusSessionStore((s) => s.isDialogOpen);
+  const actions = useFocusSessionStore((s) => s.actions);
 
   const handleFocusClick = () => {
     actions.openDialog();
