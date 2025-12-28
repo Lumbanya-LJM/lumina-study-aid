@@ -50,6 +50,7 @@ import TutorProfilePage from "./pages/TutorProfilePage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import AdminAuthPage from "./pages/AdminAuthPage";
 import MarketplacePage from "./pages/MarketplacePage";
+import TutorManagementPage from "./pages/TutorManagementPage";
 import NotFound from "./pages/NotFound";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -121,6 +122,7 @@ const App = () => {
               <Route path="/admin" element={<AdminProtectedRoute><AdminDashboardPage /></AdminProtectedRoute>} />
               <Route path="/admin/content" element={<AdminProtectedRoute><AdminContentPage /></AdminProtectedRoute>} />
               <Route path="/admin/tutors" element={<AdminProtectedRoute><TutorApplicationsAdminPage /></AdminProtectedRoute>} />
+              <Route path="/admin/tutor-management" element={<AdminProtectedRoute><TutorManagementPage /></AdminProtectedRoute>} />
               
               {/* Shared routes (accessible by all authenticated users) */}
               <Route path="/class/:classId" element={<ProtectedRoute><LiveClassPage /></ProtectedRoute>} />

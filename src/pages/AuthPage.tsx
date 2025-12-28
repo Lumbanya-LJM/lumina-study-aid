@@ -62,20 +62,102 @@ const AuthPage: React.FC = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialRole = searchParams.get('role') || 'student';
+  const invitationToken = searchParams.get('invitation');
   const { signUp, signIn } = useAuth();
   const { toast } = useToast();
 
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(!invitationToken);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'credentials' | 'profile' | 'courses' | 'tutor-application'>('credentials');
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<'student' | 'tutor'>(initialRole as 'student' | 'tutor');
+  const [selectedRole, setSelectedRole] = useState<'student' | 'tutor'>(
+    invitationToken ? 'tutor' : (initialRole as 'student' | 'tutor')
+  );
+  const [invitation, setInvitation] = useState<{
+    id: string;
+    email: string;
+    full_name: string | null;
+    selected_courses: string[];
+  } | null>(null);
+  const [loadingInvitation, setLoadingInvitation] = useState(!!invitationToken);
+
+  // Load invitation details if token is present
+  useEffect(() => {
+    if (invitationToken) {
+      loadInvitation(invitationToken);
+    }
+  }, [invitationToken]);
+
+  const loadInvitation = async (token: string) => {
+    setLoadingInvitation(true);
+    try {
+      const { data, error } = await supabase
+        .from('tutor_invitations')
+        .select('id, email, full_name, selected_courses, status, expires_at')
+        .eq('invitation_token', token)
+        .single();
+
+      if (error || !data) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid Invitation',
+          description: 'This invitation link is invalid or has expired.',
+        });
+        setSearchParams({});
+        return;
+      }
+
+      if (data.status !== 'pending') {
+        toast({
+          variant: 'destructive',
+          title: 'Invitation Already Used',
+          description: 'This invitation has already been accepted or cancelled.',
+        });
+        setSearchParams({});
+        return;
+      }
+
+      if (new Date(data.expires_at) < new Date()) {
+        toast({
+          variant: 'destructive',
+          title: 'Invitation Expired',
+          description: 'This invitation has expired. Please contact the admin for a new one.',
+        });
+        setSearchParams({});
+        return;
+      }
+
+      setInvitation({
+        id: data.id,
+        email: data.email,
+        full_name: data.full_name,
+        selected_courses: data.selected_courses || [],
+      });
+      setFormData(prev => ({
+        ...prev,
+        email: data.email,
+        fullName: data.full_name || '',
+      }));
+      setIsLogin(false);
+      setSelectedRole('tutor');
+    } catch (error) {
+      console.error('Error loading invitation:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load invitation details.',
+      });
+    } finally {
+      setLoadingInvitation(false);
+    }
+  };
 
   // Update URL when role changes
   const handleRoleChange = (role: 'student' | 'tutor') => {
+    if (invitation) return; // Don't allow changing role if invited
     setSelectedRole(role);
     setSearchParams({ role });
   };
@@ -208,7 +290,90 @@ const AuthPage: React.FC = () => {
         });
         return;
       }
-      // For tutors, skip profile and courses step, go directly to account creation then application
+      // For invited tutors, create account and grant tutor role directly
+      if (invitation) {
+        setLoading(true);
+        try {
+          const result = await signUp(formData.email, formData.password, formData.fullName);
+          
+          if (result.error) {
+            if (result.error.message.includes('already registered')) {
+              toast({
+                variant: "destructive",
+                title: "Account Exists",
+                description: "This email is already registered. Please log in instead.",
+              });
+              setStep('credentials');
+              setIsLogin(true);
+            } else {
+              toast({
+                variant: "destructive",
+                title: "Sign Up Failed",
+                description: result.error.message,
+              });
+            }
+          } else {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            
+            if (currentUser) {
+              // Add moderator role for invited tutor
+              const { error: roleError } = await supabase
+                .from('user_roles')
+                .insert({ user_id: currentUser.id, role: 'moderator' });
+
+              if (roleError) {
+                console.error('Error adding tutor role:', roleError);
+              }
+
+              // Create tutor application record (pre-approved)
+              const { error: appError } = await supabase
+                .from('tutor_applications')
+                .insert({
+                  user_id: currentUser.id,
+                  email: formData.email,
+                  full_name: formData.fullName,
+                  selected_courses: invitation.selected_courses,
+                  status: 'approved',
+                  reviewed_at: new Date().toISOString(),
+                });
+
+              if (appError) {
+                console.error('Error creating tutor application:', appError);
+              }
+
+              // Update invitation status
+              await supabase
+                .from('tutor_invitations')
+                .update({ 
+                  status: 'accepted', 
+                  accepted_at: new Date().toISOString(),
+                  user_id: currentUser.id 
+                })
+                .eq('id', invitation.id);
+
+              localStorage.removeItem('luminary_tutor_onboarding_complete');
+              
+              toast({
+                title: "Welcome, Tutor!",
+                description: "Your account has been created. Redirecting to your dashboard.",
+              });
+
+              navigate('/teach', { replace: true });
+            }
+          }
+        } catch (error) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Something went wrong. Please try again.",
+          });
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // For regular tutor applications, skip profile and courses step, go directly to account creation then application
       if (selectedRole === 'tutor') {
         // Create the account and go to tutor application
         setLoading(true);

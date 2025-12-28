@@ -15,6 +15,7 @@ import {
   Menu,
   LogOut,
   DollarSign,
+  UserPlus,
 } from 'lucide-react';
 import { SidebarUserHeader } from '@/components/layout/SidebarUserHeader';
 import { cn } from '@/lib/utils';
@@ -28,7 +29,13 @@ interface AdminSidebarProps {
   pendingApplications?: number;
 }
 
-const navItems = [
+const navItems: Array<{
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  route?: string;
+}> = [
   {
     id: 'overview',
     label: 'Overview',
@@ -46,6 +53,13 @@ const navItems = [
     label: 'Enrollments',
     icon: ClipboardList,
     description: 'Enroll/unenroll students',
+  },
+  {
+    id: 'tutor-management',
+    label: 'Tutor Management',
+    icon: UserPlus,
+    description: 'Invite & manage tutors',
+    route: '/admin/tutor-management',
   },
   {
     id: 'tutors',
@@ -101,8 +115,12 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   const navigate = useNavigate();
   const { signOut } = useAuth();
 
-  const handleClick = (id: string) => {
-    onTabChange(id);
+  const handleClick = (item: typeof navItems[0]) => {
+    if (item.route) {
+      navigate(item.route);
+    } else {
+      onTabChange(item.id);
+    }
     onClose?.();
   };
 
@@ -135,7 +153,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             return (
               <button
                 key={item.id}
-                onClick={() => handleClick(item.id)}
+                onClick={() => handleClick(item)}
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
                   isActive
