@@ -524,14 +524,17 @@ const LiveClassPage: React.FC = () => {
             className="w-full h-full absolute inset-0"
             style={{ border: "none" }}
           />
-          {/* LMV Logo Watermark */}
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-            <img 
-              src={lmvLogo} 
-              alt="" 
-              className="w-16 h-16 opacity-15 rotate-[-15deg] select-none"
-              draggable={false}
-            />
+          {/* Download Protection Overlay - deters screen capture */}
+          <div className="absolute inset-0 pointer-events-none z-10">
+            <div className="absolute top-2 left-2 opacity-15">
+              <img src={lmvLogo} alt="" className="w-8 h-8 rotate-[-10deg] select-none" draggable={false} />
+            </div>
+            <div className="absolute top-2 right-2 opacity-15">
+              <img src={lmvLogo} alt="" className="w-8 h-8 rotate-[10deg] select-none" draggable={false} />
+            </div>
+            <div className="flex items-center justify-center h-full">
+              <img src={lmvLogo} alt="" className="w-16 h-16 opacity-15 rotate-[-15deg] select-none" draggable={false} />
+            </div>
           </div>
         </div>
         <div className="p-2 flex items-center justify-between gap-2 bg-card">
@@ -617,12 +620,6 @@ const LiveClassPage: React.FC = () => {
                   </div>
                 )}
                 
-                {/* Participant count */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  <span>{participantCount} in class</span>
-                </div>
-                
                 <Button
                   variant="outline"
                   size="sm"
@@ -659,14 +656,23 @@ const LiveClassPage: React.FC = () => {
                 className="w-full h-full absolute inset-0"
                 style={{ border: "none" }}
               />
-              {/* LMV Logo Watermark - deters screen recording */}
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-                <img 
-                  src={lmvLogo} 
-                  alt="" 
-                  className="w-32 h-32 md:w-40 md:h-40 opacity-15 rotate-[-15deg] select-none"
-                  draggable={false}
-                />
+              {/* Download Protection Overlay - deters screen capture */}
+              <div className="absolute inset-0 pointer-events-none z-10">
+                <div className="absolute top-4 left-4 opacity-10">
+                  <img src={lmvLogo} alt="" className="w-12 h-12 rotate-[-10deg] select-none" draggable={false} />
+                </div>
+                <div className="absolute top-4 right-4 opacity-10">
+                  <img src={lmvLogo} alt="" className="w-12 h-12 rotate-[10deg] select-none" draggable={false} />
+                </div>
+                <div className="absolute bottom-20 left-4 opacity-10">
+                  <img src={lmvLogo} alt="" className="w-12 h-12 rotate-[5deg] select-none" draggable={false} />
+                </div>
+                <div className="absolute bottom-20 right-4 opacity-10">
+                  <img src={lmvLogo} alt="" className="w-12 h-12 rotate-[-5deg] select-none" draggable={false} />
+                </div>
+                <div className="flex items-center justify-center h-full">
+                  <img src={lmvLogo} alt="" className="w-32 h-32 md:w-40 md:h-40 opacity-15 rotate-[-15deg] select-none" draggable={false} />
+                </div>
               </div>
             </div>
 

@@ -161,25 +161,55 @@ serve(async (req) => {
     }
 
     if (action === "start-recording") {
-      // Start cloud recording for a room
+      // Start cloud recording for a room using the correct Daily.co API endpoint
+      // Note: Recording must be started via the recordings/start endpoint with session_id
+      // or via the client-side Daily.co SDK call
       console.log("Starting recording for room:", roomName);
       
-      const response = await fetch(`https://api.daily.co/v1/rooms/${roomName}/recordings`, {
+      // First, get the room to check if there's an active session
+      const roomResponse = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+        headers: {
+          Authorization: `Bearer ${DAILY_API_KEY}`,
+        },
+      });
+
+      if (!roomResponse.ok) {
+        const errorText = await roomResponse.text();
+        console.error("Failed to get room:", roomResponse.status, errorText);
+        return new Response(
+          JSON.stringify({ success: false, error: `Room not found: ${errorText}` }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Use the recordings endpoint to start recording
+      const response = await fetch("https://api.daily.co/v1/recordings/start", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${DAILY_API_KEY}`,
         },
         body: JSON.stringify({
-          type: "cloud",
+          room_name: roomName,
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Failed to start recording:", response.status, errorText);
+        
+        // Provide more helpful error message
+        let userError = "Failed to start recording";
+        if (response.status === 403) {
+          userError = "Recording is not enabled for this Daily.co plan. Please upgrade your plan.";
+        } else if (response.status === 404) {
+          userError = "No active meeting session found. Ensure participants are in the room.";
+        } else {
+          userError = `Recording error: ${errorText}`;
+        }
+        
         return new Response(
-          JSON.stringify({ success: false, error: errorText }),
+          JSON.stringify({ success: false, error: userError }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -195,12 +225,23 @@ serve(async (req) => {
     if (action === "stop-recording") {
       console.log("Stopping recording for room:", roomName);
       
-      await fetch(`https://api.daily.co/v1/rooms/${roomName}/recordings`, {
-        method: "DELETE",
+      // Use the correct endpoint to stop recording
+      const response = await fetch("https://api.daily.co/v1/recordings/stop", {
+        method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${DAILY_API_KEY}`,
         },
+        body: JSON.stringify({
+          room_name: roomName,
+        }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to stop recording:", response.status, errorText);
+        // Still return success since the recording might have already stopped
+      }
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -137,15 +137,23 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
         animationDelay: `${index * 50}ms`,
       }}
     >
-      {/* Swipe indicator background */}
-      <div className="absolute inset-0 bg-emerald-500/20 rounded-xl flex items-center pl-4">
-        <span className="text-emerald-500 text-sm font-medium">Dismiss</span>
-      </div>
+      {/* Swipe indicator background - only show when actively swiping */}
+      {translateX > 0 && (
+        <div 
+          className="absolute inset-0 rounded-xl flex items-center pl-4 transition-opacity"
+          style={{ 
+            backgroundColor: 'hsl(var(--emerald-500) / 0.2)',
+            opacity: Math.min(translateX / 100, 1)
+          }}
+        >
+          <span className="text-emerald-500 text-sm font-medium">Dismiss</span>
+        </div>
+      )}
 
       {/* Main notification card - compact design */}
       <div
         className={cn(
-          "relative rounded-lg p-2 border shadow-md overflow-hidden backdrop-blur-md",
+          "relative rounded-lg p-2 border shadow-md overflow-hidden backdrop-blur-md bg-card",
           `bg-gradient-to-r ${styles.gradient} ${styles.border}`
         )}
         style={{
@@ -191,10 +199,15 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
 
           <div className="flex items-center gap-1 shrink-0">
             <Button
-              onClick={() => onDismiss(notification.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                haptics.light();
+                onDismiss(notification.id);
+              }}
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-destructive/10"
             >
               <X className="w-3 h-3" />
             </Button>
