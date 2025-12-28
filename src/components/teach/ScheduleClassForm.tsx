@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Clock, Video, Link as LinkIcon, Play, Loader2 } from 'lucide-react';
 import { fromZonedTime } from 'date-fns-tz';
+
 interface ScheduleClassFormProps {
   courseId: string;
   tutorId: string;
@@ -50,7 +51,6 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
     setLoading(true);
     try {
       // Parse date and time as Zambia timezone (CAT - Africa/Lusaka, UTC+2)
-      // The user inputs the time they want in Zambia, so we convert that to UTC for storage
       const dateTimeStr = `${formData.classDate}T${formData.classTime}:00`;
       const classDateTime = fromZonedTime(dateTimeStr, 'Africa/Lusaka');
       
@@ -59,30 +59,31 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
         utcDateTime: classDateTime.toISOString(),
         zambiaTime: classDateTime.toLocaleString('en-ZM', { timeZone: 'Africa/Lusaka' })
       });
-      // Auto-generate Zoom meeting link if not provided
-      let zoomUrl = formData.classLink.trim();
-      let meetingId = null;
+
+      // Create Daily.co room for the scheduled class
+      let roomUrl = formData.classLink.trim();
+      let roomName = null;
       
-      if (!zoomUrl) {
-        const { data: meetingData, error: meetingError } = await supabase.functions.invoke('zoom-meeting', {
+      if (!roomUrl) {
+        const { data: roomData, error: roomError } = await supabase.functions.invoke('daily-room', {
           body: {
             action: 'create',
-            topic: formData.title.trim(),
-            duration: 60,
-            startTime: classDateTime.toISOString(),
+            title: formData.title.trim(),
+            expiresInMinutes: 180, // 3 hours from creation
           }
         });
 
-        if (meetingError) {
-          console.error('Zoom meeting creation error:', meetingError);
+        if (roomError) {
+          console.error('Daily room creation error:', roomError);
           toast({
             title: 'Warning',
-            description: 'Could not auto-generate Zoom link. You can add it manually later.',
+            description: 'Could not auto-generate video room. You can add a link manually later.',
             variant: 'default'
           });
-        } else {
-          zoomUrl = meetingData?.joinUrl || '';
-          meetingId = meetingData?.meetingId || null;
+        } else if (roomData?.success) {
+          roomUrl = roomData.roomUrl;
+          roomName = roomData.roomName;
+          console.log('Daily room created:', roomData);
         }
       }
 
@@ -96,8 +97,8 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           course_id: courseId,
           status: 'scheduled',
           scheduled_at: classDateTime.toISOString(),
-          daily_room_name: meetingId,
-          daily_room_url: zoomUrl || null,
+          daily_room_name: roomName,
+          daily_room_url: roomUrl || null,
         })
         .select()
         .single();
@@ -114,7 +115,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           content: formData.content.trim() || `Live class scheduled for ${classDateTime.toLocaleString()}`,
           update_type: 'class',
           class_time: classDateTime.toISOString(),
-          class_link: zoomUrl || null,
+          class_link: roomUrl || null,
           is_published: true
         });
 
@@ -160,7 +161,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
               courseId,
               classTitle: formData.title.trim(),
               scheduledAt: classDateTime.toISOString(),
-              meetingLink: zoomUrl || null,
+              meetingLink: roomUrl || null,
               updateType: 'scheduled'
             }
           });
@@ -178,8 +179,8 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
       toast({
         title: 'Success',
-        description: zoomUrl 
-          ? 'Class scheduled with Zoom link! Students have been notified.'
+        description: roomUrl 
+          ? 'Class scheduled with video room! Students have been notified.'
           : 'Class scheduled successfully! Students have been notified.',
       });
 
@@ -218,19 +219,37 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
     setCreatingLiveClass(true);
     try {
-      // Create Zoom meeting via edge function
-      const { data: meetingData, error: meetingError } = await supabase.functions.invoke('zoom-meeting', {
+      // Create Daily.co room with recording enabled
+      const { data: roomData, error: roomError } = await supabase.functions.invoke('daily-room', {
         body: {
           action: 'create',
-          topic: formData.title.trim(),
-          duration: 60,
+          title: formData.title.trim(),
+          expiresInMinutes: 180, // 3 hours
         }
       });
 
-      if (meetingError) throw meetingError;
+      if (roomError || !roomData?.success) {
+        throw new Error(roomError?.message || roomData?.error || 'Failed to create video room');
+      }
 
-      const zoomUrl = meetingData.joinUrl;
-      const meetingId = meetingData.meetingId;
+      const roomUrl = roomData.roomUrl;
+      const roomName = roomData.roomName;
+
+      console.log('Daily room created:', roomData);
+
+      // Start recording immediately
+      try {
+        await supabase.functions.invoke('daily-room', {
+          body: {
+            action: 'start-recording',
+            roomName: roomName,
+          }
+        });
+        console.log('Recording started for room:', roomName);
+      } catch (recordingError) {
+        console.error('Failed to start recording:', recordingError);
+        // Continue anyway - recording can be started manually or via Daily.co dashboard
+      }
 
       // Create live_classes entry
       const { data: liveClassData, error: liveClassError } = await supabase
@@ -242,8 +261,8 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           course_id: courseId,
           status: 'live',
           started_at: new Date().toISOString(),
-          daily_room_name: meetingId,
-          daily_room_url: zoomUrl,
+          daily_room_name: roomName,
+          daily_room_url: roomUrl,
         })
         .select()
         .single();
@@ -260,7 +279,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           content: formData.content.trim() || 'The tutor is now live! Join the class.',
           update_type: 'class',
           class_time: new Date().toISOString(),
-          class_link: zoomUrl,
+          class_link: roomUrl,
           is_published: true
         });
 
@@ -297,7 +316,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
       console.error('Error creating live class:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create live class. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to create live class. Please try again.',
         variant: 'destructive'
       });
     } finally {
@@ -360,7 +379,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
             )}
           </Button>
           <p className="text-xs text-muted-foreground text-center">
-            Students will be notified immediately and can join the live class
+            Classes are recorded automatically with AI transcription
           </p>
         </CardContent>
       </Card>
@@ -417,14 +436,14 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="classLink">Meeting Link (optional - will auto-generate if empty)</Label>
+              <Label htmlFor="classLink">External Link (optional - leave empty for embedded class)</Label>
               <div className="relative">
                 <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="classLink"
                   type="url"
                   className="pl-10"
-                  placeholder="https://zoom.us/j/... or leave empty for Lumina class"
+                  placeholder="https://... or leave empty for Lumina classroom"
                   value={formData.classLink}
                   onChange={(e) => setFormData({ ...formData, classLink: e.target.value })}
                 />
