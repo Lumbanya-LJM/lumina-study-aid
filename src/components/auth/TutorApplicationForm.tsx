@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -949,20 +955,38 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
         </div>
       </div>
 
-      <Button 
-        type="submit" 
-        className="w-full" 
-        disabled={loading || !formData.agreePrivacyPolicy || !formData.agreeDataConsent || (formData.selectedUndergraduateCourses.length + formData.selectedZialeCourses.length) === 0}
-      >
-        {loading ? (
-          <span className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Submitting...
-          </span>
-        ) : (
-          'Submit Application'
-        )}
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="w-full">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading || !formData.agreePrivacyPolicy || !formData.agreeDataConsent || (formData.selectedUndergraduateCourses.length + formData.selectedZialeCourses.length) === 0}
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting...
+                  </span>
+                ) : (
+                  'Submit Application'
+                )}
+              </Button>
+            </div>
+          </TooltipTrigger>
+          {(!formData.agreePrivacyPolicy || !formData.agreeDataConsent || (formData.selectedUndergraduateCourses.length + formData.selectedZialeCourses.length) === 0) && (
+            <TooltipContent>
+              {!formData.agreePrivacyPolicy || !formData.agreeDataConsent
+                ? <p>Please agree to the privacy policy and data consent to continue.</p>
+                : (formData.selectedUndergraduateCourses.length + formData.selectedZialeCourses.length) === 0
+                  ? <p>Please select at least one course to teach before submitting.</p>
+                  : null
+              }
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
 
       {(!formData.agreePrivacyPolicy || !formData.agreeDataConsent) && (
         <p className="text-xs text-center text-muted-foreground">
