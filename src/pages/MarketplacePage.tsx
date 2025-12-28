@@ -9,7 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { 
   Video, 
   Play, 
@@ -19,7 +27,9 @@ import {
   ShoppingCart,
   CheckCircle,
   User,
-  ArrowLeft
+  ArrowLeft,
+  Crown,
+  Mail
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -48,9 +58,16 @@ const MarketplacePage: React.FC = () => {
   
   const [classes, setClasses] = useState<MarketplaceClass[]>([]);
   const [purchases, setPurchases] = useState<Set<string>>(new Set());
+  const [enrolledCourses, setEnrolledCourses] = useState<Set<string>>(new Set());
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [processingPurchase, setProcessingPurchase] = useState<string | null>(null);
+  
+  // Email collection modal
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [purchaseEmail, setPurchaseEmail] = useState('');
+  const [pendingPurchase, setPendingPurchase] = useState<{ classItem: MarketplaceClass; type: 'live' | 'recording' } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -84,16 +101,19 @@ const MarketplacePage: React.FC = () => {
 
       if (classesError) throw classesError;
 
-      // Load user's purchases
-      const { data: purchasesData, error: purchasesError } = await supabase
-        .from('class_purchases')
-        .select('class_id')
-        .eq('user_id', user?.id);
+      // Load user's purchases, enrollments, and subscription status
+      const [purchasesRes, enrollmentsRes, subscriptionRes] = await Promise.all([
+        supabase.from('class_purchases').select('class_id').eq('user_id', user?.id),
+        supabase.from('academy_enrollments').select('course_id').eq('user_id', user?.id).eq('status', 'active'),
+        supabase.from('subscriptions').select('*').eq('user_id', user?.id).eq('status', 'active').gte('expires_at', new Date().toISOString()).maybeSingle()
+      ]);
 
-      if (purchasesError) throw purchasesError;
-
-      const purchasedIds = new Set(purchasesData?.map(p => p.class_id) || []);
+      const purchasedIds = new Set(purchasesRes.data?.map(p => p.class_id) || []);
+      const enrolledIds = new Set(enrollmentsRes.data?.map(e => e.course_id) || []);
+      
       setPurchases(purchasedIds);
+      setEnrolledCourses(enrolledIds);
+      setHasActiveSubscription(!!subscriptionRes.data);
 
       // Fetch course names and host profiles
       const courseIds = [...new Set(classesData?.filter(c => c.course_id).map(c => c.course_id) || [])];
@@ -131,20 +151,75 @@ const MarketplacePage: React.FC = () => {
     }
   };
 
+  // Check if user has free access (subscription or enrollment)
+  const hasFreeAccess = (classItem: MarketplaceClass) => {
+    if (hasActiveSubscription) return true;
+    if (classItem.course_id && enrolledCourses.has(classItem.course_id)) return true;
+    return false;
+  };
+
   const handlePurchase = async (classItem: MarketplaceClass, type: 'live' | 'recording') => {
     if (!user) {
       navigate('/auth');
       return;
     }
 
+    // Check if user has free access (subscription or course enrollment)
+    if (hasFreeAccess(classItem)) {
+      // Grant access without payment - just record as K0 purchase
+      setProcessingPurchase(classItem.id);
+      try {
+        const { error } = await supabase
+          .from('class_purchases')
+          .insert({
+            user_id: user.id,
+            class_id: classItem.id,
+            purchase_type: type,
+            amount: 0,
+            purchaser_email: user.email
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: 'Access Granted!',
+          description: 'You already have access through your subscription or enrollment.',
+        });
+        
+        loadMarketplace();
+      } catch (error) {
+        console.error('Error granting access:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to grant access',
+          variant: 'destructive'
+        });
+      } finally {
+        setProcessingPurchase(null);
+      }
+      return;
+    }
+
+    // For live class purchases, collect email first
+    if (type === 'live') {
+      setPurchaseEmail(user.email || '');
+      setPendingPurchase({ classItem, type });
+      setEmailModalOpen(true);
+      return;
+    }
+
+    // For recordings, proceed directly
+    proceedToPurchase(classItem, type, user.email || '');
+  };
+
+  const proceedToPurchase = (classItem: MarketplaceClass, type: 'live' | 'recording', email: string) => {
     setProcessingPurchase(classItem.id);
     
     try {
       const amount = type === 'live' ? classItem.live_class_price : classItem.recording_price;
       
-      // Navigate to a payment page or show payment modal
-      // For now, we'll navigate to subscription page with purchase params
-      navigate(`/subscription?purchase=class&classId=${classItem.id}&type=${type}&amount=${amount}`);
+      // Navigate to subscription page with purchase params including email
+      navigate(`/subscription?purchase=class&classId=${classItem.id}&type=${type}&amount=${amount}&email=${encodeURIComponent(email)}`);
     } catch (error) {
       console.error('Purchase error:', error);
       toast({
@@ -154,6 +229,23 @@ const MarketplacePage: React.FC = () => {
       });
     } finally {
       setProcessingPurchase(null);
+    }
+  };
+
+  const handleEmailSubmit = () => {
+    if (!purchaseEmail || !purchaseEmail.includes('@')) {
+      toast({
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (pendingPurchase) {
+      setEmailModalOpen(false);
+      proceedToPurchase(pendingPurchase.classItem, pendingPurchase.type, purchaseEmail);
+      setPendingPurchase(null);
     }
   };
 
@@ -174,6 +266,7 @@ const MarketplacePage: React.FC = () => {
 
   const ClassCard: React.FC<{ item: MarketplaceClass; type: 'live' | 'recording' }> = ({ item, type }) => {
     const isPurchased = purchases.has(item.id);
+    const isFreeAccess = hasFreeAccess(item);
     const price = type === 'live' ? item.live_class_price : item.recording_price;
     const isProcessing = processingPurchase === item.id;
 
@@ -182,10 +275,15 @@ const MarketplacePage: React.FC = () => {
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-2">
             <CardTitle className="text-base line-clamp-2">{item.title}</CardTitle>
-            {isPurchased && (
+            {isPurchased ? (
               <Badge variant="secondary" className="shrink-0 gap-1">
                 <CheckCircle className="w-3 h-3" />
                 Owned
+              </Badge>
+            ) : isFreeAccess && (
+              <Badge variant="default" className="shrink-0 gap-1 bg-primary/20 text-primary">
+                <Crown className="w-3 h-3" />
+                Included
               </Badge>
             )}
           </div>
@@ -218,7 +316,10 @@ const MarketplacePage: React.FC = () => {
 
           <div className="flex items-center justify-between pt-2 border-t border-border/50">
             <div className="text-lg font-bold text-primary">
-              K{price}
+              {isFreeAccess && !isPurchased ? (
+                <span className="text-sm text-muted-foreground line-through mr-2">K{price}</span>
+              ) : null}
+              {isFreeAccess ? 'Free' : `K${price}`}
             </div>
             {isPurchased ? (
               <Button 
@@ -238,6 +339,8 @@ const MarketplacePage: React.FC = () => {
               >
                 {isProcessing ? (
                   'Processing...'
+                ) : isFreeAccess ? (
+                  'Get Access'
                 ) : (
                   <>
                     <ShoppingCart className="w-4 h-4 mr-1" />
@@ -333,6 +436,41 @@ const MarketplacePage: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Email Collection Modal for Live Class Purchases */}
+      <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Enter Your Email
+            </DialogTitle>
+            <DialogDescription>
+              We'll send the class join link to this email address.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="purchase-email">Email Address</Label>
+              <Input
+                id="purchase-email"
+                type="email"
+                value={purchaseEmail}
+                onChange={(e) => setPurchaseEmail(e.target.value)}
+                placeholder="your@email.com"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEmailModalOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleEmailSubmit} className="flex-1">
+                Continue to Payment
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MobileLayout>
   );
 };
