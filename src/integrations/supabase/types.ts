@@ -258,6 +258,7 @@ export type Database = {
           payment_id: string | null
           purchase_type: string
           purchased_at: string
+          purchaser_email: string | null
           user_id: string
         }
         Insert: {
@@ -267,6 +268,7 @@ export type Database = {
           payment_id?: string | null
           purchase_type?: string
           purchased_at?: string
+          purchaser_email?: string | null
           user_id: string
         }
         Update: {
@@ -276,6 +278,7 @@ export type Database = {
           payment_id?: string | null
           purchase_type?: string
           purchased_at?: string
+          purchaser_email?: string | null
           user_id?: string
         }
         Relationships: [

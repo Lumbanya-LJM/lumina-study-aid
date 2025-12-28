@@ -48,6 +48,7 @@ interface ClassPurchaseInfo {
   type: 'live' | 'recording';
   amount: number;
   title?: string;
+  email?: string;
 }
 
 const plans = [
@@ -110,9 +111,10 @@ const SubscriptionPage: React.FC = () => {
     const classId = searchParams.get('classId');
     const type = searchParams.get('type') as 'live' | 'recording';
     const amount = searchParams.get('amount');
+    const email = searchParams.get('email');
     
     if (purchaseType === 'class' && classId && type && amount) {
-      loadClassInfo(classId, type, parseFloat(amount));
+      loadClassInfo(classId, type, parseFloat(amount), email || undefined);
     }
   }, [searchParams]);
 
@@ -148,7 +150,7 @@ const SubscriptionPage: React.FC = () => {
     setEnrollments((data || []).map(e => e.course_id));
   };
 
-  const loadClassInfo = async (classId: string, type: 'live' | 'recording', amount: number) => {
+  const loadClassInfo = async (classId: string, type: 'live' | 'recording', amount: number, email?: string) => {
     const { data } = await supabase
       .from('live_classes')
       .select('id, title')
@@ -156,7 +158,7 @@ const SubscriptionPage: React.FC = () => {
       .maybeSingle();
     
     if (data) {
-      setClassPurchase({ classId, type, amount, title: data.title });
+      setClassPurchase({ classId, type, amount, title: data.title, email });
       setSelectedPlan('class');
       setShowPayment(true);
     }
@@ -216,6 +218,7 @@ const SubscriptionPage: React.FC = () => {
           selectedCourses: selectedPlan === 'academy' ? selectedCourses : undefined,
           classId: selectedPlan === 'class' ? classPurchase?.classId : undefined,
           classPurchaseType: selectedPlan === 'class' ? classPurchase?.type : undefined,
+          purchaserEmail: selectedPlan === 'class' ? classPurchase?.email : undefined,
         }),
       });
 

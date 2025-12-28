@@ -10,6 +10,7 @@ import TutorPerformance from '@/components/admin/TutorPerformance';
 import TutorActivityDashboard from '@/components/admin/TutorActivityDashboard';
 import StudentManagement from '@/components/admin/StudentManagement';
 import BulkEnrollmentManager from '@/components/admin/BulkEnrollmentManager';
+import ClassPricingManager from '@/components/admin/ClassPricingManager';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { AdminOnboardingTutorial } from '@/components/onboarding/AdminOnboardingTutorial';
 import { AdminStatsDetailModal, AdminStatType } from '@/components/admin/AdminStatsDetailModal';
@@ -447,6 +448,9 @@ const AdminDashboardPage: React.FC = () => {
             </CardContent>
           </Card>
         );
+
+      case 'pricing':
+        return <ClassPricingManager />;
 
       case 'settings':
         return <AdminManagement />;

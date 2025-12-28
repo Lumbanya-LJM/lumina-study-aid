@@ -43,8 +43,10 @@ import {
   Globe,
   Sparkles,
   Lightbulb,
-  RotateCcw
+  RotateCcw,
+  ShoppingBag
 } from 'lucide-react';
+import MyPurchasesSection from '@/components/settings/MyPurchasesSection';
 import { cn } from '@/lib/utils';
 
 interface NotificationSettings {
@@ -74,7 +76,7 @@ const SettingsPage: React.FC = () => {
   const offlineSync = useOfflineSync();
   const { resetAllTips, seenTips } = useQuickTips();
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'notifications' | 'goals' | 'lumina' | 'appearance' | 'offline' | 'security'>('notifications');
+  const [activeTab, setActiveTab] = useState<'purchases' | 'notifications' | 'goals' | 'lumina' | 'appearance' | 'offline' | 'security'>('purchases');
   
   // Email change state
   const [newEmail, setNewEmail] = useState('');
@@ -223,6 +225,7 @@ const SettingsPage: React.FC = () => {
   };
 
   const tabs = [
+    { id: 'purchases' as const, label: 'Purchases', icon: ShoppingBag },
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
     { id: 'goals' as const, label: 'Goals', icon: Target },
     { id: 'lumina' as const, label: 'Lumina', icon: Sparkles },
@@ -291,6 +294,11 @@ const SettingsPage: React.FC = () => {
 
         {/* Content */}
         <div className="space-y-6">
+          {/* Purchases Tab */}
+          {activeTab === 'purchases' && (
+            <MyPurchasesSection />
+          )}
+
           {/* Notifications Tab */}
           {activeTab === 'notifications' && (
             <>

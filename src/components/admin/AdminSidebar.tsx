@@ -14,6 +14,7 @@ import {
   Shield,
   Menu,
   LogOut,
+  DollarSign,
 } from 'lucide-react';
 import { SidebarUserHeader } from '@/components/layout/SidebarUserHeader';
 import { cn } from '@/lib/utils';
@@ -65,9 +66,15 @@ const navItems = [
     description: 'Manage library resources',
   },
   {
+    id: 'pricing',
+    label: 'Class Pricing',
+    icon: DollarSign,
+    description: 'Set class & recording prices',
+  },
+  {
     id: 'analytics',
     label: 'Analytics',
-    icon: Activity,
+    icon: BarChart3,
     description: 'Platform metrics',
   },
   {
