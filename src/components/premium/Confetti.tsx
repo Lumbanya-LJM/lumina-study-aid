@@ -147,6 +147,9 @@ export const Confetti: React.FC<ConfettiProps> = ({
     return <div key={piece.id} style={style} />;
   };
 
+  // Safely create portal only when document.body exists
+  if (typeof document === 'undefined') return null;
+
   return createPortal(
     <div
       style={{
