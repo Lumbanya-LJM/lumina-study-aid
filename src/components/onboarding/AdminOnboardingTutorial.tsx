@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
+  Shield, 
+  Users, 
   GraduationCap, 
-  Bell, 
-  Video, 
   FileText, 
-  Users,
+  BarChart3,
   ChevronRight,
   ChevronLeft,
   Sparkles,
-  Calendar,
-  BarChart3
+  Settings,
+  UserPlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,55 +21,55 @@ interface OnboardingStep {
   highlight: string;
 }
 
-const tutorSteps: OnboardingStep[] = [
+const adminSteps: OnboardingStep[] = [
   {
-    title: "Welcome to Lumina Teach",
-    description: "Your all-in-one platform for teaching law students. Host live classes, share materials, track engagement, and let AI help with class summaries and student communication.",
+    title: "Welcome to LMV Admin",
+    description: "As an administrator, you have full control over the Lumina Academy platform. Manage courses, tutors, students, and content from one central dashboard.",
+    icon: Shield,
+    highlight: "Platform management"
+  },
+  {
+    title: "Manage Courses",
+    description: "Create and configure courses, set pricing, assign tutors, and control course visibility. Bulk enrol students and manage course materials.",
     icon: GraduationCap,
-    highlight: "Your teaching command centre"
+    highlight: "Course administration"
   },
   {
-    title: "Manage Your Courses",
-    description: "Select the courses you've been assigned to teach. Post updates, share resources, and schedule classes - all from your dashboard.",
-    icon: Bell,
-    highlight: "Everything organised"
+    title: "Tutor Management",
+    description: "Review tutor applications, approve or reject applicants, and monitor tutor performance. View class attendance and engagement metrics.",
+    icon: UserPlus,
+    highlight: "Tutor oversight"
   },
   {
-    title: "Host Live Classes",
-    description: "Start or schedule video sessions with enrolled students. Classes are automatically recorded and AI generates summaries with key points after each session.",
-    icon: Video,
-    highlight: "AI-powered class summaries"
+    title: "Student Management",
+    description: "View all enrolled students, manage enrollments, and track student progress across courses. Support students with account issues.",
+    icon: Users,
+    highlight: "Student support"
   },
   {
-    title: "Share Course Materials",
-    description: "Upload lecture notes, PDFs, slides, and study resources. Students can access materials anytime, and Lumina can help them study from your content.",
+    title: "Content & Library",
+    description: "Curate the content library with past papers, case summaries, and study materials. Manage legal alerts and featured resources.",
     icon: FileText,
-    highlight: "Resource library"
+    highlight: "Content curation"
   },
   {
-    title: "Track Student Progress",
-    description: "See who's enrolled, monitor attendance, and view engagement analytics. Use insights to improve your teaching and support struggling students.",
+    title: "Analytics & Reports",
+    description: "Access platform-wide analytics including enrollment trends, class attendance, and engagement metrics. Generate reports for insights.",
     icon: BarChart3,
-    highlight: "Data-driven teaching"
-  },
-  {
-    title: "Access Recordings & Summaries",
-    description: "Review past classes with full recordings, transcripts, and AI summaries. Students can also catch up on missed sessions.",
-    icon: Calendar,
-    highlight: "Never lose a lesson"
+    highlight: "Data insights"
   }
 ];
 
-interface TutorOnboardingTutorialProps {
+interface AdminOnboardingTutorialProps {
   onComplete: () => void;
 }
 
-export const TutorOnboardingTutorial: React.FC<TutorOnboardingTutorialProps> = ({ onComplete }) => {
+export const AdminOnboardingTutorial: React.FC<AdminOnboardingTutorialProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
   const handleNext = () => {
-    if (currentStep < tutorSteps.length - 1) {
+    if (currentStep < adminSteps.length - 1) {
       setIsAnimating(true);
       setTimeout(() => {
         setCurrentStep(prev => prev + 1);
@@ -91,16 +91,16 @@ export const TutorOnboardingTutorial: React.FC<TutorOnboardingTutorialProps> = (
   };
 
   const handleComplete = () => {
-    localStorage.setItem('luminary_tutor_onboarding_complete', 'true');
+    localStorage.setItem('luminary_admin_onboarding_complete', 'true');
     onComplete();
   };
 
   const handleSkip = () => {
-    localStorage.setItem('luminary_tutor_onboarding_complete', 'true');
+    localStorage.setItem('luminary_admin_onboarding_complete', 'true');
     onComplete();
   };
 
-  const step = tutorSteps[currentStep];
+  const step = adminSteps[currentStep];
   const Icon = step.icon;
 
   return (
@@ -109,7 +109,7 @@ export const TutorOnboardingTutorial: React.FC<TutorOnboardingTutorialProps> = (
         {/* Header */}
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-2">
-            {tutorSteps.map((_, index) => (
+            {adminSteps.map((_, index) => (
               <div
                 key={index}
                 className={cn(
@@ -180,9 +180,9 @@ export const TutorOnboardingTutorial: React.FC<TutorOnboardingTutorialProps> = (
                 currentStep === 0 && "w-full"
               )}
             >
-              {currentStep === tutorSteps.length - 1 ? (
+              {currentStep === adminSteps.length - 1 ? (
                 <>
-                  Start Teaching
+                  Get Started
                   <Sparkles className="w-4 h-4 ml-1" />
                 </>
               ) : (
@@ -196,7 +196,7 @@ export const TutorOnboardingTutorial: React.FC<TutorOnboardingTutorialProps> = (
 
           {/* Quick Navigation Dots */}
           <div className="flex justify-center gap-2">
-            {tutorSteps.map((_, index) => (
+            {adminSteps.map((_, index) => (
               <button
                 key={index}
                 onClick={() => {

@@ -631,9 +631,11 @@ const SettingsPage: React.FC = () => {
                   onClick={() => {
                     resetAllTips();
                     localStorage.removeItem('luminary_onboarding_complete');
+                    localStorage.removeItem('luminary_tutor_onboarding_complete');
+                    localStorage.removeItem('luminary_admin_onboarding_complete');
                     toast({
-                      title: "Tips Reset",
-                      description: "You'll see all quick tips and the tutorial again.",
+                      title: "Tutorials Reset",
+                      description: "You'll see all onboarding tutorials again.",
                     });
                   }}
                   className="w-full"

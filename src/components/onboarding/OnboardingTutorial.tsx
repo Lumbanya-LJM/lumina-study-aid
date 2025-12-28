@@ -24,32 +24,32 @@ interface OnboardingStep {
 
 const steps: OnboardingStep[] = [
   {
-    title: "Meet Lumina, Your Study Buddy",
-    description: "I'm here to help you excel in your law studies! Ask me to summarise cases, create flashcards, quiz you on topics, or help manage your study schedule.",
+    title: "Meet Lumina, Your AI Study Assistant",
+    description: "Lumina can do much more than chat! Ask her to add tasks to your planner, create flashcards, generate quizzes, and even search legal databases - all from one conversation.",
     icon: MessageCircle,
-    highlight: "Chat with me anytime!"
+    highlight: "Your personal study AI"
+  },
+  {
+    title: "Lumina Academy - Learn from Experts",
+    description: "Enrol in courses taught by qualified legal professionals. Attend live classes, access course materials, watch recordings, and get AI summaries of every session.",
+    icon: Calendar,
+    highlight: "Live classes & recordings"
   },
   {
     title: "Smart Study Planner",
-    description: "Create a personalised study schedule based on your university timetable. I'll remind you of pre-class prep, post-class recaps, and optimal review times.",
-    icon: Calendar,
-    highlight: "Upload your timetable to get started"
-  },
-  {
-    title: "Deep Focus Mode",
-    description: "When it's time to concentrate, activate Focus Mode to block distractions. Choose Hard Mode for maximum focus or Lite Mode for gentle reminders.",
+    description: "Upload your timetable or ask Lumina to create a study schedule. Get reminders for tasks and let Lumina manage your study sessions intelligently.",
     icon: Focus,
-    highlight: "Pomodoro timer with breaks"
+    highlight: "AI-powered scheduling"
   },
   {
-    title: "Rich Content Library",
-    description: "Access past papers, case summaries, revision kits, and legal alerts curated for Zambian law students. Generate AI summaries instantly.",
+    title: "Legal Research & Library",
+    description: "Access past papers, case summaries, and legal alerts. Search ZambiaLII directly through Lumina and get instant AI-powered case summaries.",
     icon: BookOpen,
     highlight: "Everything in one place"
   },
   {
-    title: "Track Your Progress",
-    description: "Earn achievements, maintain study streaks, and view detailed analytics. Share your progress with accountability partners to stay motivated!",
+    title: "Track Progress & Achievements",
+    description: "Earn badges, maintain study streaks, and view analytics. Store your notes in Lumina Vault and review with AI-generated flashcards and quizzes.",
     icon: Trophy,
     highlight: "Gamified learning"
   }
