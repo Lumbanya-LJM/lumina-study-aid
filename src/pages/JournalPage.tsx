@@ -8,12 +8,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLuminaTaskNotification } from '@/hooks/useLuminaTaskNotification';
 
 const JournalPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { notifyJournalSaved } = useLuminaTaskNotification();
   
   const [entry, setEntry] = useState('');
   const [selectedMood, setSelectedMood] = useState<'happy' | 'neutral' | 'sad' | null>(null);
@@ -78,10 +80,8 @@ const JournalPage: React.FC = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Journal Entry Saved",
-        description: "Lumina has responded to your entry.",
-      });
+      // Notify user with Lumina task completion
+      notifyJournalSaved();
 
       // Reset form and refetch entries
       setEntry('');

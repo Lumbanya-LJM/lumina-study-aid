@@ -1,6 +1,6 @@
 // Sound notification system for app events
 
-type SoundType = 'classStart' | 'newUpdate' | 'message' | 'success' | 'reminder';
+type SoundType = 'classStart' | 'newUpdate' | 'message' | 'success' | 'reminder' | 'recordingReady' | 'taskComplete';
 
 interface SoundConfig {
   frequency: number;
@@ -44,6 +44,20 @@ const soundConfigs: Record<SoundType, SoundConfig> = {
     type: 'triangle',
     volume: 0.25,
     pattern: [440, 550, 440],
+  },
+  recordingReady: {
+    frequency: 698,
+    duration: 130,
+    type: 'sine',
+    volume: 0.25,
+    pattern: [698, 880, 1047], // C-E-G chord progression
+  },
+  taskComplete: {
+    frequency: 523,
+    duration: 100,
+    type: 'sine',
+    volume: 0.2,
+    pattern: [523, 659, 784, 1047], // Rising arpeggio for completion
   },
 };
 
@@ -143,6 +157,8 @@ export const sounds = {
   message: () => playSound('message'),
   success: () => playSound('success'),
   reminder: () => playSound('reminder'),
+  recordingReady: () => playSound('recordingReady'),
+  taskComplete: () => playSound('taskComplete'),
   setEnabled: setSoundEnabled,
   isEnabled: isSoundEnabledState,
   init: initSoundState,
