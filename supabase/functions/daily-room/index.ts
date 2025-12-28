@@ -31,8 +31,8 @@ serve(async (req) => {
         properties: {
           enable_chat: true,
           enable_screenshare: true,
-          enable_recording: "cloud", // Enable cloud recording
-          enable_transcription_storage: true, // Store transcriptions
+          // Recording is plan-dependent in Daily; we don't request it at room-creation time.
+          enable_transcription_storage: true, // Store transcriptions (if supported by plan)
           start_video_off: false,
           start_audio_off: false,
           // Note: max_participants removed - uses Daily.co plan default
@@ -88,9 +88,8 @@ serve(async (req) => {
           room_name: roomName,
           user_name: userName || "Student",
           user_id: userId || undefined,
-          is_owner: isOwner === true, // Owner can record, mute others, etc.
-          enable_recording: isOwner === true ? "cloud" : undefined,
-          start_cloud_recording: isOwner === true, // Auto-start recording for host
+          is_owner: isOwner === true, // Owner can manage the room
+          // Recording is plan-dependent; don't request cloud recording in token properties.
           exp: Math.floor(Date.now() / 1000) + (expiresInMinutes * 60),
         },
       };
