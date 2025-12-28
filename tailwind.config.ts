@@ -171,8 +171,14 @@ export default {
           "50%": { transform: "translateY(-5px)" },
         },
         "wiggle": {
-          "0%, 100%": { transform: "rotate(-1deg)" },
-          "50%": { transform: "rotate(1deg)" },
+          "0%, 100%": { transform: "rotate(-3deg)" },
+          "50%": { transform: "rotate(3deg)" },
+        },
+        "thinking": {
+          "0%, 100%": { transform: "rotate(-5deg) scale(1)" },
+          "25%": { transform: "rotate(0deg) scale(1.1)" },
+          "50%": { transform: "rotate(5deg) scale(1)" },
+          "75%": { transform: "rotate(0deg) scale(1.05)" },
         },
         "glow-pulse": {
           "0%, 100%": { boxShadow: "0 0 20px hsl(var(--primary) / 0.3)" },
@@ -213,6 +219,7 @@ export default {
         "pulse-ring": "pulse-ring 2s ease-in-out infinite",
         "bounce-soft": "bounce-soft 2s ease-in-out infinite",
         "wiggle": "wiggle 0.3s ease-in-out",
+        "thinking": "thinking 1.5s ease-in-out infinite",
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
         "confetti": "confetti 3s ease-out forwards",
         "celebrate": "celebrate 0.5s ease-in-out",

@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Brain, Search, Sparkles, BookOpen, FileText, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const ThinkingEmoji = ({ className }: { className?: string }) => (
+  <span className={cn("text-lg", className)}>🤔</span>
+);
+
 interface ThinkingIndicatorProps {
   action?: string;
   hasWebSearch?: boolean;
@@ -72,10 +76,10 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
   return (
     <div className="flex items-center gap-3">
       <div className="relative">
-        <CurrentIcon 
+        <ThinkingEmoji 
           className={cn(
-            "w-4 h-4 text-primary transition-all duration-300",
-            "animate-pulse"
+            "transition-all duration-300",
+            "animate-thinking"
           )} 
         />
       </div>
