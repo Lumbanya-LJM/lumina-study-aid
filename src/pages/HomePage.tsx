@@ -10,6 +10,7 @@ import { OnboardingTutorial } from '@/components/onboarding/OnboardingTutorial';
 import { StudentStatsDetailModal, StudentStatType } from '@/components/student/StudentStatsDetailModal';
 import { PersonalizedGreeting, useGreeting } from '@/components/premium/PersonalizedGreeting';
 import { useCelebration } from '@/components/premium/ProgressCelebration';
+import { LiveClassBanner } from '@/components/liveclass/LiveClassBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundNotifications } from '@/hooks/useSoundNotifications';
@@ -238,6 +239,9 @@ const HomePage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Live Class Banner - Real-time notification for live classes */}
+        <LiveClassBanner />
 
         {/* Lumina's Study Reminders */}
         <StudyRemindersCard />
