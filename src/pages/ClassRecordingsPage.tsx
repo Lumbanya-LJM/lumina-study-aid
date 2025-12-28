@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
@@ -55,6 +56,14 @@ interface UpcomingClass {
   academy_courses?: { name: string } | null;
 }
 
+interface WatchHistory {
+  class_id: string;
+  progress_seconds: number;
+  duration_seconds: number | null;
+  completed: boolean;
+  last_watched_at: string;
+}
+
 const ClassRecordingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -63,6 +72,7 @@ const ClassRecordingsPage: React.FC = () => {
   const [pendingRecordings, setPendingRecordings] = useState<ClassRecording[]>([]);
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
   const [liveClasses, setLiveClasses] = useState<UpcomingClass[]>([]);
+  const [watchHistory, setWatchHistory] = useState<Map<string, WatchHistory>>(new Map());
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,12 +119,34 @@ const ClassRecordingsPage: React.FC = () => {
         .order("started_at", { ascending: false });
 
       setLiveClasses(liveData || []);
+
+      // Load watch history for the current user
+      if (user) {
+        const { data: historyData } = await supabase
+          .from("recording_watch_history")
+          .select("*")
+          .eq("user_id", user.id);
+
+        if (historyData) {
+          const historyMap = new Map<string, WatchHistory>();
+          historyData.forEach((h) => {
+            historyMap.set(h.class_id, {
+              class_id: h.class_id,
+              progress_seconds: h.progress_seconds,
+              duration_seconds: h.duration_seconds,
+              completed: h.completed,
+              last_watched_at: h.last_watched_at,
+            });
+          });
+          setWatchHistory(historyMap);
+        }
+      }
     } catch (error) {
       console.error("Error loading classes:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     loadClasses();
@@ -224,6 +256,70 @@ const ClassRecordingsPage: React.FC = () => {
       return `${hours}h ${minutes}m`;
     }
     return `${minutes} minutes`;
+  };
+
+  // Save watch progress to database
+  const saveWatchProgress = useCallback(
+    async (classId: string, progressSeconds: number, durationSeconds: number, completed: boolean) => {
+      if (!user) return;
+
+      try {
+        const { error } = await supabase
+          .from("recording_watch_history")
+          .upsert(
+            {
+              user_id: user.id,
+              class_id: classId,
+              progress_seconds: Math.floor(progressSeconds),
+              duration_seconds: Math.floor(durationSeconds),
+              completed,
+              last_watched_at: new Date().toISOString(),
+            },
+            {
+              onConflict: "user_id,class_id",
+            }
+          );
+
+        if (error) {
+          console.error("Error saving watch progress:", error);
+        } else {
+          // Update local state
+          setWatchHistory((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(classId, {
+              class_id: classId,
+              progress_seconds: Math.floor(progressSeconds),
+              duration_seconds: Math.floor(durationSeconds),
+              completed,
+              last_watched_at: new Date().toISOString(),
+            });
+            return newMap;
+          });
+        }
+      } catch (error) {
+        console.error("Error saving watch progress:", error);
+      }
+    },
+    [user]
+  );
+
+  // Calculate watch progress percentage
+  const getWatchProgress = (classId: string): { percentage: number; completed: boolean; resumeText: string } | null => {
+    const history = watchHistory.get(classId);
+    if (!history || !history.duration_seconds) return null;
+
+    const percentage = Math.min(100, (history.progress_seconds / history.duration_seconds) * 100);
+    const remainingSeconds = history.duration_seconds - history.progress_seconds;
+    const remainingMinutes = Math.ceil(remainingSeconds / 60);
+
+    let resumeText = "";
+    if (history.completed) {
+      resumeText = "Completed";
+    } else if (percentage > 0) {
+      resumeText = `${remainingMinutes}m left`;
+    }
+
+    return { percentage, completed: history.completed, resumeText };
   };
 
   const filteredRecordings = recordings.filter(
@@ -388,46 +484,73 @@ const ClassRecordingsPage: React.FC = () => {
               </Card>
             ) : (
               <div className="space-y-3">
-                {filteredRecordings.map((recording) => (
-                  <Card
-                    key={recording.id}
-                    className="cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => setSelectedRecording(recording)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex gap-4">
-                        <div className="relative h-20 w-32 bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
-                          <Play className="h-8 w-8 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate">
-                            {recording.title}
-                          </h3>
-                          {recording.academy_courses && (
-                            <Badge variant="secondary" className="mt-1 text-xs">
-                              {recording.academy_courses.name}
-                            </Badge>
-                          )}
-                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDuration(recording.recording_duration_seconds)}
-                            </span>
-                            {recording.ended_at && (
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {formatDistanceToNow(new Date(recording.ended_at), {
-                                  addSuffix: true,
-                                })}
-                              </span>
+                {filteredRecordings.map((recording) => {
+                  const progress = getWatchProgress(recording.id);
+                  return (
+                    <Card
+                      key={recording.id}
+                      className="cursor-pointer hover:bg-accent/50 transition-colors"
+                      onClick={() => setSelectedRecording(recording)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex gap-4">
+                          <div className="relative h-20 w-32 bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
+                            <Play className="h-8 w-8 text-primary" />
+                            {/* Progress bar overlay */}
+                            {progress && progress.percentage > 0 && (
+                              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
+                                <div
+                                  className={cn(
+                                    "h-full transition-all",
+                                    progress.completed ? "bg-green-500" : "bg-primary"
+                                  )}
+                                  style={{ width: `${progress.percentage}%` }}
+                                />
+                              </div>
                             )}
                           </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium truncate">
+                              {recording.title}
+                            </h3>
+                            {recording.academy_courses && (
+                              <Badge variant="secondary" className="mt-1 text-xs">
+                                {recording.academy_courses.name}
+                              </Badge>
+                            )}
+                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDuration(recording.recording_duration_seconds)}
+                              </span>
+                              {recording.ended_at && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDistanceToNow(new Date(recording.ended_at), {
+                                    addSuffix: true,
+                                  })}
+                                </span>
+                              )}
+                              {/* Watch progress indicator */}
+                              {progress && (
+                                <Badge
+                                  variant={progress.completed ? "default" : "outline"}
+                                  className={cn(
+                                    "text-xs",
+                                    progress.completed && "bg-green-500 hover:bg-green-500"
+                                  )}
+                                >
+                                  {progress.resumeText}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
@@ -504,12 +627,23 @@ const ClassRecordingsPage: React.FC = () => {
                 {selectedRecording.academy_courses.name}
               </Badge>
             )}
+            {selectedRecording && watchHistory.get(selectedRecording.id) && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {watchHistory.get(selectedRecording.id)?.completed
+                  ? "✓ Completed previously"
+                  : `Resuming from ${formatDuration(watchHistory.get(selectedRecording.id)?.progress_seconds || 0)}`}
+              </p>
+            )}
           </DialogHeader>
           <div className="p-4 pt-2">
             {selectedRecording && (
               <SecureVideoPlayer
                 classId={selectedRecording.id}
                 title={selectedRecording.title}
+                initialProgress={watchHistory.get(selectedRecording.id)?.progress_seconds || 0}
+                onProgressUpdate={(progress, duration, completed) => {
+                  saveWatchProgress(selectedRecording.id, progress, duration, completed);
+                }}
                 onError={(error) => {
                   toast({
                     title: "Playback Error",
