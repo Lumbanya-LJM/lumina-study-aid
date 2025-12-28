@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { TutorProtectedRoute } from "@/components/auth/TutorProtectedRoute";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 import { CommandPalette } from "@/components/premium/CommandPalette";
+import { AchievementConfetti } from "@/components/premium/AchievementConfetti";
 import SplashScreen from "./pages/SplashScreen";
 import RoleSelectionPage from "./pages/RoleSelectionPage";
 import AuthPage from "./pages/AuthPage";
@@ -24,6 +25,7 @@ import JournalPage from "./pages/JournalPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import AnalyticsDashboardPage from "./pages/AnalyticsDashboardPage";
+import StudyAnalyticsPage from "./pages/StudyAnalyticsPage";
 
 import PartnerPage from "./pages/PartnerPage";
 import UploadPage from "./pages/UploadPage";
@@ -69,6 +71,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <CommandPalette />
+          <AchievementConfetti />
           <BrowserRouter>
             <Routes>
               {/* Public routes */}
@@ -89,6 +92,7 @@ const App = () => {
               <Route path="/profile" element={<ProtectedRoute studentOnly><ProfilePage /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
               <Route path="/analytics" element={<ProtectedRoute studentOnly><AnalyticsDashboardPage /></ProtectedRoute>} />
+              <Route path="/study-analytics" element={<ProtectedRoute studentOnly><StudyAnalyticsPage /></ProtectedRoute>} />
               <Route path="/partner" element={<ProtectedRoute studentOnly><PartnerPage /></ProtectedRoute>} />
               <Route path="/upload" element={<ProtectedRoute studentOnly><UploadPage /></ProtectedRoute>} />
               <Route path="/locker" element={<ProtectedRoute studentOnly><LuminaVaultPage /></ProtectedRoute>} />

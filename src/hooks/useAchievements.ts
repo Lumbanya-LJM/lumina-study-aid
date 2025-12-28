@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { create } from 'zustand';
 
 interface Achievement {
   id: string;
@@ -30,9 +31,23 @@ interface UseAchievementsReturn {
   getProgress: (achievement: Achievement) => { current: number; required: number; percentage: number };
 }
 
+// Store for confetti trigger
+interface ConfettiStore {
+  showConfetti: boolean;
+  triggerConfetti: () => void;
+  hideConfetti: () => void;
+}
+
+export const useConfettiStore = create<ConfettiStore>((set) => ({
+  showConfetti: false,
+  triggerConfetti: () => set({ showConfetti: true }),
+  hideConfetti: () => set({ showConfetti: false }),
+}));
+
 export const useAchievements = (): UseAchievementsReturn => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const triggerConfetti = useConfettiStore(state => state.triggerConfetti);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [earnedAchievements, setEarnedAchievements] = useState<UserAchievement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,19 +187,20 @@ export const useAchievements = (): UseAchievementsReturn => {
       }
     }
 
-    // Show toast for each newly earned achievement
-    for (const achievement of newlyEarned) {
-      toast({
-        title: '🏆 Achievement Unlocked!',
-        description: `${achievement.name} - ${achievement.description}`,
-      });
-    }
-
-    // Refresh data if achievements were earned
+    // Show toast and confetti for each newly earned achievement
     if (newlyEarned.length > 0) {
+      triggerConfetti();
+      
+      for (const achievement of newlyEarned) {
+        toast({
+          title: '🏆 Achievement Unlocked!',
+          description: `${achievement.name} - ${achievement.description}`,
+        });
+      }
+
       await fetchData();
     }
-  }, [user, achievements, earnedAchievements, userStats, toast]);
+  }, [user, achievements, earnedAchievements, userStats, toast, triggerConfetti]);
 
   const getProgress = useCallback((achievement: Achievement) => {
     let current = 0;
