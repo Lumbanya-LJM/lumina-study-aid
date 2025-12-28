@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 
@@ -9,6 +9,11 @@ interface MarkdownRendererProps {
 }
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className, streaming }) => {
+  // Memoize the markdown content to prevent unnecessary re-renders during streaming
+  const displayContent = useMemo(() => {
+    return streaming ? content : content;
+  }, [content, streaming]);
+
   return (
     <div className={cn("text-sm leading-relaxed", className)}>
       <ReactMarkdown
@@ -127,8 +132,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
           ),
         }}
       >
-        {`${content}${streaming ? '▋' : ''}`}
+        {displayContent}
       </ReactMarkdown>
+      {streaming && (
+        <span className="inline-block w-2 h-4 bg-primary/80 ml-0.5 animate-pulse rounded-sm" />
+      )}
     </div>
   );
 };

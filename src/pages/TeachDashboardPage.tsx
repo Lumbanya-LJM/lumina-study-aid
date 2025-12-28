@@ -116,6 +116,7 @@ const TeachDashboardPage: React.FC = () => {
     if (selectedCourse) {
       loadEnrolledStudents();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCourse]);
 
   const loadData = async () => {

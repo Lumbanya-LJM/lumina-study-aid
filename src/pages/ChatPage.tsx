@@ -575,19 +575,24 @@ const ChatPage: React.FC = () => {
 
       if (reader) {
         let buffer = '';
-        let pendingUpdate = false;
+        let updateScheduled = false;
         
-        const flushUpdate = () => {
-          if (streamedContent) {
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === assistantMessageId
-                  ? { ...msg, content: streamedContent }
-                  : msg,
-              ),
-            );
+        // Use a more frequent update mechanism for smoother streaming
+        const scheduleUpdate = () => {
+          if (!updateScheduled && streamedContent) {
+            updateScheduled = true;
+            // Use setTimeout with 0 for immediate but non-blocking updates
+            setTimeout(() => {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: streamedContent }
+                    : msg,
+                ),
+              );
+              updateScheduled = false;
+            }, 0);
           }
-          pendingUpdate = false;
         };
         
         while (true) {
@@ -614,11 +619,8 @@ const ChatPage: React.FC = () => {
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) {
                 streamedContent += content;
-                // Use requestAnimationFrame for smooth, batched updates
-                if (!pendingUpdate) {
-                  pendingUpdate = true;
-                  requestAnimationFrame(flushUpdate);
-                }
+                // Schedule update for each token for smoother appearance
+                scheduleUpdate();
               }
             } catch {
               // Partial JSON, put it back
@@ -628,8 +630,14 @@ const ChatPage: React.FC = () => {
           }
         }
         
-        // Final flush to ensure all content is displayed
-        flushUpdate();
+        // Final update to ensure all content is displayed
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? { ...msg, content: streamedContent }
+              : msg,
+          ),
+        );
 
         // Save assistant response to database after streaming completes
         if (streamedContent) {
