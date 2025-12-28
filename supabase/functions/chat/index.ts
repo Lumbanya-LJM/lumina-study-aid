@@ -63,6 +63,47 @@ const LUMINA_TOOLS = [
   {
     type: "function",
     function: {
+      name: "update_task",
+      description: "Update an existing study task. Use when user wants to reschedule, rename, or modify a task.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_title: { type: "string", description: "Current task title to find the task" },
+          new_title: { type: "string", description: "New title if renaming" },
+          new_date: { type: "string", description: "New date in YYYY-MM-DD format if rescheduling" },
+          new_time: { type: "string", description: "New time in HH:MM format if changing time" },
+          new_description: { type: "string", description: "New description if updating" },
+          new_duration: { type: "number", description: "New duration in minutes" }
+        },
+        required: ["task_title"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_task",
+      description: "Delete a study task. Use when user wants to remove or cancel a task.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_title: { type: "string", description: "Task title to find and delete" }
+        },
+        required: ["task_title"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_week_schedule",
+      description: "Get the user's tasks and schedule for the entire week. Use when asked about this week's plan.",
+      parameters: { type: "object", properties: {} }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "get_today_schedule",
       description: "Get the user's tasks and schedule for today. Use when asked about today's plan or what to study.",
       parameters: { type: "object", properties: {} }
@@ -216,6 +257,114 @@ async function executeToolCall(supabase: any, userId: string, toolName: string, 
         await supabase.rpc('increment_counter', { row_id: userId, column_name: 'tasks_completed' }).catch(() => {});
         
         return { success: true, message: "Great job! I've marked that task as complete. Keep up the momentum!" };
+      }
+      
+      case "update_task": {
+        // Find the task by title
+        const { data: tasks } = await supabase
+          .from('study_tasks')
+          .select('id, title')
+          .eq('user_id', userId)
+          .ilike('title', `%${args.task_title}%`)
+          .limit(1);
+        
+        if (!tasks || tasks.length === 0) {
+          return { success: false, message: `I couldn't find a task matching "${args.task_title}". Could you be more specific?` };
+        }
+        
+        const taskId = tasks[0].id;
+        const updates: any = {};
+        
+        if (args.new_title) updates.title = args.new_title;
+        if (args.new_date) updates.scheduled_date = args.new_date;
+        if (args.new_time) updates.scheduled_time = args.new_time;
+        if (args.new_description) updates.description = args.new_description;
+        if (args.new_duration) updates.duration_minutes = args.new_duration;
+        
+        if (Object.keys(updates).length === 0) {
+          return { success: false, message: "No updates specified. What would you like to change about this task?" };
+        }
+        
+        const { error } = await supabase
+          .from('study_tasks')
+          .update(updates)
+          .eq('id', taskId)
+          .eq('user_id', userId);
+        
+        if (error) throw error;
+        
+        const changesList = [];
+        if (args.new_title) changesList.push(`renamed to "${args.new_title}"`);
+        if (args.new_date) changesList.push(`rescheduled to ${args.new_date}`);
+        if (args.new_time) changesList.push(`time changed to ${args.new_time}`);
+        if (args.new_description) changesList.push("description updated");
+        if (args.new_duration) changesList.push(`duration set to ${args.new_duration} minutes`);
+        
+        return { success: true, message: `Done! Task "${tasks[0].title}" has been ${changesList.join(', ')}.` };
+      }
+      
+      case "delete_task": {
+        // Find the task by title
+        const { data: tasks } = await supabase
+          .from('study_tasks')
+          .select('id, title')
+          .eq('user_id', userId)
+          .ilike('title', `%${args.task_title}%`)
+          .limit(1);
+        
+        if (!tasks || tasks.length === 0) {
+          return { success: false, message: `I couldn't find a task matching "${args.task_title}". Could you be more specific?` };
+        }
+        
+        const { error } = await supabase
+          .from('study_tasks')
+          .delete()
+          .eq('id', tasks[0].id)
+          .eq('user_id', userId);
+        
+        if (error) throw error;
+        
+        return { success: true, message: `Task "${tasks[0].title}" has been removed from your planner.` };
+      }
+      
+      case "get_week_schedule": {
+        const startOfWeek = new Date();
+        const endOfWeek = new Date();
+        endOfWeek.setDate(endOfWeek.getDate() + 7);
+        
+        const { data: tasks } = await supabase
+          .from('study_tasks')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('scheduled_date', startOfWeek.toISOString().split('T')[0])
+          .lte('scheduled_date', endOfWeek.toISOString().split('T')[0])
+          .order('scheduled_date', { ascending: true })
+          .order('scheduled_time', { ascending: true });
+        
+        const { data: classes } = await supabase
+          .from('live_classes')
+          .select('id, title, scheduled_at, course_id')
+          .gte('scheduled_at', startOfWeek.toISOString())
+          .lte('scheduled_at', endOfWeek.toISOString())
+          .eq('status', 'scheduled')
+          .order('scheduled_at', { ascending: true });
+        
+        // Group tasks by date
+        const tasksByDate: Record<string, any[]> = {};
+        (tasks || []).forEach((t: any) => {
+          const date = t.scheduled_date;
+          if (!tasksByDate[date]) tasksByDate[date] = [];
+          tasksByDate[date].push(t);
+        });
+        
+        return {
+          success: true,
+          tasksByDate,
+          classes: classes || [],
+          totalTasks: tasks?.length || 0,
+          totalClasses: classes?.length || 0,
+          summary: `This week you have ${tasks?.length || 0} tasks and ${classes?.length || 0} classes scheduled.`
+        };
       }
       
       case "get_today_schedule": {
@@ -433,13 +582,17 @@ async function getUserContext(supabase: any, userId: string): Promise<string> {
     context += `### Available Actions\n`;
     context += `You can execute these actions for the user:\n`;
     context += `- Add study tasks to their planner\n`;
+    context += `- Update existing tasks (reschedule, rename, change details)\n`;
+    context += `- Delete/remove tasks from their planner\n`;
     context += `- Mark tasks as completed\n`;
+    context += `- Get today's schedule or this week's schedule\n`;
     context += `- Create and save flashcard decks\n`;
     context += `- Create and save practice quizzes\n`;
     context += `- Create journal entries\n`;
     context += `- Show their progress and statistics\n`;
     context += `- Show upcoming classes\n\n`;
     context += `When the user asks to do any of these, USE THE APPROPRIATE TOOL to actually perform the action.\n`;
+    context += `IMPORTANT: If a user says things like "add X to my schedule", "reschedule Y", "remove Z from my tasks", "what's on my plate today" - USE TOOLS!\n`;
     
     return context;
   } catch (error) {
