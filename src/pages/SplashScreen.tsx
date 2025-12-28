@@ -10,20 +10,32 @@ const SplashScreen: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const { portalPath, loading: roleLoading } = useUserRole();
   const [stage, setStage] = useState<'logo' | 'lumina' | 'complete'>('logo');
+  const [hardTimeoutReached, setHardTimeoutReached] = useState(false);
 
   useEffect(() => {
     const timer1 = setTimeout(() => setStage('lumina'), 1500);
     const timer2 = setTimeout(() => setStage('complete'), 3000);
 
+    // Safety: never hang on splash forever if auth/role checks stall.
+    const hardTimer = setTimeout(() => {
+      setHardTimeoutReached(true);
+      setStage('complete');
+    }, 8000);
+
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
+      clearTimeout(hardTimer);
     };
   }, []);
 
   // Navigate after loading is complete and animation finishes
   useEffect(() => {
-    if (stage !== 'complete' || authLoading || roleLoading) return;
+    const isReadyToNavigate = stage === 'complete' || hardTimeoutReached;
+    if (!isReadyToNavigate) return;
+
+    // If auth/role are still loading but we hit the hard timeout, proceed anyway.
+    if ((authLoading || roleLoading) && !hardTimeoutReached) return;
 
     const navTimer = setTimeout(() => {
       if (!user) {
@@ -34,7 +46,7 @@ const SplashScreen: React.FC = () => {
     }, 800);
 
     return () => clearTimeout(navTimer);
-  }, [stage, authLoading, roleLoading, user, navigate, portalPath]);
+  }, [stage, hardTimeoutReached, authLoading, roleLoading, user, navigate, portalPath]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
