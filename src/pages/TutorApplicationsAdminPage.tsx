@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { AdminLayout } from '@/components/layout/AdminLayout';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -277,54 +278,17 @@ const TutorApplicationsAdminPage: React.FC = () => {
 
   const navigate = useNavigate();
 
-  if (adminLoading || loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="flex items-center gap-3 p-4 border-b border-border">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="font-semibold">Tutor Applications</h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="flex items-center gap-3 p-4 border-b border-border">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="font-semibold">Access Denied</h1>
-        </div>
-        <div className="flex flex-col items-center justify-center h-64 text-center px-6">
-          <AlertCircle className="w-12 h-12 text-destructive mb-4" />
-          <h2 className="text-lg font-semibold">Admin Access Required</h2>
-          <p className="text-muted-foreground">You don't have permission to view this page</p>
-        </div>
-      </div>
-    );
-  }
-
   const pendingCount = applications.filter(a => a.status === 'pending').length;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="font-semibold">Tutor Applications</h1>
-        </div>
-        <Badge variant="secondary">{pendingCount} pending</Badge>
-      </div>
-      <div className="p-4 space-y-4">
+    <AdminLayout
+      title="Tutor Applications"
+      subtitle={`${pendingCount} pending applications`}
+      mobileTitle="Tutor Applications"
+      showSidebar={false}
+      showBackButton={true}
+    >
+      <div className="space-y-4">
         {applications.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
@@ -538,7 +502,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
           })
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

@@ -2,23 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
-import { MobileLayout } from '@/components/layout/MobileLayout';
+import { AdminLayout } from '@/components/layout/AdminLayout';
 import { AdminManagement } from '@/components/admin/AdminManagement';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import CourseManagement from '@/components/admin/CourseManagement';
 import TutorPerformance from '@/components/admin/TutorPerformance';
 import TutorActivityDashboard from '@/components/admin/TutorActivityDashboard';
 import StudentManagement from '@/components/admin/StudentManagement';
 import BulkEnrollmentManager from '@/components/admin/BulkEnrollmentManager';
 import ClassPricingManager from '@/components/admin/ClassPricingManager';
-import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { AdminOnboardingTutorial } from '@/components/onboarding/AdminOnboardingTutorial';
 import { AdminStatsDetailModal, AdminStatType } from '@/components/admin/AdminStatsDetailModal';
 import { 
-  Shield, Users, BookOpen, FileText, GraduationCap, 
-  TrendingUp, AlertCircle, CheckCircle, Clock, 
-  BarChart3, Activity, Settings, ChevronRight,
-  UserCheck, UserX, Calendar, MessageSquare, ClipboardList
+  Users, BookOpen, FileText, GraduationCap, 
+  Clock, BarChart3, Activity, ChevronRight,
+  UserCheck, Calendar, ClipboardList, TrendingUp, AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -175,46 +172,9 @@ const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  if (adminLoading) {
-    return (
-      <div className="min-h-screen flex w-full bg-background">
-        <div className="hidden lg:block w-64 border-r border-border/50 p-4">
-          <Skeleton className="h-16 mb-4" />
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12" />)}
-          </div>
-        </div>
-        <div className="flex-1 p-4 sm:p-6 lg:p-8">
-          <Skeleton className="h-24 w-full rounded-2xl mb-6" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Show onboarding for new admins
   if (showOnboarding && isAdmin) {
     return <AdminOnboardingTutorial onComplete={() => setShowOnboarding(false)} />;
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen flex w-full bg-background items-center justify-center">
-        <div className="flex flex-col items-center justify-center p-5 text-center">
-          <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-            <AlertCircle className="w-10 h-10 text-destructive" />
-          </div>
-          <h2 className="text-xl font-bold text-foreground mb-2">Access Denied</h2>
-          <p className="text-muted-foreground">
-            You don't have permission to access the admin dashboard.
-          </p>
-          <Link to="/home" className="mt-4 text-primary hover:underline">
-            Return to Home
-          </Link>
-        </div>
-      </div>
-    );
   }
 
   const statCards: { label: string; value: number; icon: any; color: string; bgColor: string; statType: AdminStatType; highlight?: boolean }[] = [
@@ -459,50 +419,16 @@ const AdminDashboardPage: React.FC = () => {
   };
 
   return (
-    <MobileLayout showNav={false}>
-      <div className="flex min-h-screen w-full">
-        {/* Sidebar */}
-        <AdminSidebar
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          pendingApplications={stats.pendingApplications}
-        />
-
-        {/* Main Content */}
-        <main className="flex-1 min-w-0 overflow-auto">
-          <div className="p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 max-w-6xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Link to="/profile" className="text-muted-foreground hover:text-foreground lg:hidden">
-                  <ChevronRight className="w-5 h-5 rotate-180" />
-                </Link>
-                <div className="hidden lg:flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-bold text-foreground">Admin Dashboard</h1>
-                    <p className="text-sm text-muted-foreground">LMV Academy Management</p>
-                  </div>
-                </div>
-                <h1 className="text-lg font-bold lg:hidden">Admin Dashboard</h1>
-              </div>
-              <RoleSwitcher />
-            </div>
-
-            {/* Mobile Tab Indicator */}
-            <div className="lg:hidden mb-4">
-              <Badge variant="secondary" className="text-xs">
-                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-              </Badge>
-            </div>
-
-            {/* Content */}
-            {renderContent()}
-          </div>
-        </main>
-      </div>
+    <AdminLayout
+      title="Admin Dashboard"
+      subtitle="LMV Academy Management"
+      mobileTitle="Admin Dashboard"
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      pendingApplications={stats.pendingApplications}
+    >
+      {/* Content */}
+      {renderContent()}
 
       {/* Stats Detail Modal */}
       <AdminStatsDetailModal
@@ -510,7 +436,7 @@ const AdminDashboardPage: React.FC = () => {
         onOpenChange={setStatsModalOpen}
         statType={statsModalType}
       />
-    </MobileLayout>
+    </AdminLayout>
   );
 };
 
