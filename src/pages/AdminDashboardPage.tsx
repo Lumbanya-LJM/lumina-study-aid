@@ -12,6 +12,7 @@ import StudentManagement from '@/components/admin/StudentManagement';
 import BulkEnrollmentManager from '@/components/admin/BulkEnrollmentManager';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { AdminOnboardingTutorial } from '@/components/onboarding/AdminOnboardingTutorial';
+import { AdminStatsDetailModal, AdminStatType } from '@/components/admin/AdminStatsDetailModal';
 import { 
   Shield, Users, BookOpen, FileText, GraduationCap, 
   TrendingUp, AlertCircle, CheckCircle, Clock, 
@@ -55,6 +56,8 @@ const AdminDashboardPage: React.FC = () => {
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [statsModalType, setStatsModalType] = useState<AdminStatType>(null);
 
   useEffect(() => {
     if (isAdmin) {
@@ -215,13 +218,13 @@ const AdminDashboardPage: React.FC = () => {
     );
   }
 
-  const statCards = [
-    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
-    { label: 'Active Courses', value: stats.totalCourses, icon: BookOpen, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
-    { label: 'Enrollments', value: stats.totalEnrollments, icon: GraduationCap, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
-    { label: 'Pending Apps', value: stats.pendingApplications, icon: Clock, color: 'text-orange-500', bgColor: 'bg-orange-500/10', highlight: stats.pendingApplications > 0 },
-    { label: 'Active Classes', value: stats.activeClasses, icon: Activity, color: 'text-pink-500', bgColor: 'bg-pink-500/10' },
-    { label: 'Library Items', value: stats.libraryContent, icon: FileText, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
+  const statCards: { label: string; value: number; icon: any; color: string; bgColor: string; statType: AdminStatType; highlight?: boolean }[] = [
+    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-500/10', statType: 'users' },
+    { label: 'Active Courses', value: stats.totalCourses, icon: BookOpen, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', statType: 'courses' },
+    { label: 'Enrollments', value: stats.totalEnrollments, icon: GraduationCap, color: 'text-purple-500', bgColor: 'bg-purple-500/10', statType: 'enrollments' },
+    { label: 'Pending Apps', value: stats.pendingApplications, icon: Clock, color: 'text-orange-500', bgColor: 'bg-orange-500/10', highlight: stats.pendingApplications > 0, statType: 'applications' },
+    { label: 'Active Classes', value: stats.activeClasses, icon: Activity, color: 'text-pink-500', bgColor: 'bg-pink-500/10', statType: 'classes' },
+    { label: 'Library Items', value: stats.libraryContent, icon: FileText, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', statType: 'library' },
   ];
 
   const quickActions = [
@@ -265,7 +268,14 @@ const AdminDashboardPage: React.FC = () => {
                 [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)
               ) : (
                 statCards.map((stat, idx) => (
-                  <Card key={idx} className={cn("border-border/50", stat.highlight && "border-orange-500/50 bg-orange-500/5")}>
+                  <Card 
+                    key={idx} 
+                    className={cn(
+                      "border-border/50 cursor-pointer hover:border-primary/30 transition-colors", 
+                      stat.highlight && "border-orange-500/50 bg-orange-500/5"
+                    )}
+                    onClick={() => { setStatsModalType(stat.statType); setStatsModalOpen(true); }}
+                  >
                     <CardContent className="p-4">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-2", stat.bgColor)}>
                         <stat.icon className={cn("w-4 h-4", stat.color)} />
@@ -491,6 +501,13 @@ const AdminDashboardPage: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Stats Detail Modal */}
+      <AdminStatsDetailModal
+        open={statsModalOpen}
+        onOpenChange={setStatsModalOpen}
+        statType={statsModalType}
+      />
     </MobileLayout>
   );
 };

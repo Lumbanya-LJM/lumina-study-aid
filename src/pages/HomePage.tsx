@@ -7,6 +7,7 @@ import { QuickAction } from '@/components/ui/quick-action';
 import { HomePageSkeleton } from '@/components/ui/skeletons';
 import { StudyRemindersCard } from '@/components/lumina/StudyRemindersCard';
 import { OnboardingTutorial } from '@/components/onboarding/OnboardingTutorial';
+import { StudentStatsDetailModal, StudentStatType } from '@/components/student/StudentStatsDetailModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundNotifications } from '@/hooks/useSoundNotifications';
@@ -58,6 +59,8 @@ const HomePage: React.FC = () => {
   const [greeting, setGreeting] = useState('Good morning');
   const [isLoading, setIsLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [statsModalType, setStatsModalType] = useState<StudentStatType>(null);
 
   useEffect(() => {
     // Check if onboarding has been completed
@@ -118,11 +121,11 @@ const HomePage: React.FC = () => {
     }
   };
 
-  const stats = [
-    { icon: Flame, label: 'Day Streak', value: profile?.streak_days || 0, trend: profile?.streak_days && profile.streak_days > 0 ? { value: 8, positive: true } : undefined },
-    { icon: Clock, label: 'Study Hours', value: (profile?.total_study_hours || 0).toFixed(1), trend: { value: 15, positive: true } },
-    { icon: Target, label: 'Tasks Done', value: profile?.tasks_completed || 0, trend: { value: 12, positive: true } },
-    { icon: BookOpen, label: 'Cases Read', value: profile?.cases_read || 0 },
+  const stats: { icon: any; label: string; value: string | number; trend?: { value: number; positive: boolean }; statType: StudentStatType }[] = [
+    { icon: Flame, label: 'Day Streak', value: profile?.streak_days || 0, trend: profile?.streak_days && profile.streak_days > 0 ? { value: 8, positive: true } : undefined, statType: 'streak' },
+    { icon: Clock, label: 'Study Hours', value: (profile?.total_study_hours || 0).toFixed(1), trend: { value: 15, positive: true }, statType: 'hours' },
+    { icon: Target, label: 'Tasks Done', value: profile?.tasks_completed || 0, trend: { value: 12, positive: true }, statType: 'tasks' },
+    { icon: BookOpen, label: 'Cases Read', value: profile?.cases_read || 0, statType: 'cases' },
   ];
 
   const quickActions = [
@@ -233,6 +236,7 @@ const HomePage: React.FC = () => {
                 label={stat.label}
                 value={stat.value}
                 trend={stat.trend}
+                onClick={() => { setStatsModalType(stat.statType); setStatsModalOpen(true); }}
               />
             </div>
           ))}
@@ -320,6 +324,13 @@ const HomePage: React.FC = () => {
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </button>
       </div>
+
+      {/* Stats Detail Modal */}
+      <StudentStatsDetailModal
+        open={statsModalOpen}
+        onOpenChange={setStatsModalOpen}
+        statType={statsModalType}
+      />
     </MobileLayout>
   );
 };
