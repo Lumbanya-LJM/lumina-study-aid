@@ -4,8 +4,7 @@ import {
   GraduationCap, 
   Bell, 
   Video, 
-  FileText, 
-  Users,
+  FileText,
   ChevronRight,
   ChevronLeft,
   Sparkles,
@@ -13,6 +12,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 
 interface OnboardingStep {
   title: string;
@@ -100,11 +100,22 @@ export const TutorOnboardingTutorial: React.FC<TutorOnboardingTutorialProps> = (
     onComplete();
   };
 
+  const swipeHandlers = useSwipeGesture({
+    onSwipeLeft: handleNext,
+    onSwipeRight: handlePrev,
+    minSwipeDistance: 50
+  });
+
   const step = tutorSteps[currentStep];
   const Icon = step.icon;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background">
+    <div 
+      className="fixed inset-0 z-50 bg-background"
+      onTouchStart={swipeHandlers.onTouchStart}
+      onTouchMove={swipeHandlers.onTouchMove}
+      onTouchEnd={swipeHandlers.onTouchEnd}
+    >
       <div className="flex flex-col min-h-screen safe-top safe-bottom">
         {/* Header */}
         <div className="flex items-center justify-between p-4">

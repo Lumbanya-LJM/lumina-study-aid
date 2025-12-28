@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { Button } from '@/components/ui/button';
 import { 
@@ -9,11 +9,10 @@ import {
   Trophy,
   ChevronRight,
   ChevronLeft,
-  X,
   Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 
 interface OnboardingStep {
   title: string;
@@ -60,7 +59,6 @@ interface OnboardingTutorialProps {
 }
 
 export const OnboardingTutorial: React.FC<OnboardingTutorialProps> = ({ onComplete }) => {
-  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -96,11 +94,22 @@ export const OnboardingTutorial: React.FC<OnboardingTutorialProps> = ({ onComple
     onComplete();
   };
 
+  const swipeHandlers = useSwipeGesture({
+    onSwipeLeft: handleNext,
+    onSwipeRight: handlePrev,
+    minSwipeDistance: 50
+  });
+
   const step = steps[currentStep];
   const Icon = step.icon;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background">
+    <div 
+      className="fixed inset-0 z-50 bg-background"
+      onTouchStart={swipeHandlers.onTouchStart}
+      onTouchMove={swipeHandlers.onTouchMove}
+      onTouchEnd={swipeHandlers.onTouchEnd}
+    >
       <div className="flex flex-col min-h-screen safe-top safe-bottom">
         {/* Header */}
         <div className="flex items-center justify-between p-4">
