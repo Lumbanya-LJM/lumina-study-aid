@@ -140,6 +140,10 @@ export default {
           from: { opacity: "0", transform: "translateX(20px)" },
           to: { opacity: "1", transform: "translateX(0)" },
         },
+        "slide-down": {
+          from: { opacity: "0", transform: "translateY(-10px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
         "scale-in": {
           from: { opacity: "0", transform: "scale(0.95)" },
           to: { opacity: "1", transform: "scale(1)" },
@@ -174,6 +178,25 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(var(--primary) / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(var(--primary) / 0.5)" },
         },
+        "confetti": {
+          "0%": { transform: "translateY(0) rotate(0deg)", opacity: "1" },
+          "100%": { transform: "translateY(100vh) rotate(720deg)", opacity: "0" },
+        },
+        "celebrate": {
+          "0%": { transform: "scale(1)" },
+          "25%": { transform: "scale(1.2)" },
+          "50%": { transform: "scale(1)" },
+          "75%": { transform: "scale(1.1)" },
+          "100%": { transform: "scale(1)" },
+        },
+        "ripple": {
+          "0%": { transform: "scale(0)", opacity: "1" },
+          "100%": { transform: "scale(4)", opacity: "0" },
+        },
+        "slide-in-bottom": {
+          from: { opacity: "0", transform: "translateY(100%)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -182,6 +205,7 @@ export default {
         "fade-in-up": "fade-in-up 0.4s ease-out forwards",
         "slide-up": "slide-up 0.5s ease-out forwards",
         "slide-in-right": "slide-in-right 0.4s ease-out forwards",
+        "slide-down": "slide-down 0.3s ease-out forwards",
         "scale-in": "scale-in 0.3s ease-out forwards",
         "scale-bounce": "scale-bounce 0.4s ease-out forwards",
         "shimmer": "shimmer 2s linear infinite",
@@ -190,6 +214,10 @@ export default {
         "bounce-soft": "bounce-soft 2s ease-in-out infinite",
         "wiggle": "wiggle 0.3s ease-in-out",
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "confetti": "confetti 3s ease-out forwards",
+        "celebrate": "celebrate 0.5s ease-in-out",
+        "ripple": "ripple 0.6s ease-out",
+        "slide-in-bottom": "slide-in-bottom 0.3s ease-out forwards",
       },
     },
   },
