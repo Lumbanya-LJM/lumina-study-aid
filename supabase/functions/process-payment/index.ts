@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, phoneNumber, provider, productType, productId, selectedCourses } = await req.json();
+    const { amount, phoneNumber, provider, productType, productId, selectedCourses, classId, classPurchaseType } = await req.json();
     
     const MONEYUNIFY_API_KEY = Deno.env.get("MONEYUNIFY_API_KEY");
     const MONEYUNIFY_MERCHANT_ID = Deno.env.get("MONEYUNIFY_MERCHANT_ID");
@@ -131,6 +131,21 @@ serve(async (req) => {
         if (enrollError) {
           console.error("Error creating enrollments:", enrollError);
         }
+      } else if (productType === "class" && classId) {
+        // Create class purchase record for individual class/recording
+        const { error: purchaseError } = await supabaseClient
+          .from("class_purchases")
+          .insert({
+            user_id: user.id,
+            class_id: classId,
+            purchase_type: classPurchaseType || 'recording',
+            amount: amount,
+            payment_id: payment.id,
+          });
+
+        if (purchaseError) {
+          console.error("Error creating class purchase:", purchaseError);
+        }
       }
 
       return new Response(JSON.stringify({ 
@@ -138,7 +153,9 @@ serve(async (req) => {
         paymentId: payment.id,
         message: productType === "academy" 
           ? "Academy enrollment successful!" 
-          : "Payment processed successfully" 
+          : productType === "class"
+            ? "Class purchase successful! You now have lifetime access."
+            : "Payment processed successfully" 
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

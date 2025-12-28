@@ -12,7 +12,7 @@ import {
   GraduationCap,
   Users
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +41,13 @@ interface Course {
   description: string;
   price: number;
   institution: string;
+}
+
+interface ClassPurchaseInfo {
+  classId: string;
+  type: 'live' | 'recording';
+  amount: number;
+  title?: string;
 }
 
 const plans = [
@@ -78,6 +85,7 @@ const plans = [
 
 const SubscriptionPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -86,16 +94,27 @@ const SubscriptionPage: React.FC = () => {
   const [showPayment, setShowPayment] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [provider, setProvider] = useState('mtn');
-  const [selectedPlan, setSelectedPlan] = useState<'pro' | 'academy'>('pro');
+  const [selectedPlan, setSelectedPlan] = useState<'pro' | 'academy' | 'class'>('pro');
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [enrollments, setEnrollments] = useState<string[]>([]);
+  const [classPurchase, setClassPurchase] = useState<ClassPurchaseInfo | null>(null);
 
   useEffect(() => {
     loadSubscription();
     loadCourses();
     loadEnrollments();
-  }, []);
+    
+    // Check for class purchase from URL params
+    const purchaseType = searchParams.get('purchase');
+    const classId = searchParams.get('classId');
+    const type = searchParams.get('type') as 'live' | 'recording';
+    const amount = searchParams.get('amount');
+    
+    if (purchaseType === 'class' && classId && type && amount) {
+      loadClassInfo(classId, type, parseFloat(amount));
+    }
+  }, [searchParams]);
 
   const loadSubscription = async () => {
     const { data } = await supabase
@@ -129,6 +148,20 @@ const SubscriptionPage: React.FC = () => {
     setEnrollments((data || []).map(e => e.course_id));
   };
 
+  const loadClassInfo = async (classId: string, type: 'live' | 'recording', amount: number) => {
+    const { data } = await supabase
+      .from('live_classes')
+      .select('id, title')
+      .eq('id', classId)
+      .maybeSingle();
+    
+    if (data) {
+      setClassPurchase({ classId, type, amount, title: data.title });
+      setSelectedPlan('class');
+      setShowPayment(true);
+    }
+  };
+
   const handleSubscribe = (plan: 'pro' | 'academy') => {
     setSelectedPlan(plan);
     if (plan === 'academy' && selectedCourses.length === 0) {
@@ -147,6 +180,7 @@ const SubscriptionPage: React.FC = () => {
   };
 
   const calculateTotal = () => {
+    if (selectedPlan === 'class' && classPurchase) return classPurchase.amount;
     if (selectedPlan === 'pro') return 150;
     return selectedCourses.length * 350;
   };
@@ -178,8 +212,10 @@ const SubscriptionPage: React.FC = () => {
           amount,
           phoneNumber,
           provider,
-          productType: selectedPlan === 'pro' ? 'subscription' : 'academy',
+          productType: selectedPlan === 'pro' ? 'subscription' : selectedPlan === 'class' ? 'class' : 'academy',
           selectedCourses: selectedPlan === 'academy' ? selectedCourses : undefined,
+          classId: selectedPlan === 'class' ? classPurchase?.classId : undefined,
+          classPurchaseType: selectedPlan === 'class' ? classPurchase?.type : undefined,
         }),
       });
 
@@ -189,14 +225,31 @@ const SubscriptionPage: React.FC = () => {
       }
 
       const result = await response.json();
+      
+      let successMessage = '';
+      if (selectedPlan === 'pro') {
+        successMessage = 'Your Pro subscription is now active';
+      } else if (selectedPlan === 'class') {
+        successMessage = `You now have access to "${classPurchase?.title}"`;
+      } else {
+        successMessage = 'Your Academy enrollment is now active';
+      }
+      
       toast({ 
         title: "Payment Successful!", 
-        description: result.message || `Your ${selectedPlan === 'pro' ? 'Pro subscription' : 'Academy enrollment'} is now active` 
+        description: result.message || successMessage 
       });
       
       setShowPayment(false);
-      loadSubscription();
-      loadEnrollments();
+      setClassPurchase(null);
+      
+      if (selectedPlan === 'class') {
+        // Navigate back to marketplace or the purchased content
+        navigate('/marketplace');
+      } else {
+        loadSubscription();
+        loadEnrollments();
+      }
     } catch (error) {
       toast({ 
         variant: "destructive", 
@@ -259,13 +312,19 @@ const SubscriptionPage: React.FC = () => {
                 <div className="bg-secondary rounded-2xl p-4">
                   <div className="flex justify-between mb-2">
                     <span className="text-muted-foreground">
-                      {selectedPlan === 'pro' ? 'Pro Plan' : `Academy (${selectedCourses.length} courses)`}
+                      {selectedPlan === 'pro' 
+                        ? 'Pro Plan' 
+                        : selectedPlan === 'class' 
+                          ? `${classPurchase?.type === 'live' ? 'Live Class' : 'Recording'}: ${classPurchase?.title?.substring(0, 30)}...`
+                          : `Academy (${selectedCourses.length} courses)`}
                     </span>
                     <span className="font-medium text-foreground">K{calculateTotal()}.00</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Duration</span>
-                    <span className="font-medium text-foreground">1 Month</span>
+                    <span className="font-medium text-foreground">
+                      {selectedPlan === 'class' ? 'Lifetime Access' : '1 Month'}
+                    </span>
                   </div>
                 </div>
 

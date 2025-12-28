@@ -250,6 +250,51 @@ export type Database = {
           },
         ]
       }
+      class_purchases: {
+        Row: {
+          amount: number
+          class_id: string
+          id: string
+          payment_id: string | null
+          purchase_type: string
+          purchased_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          class_id: string
+          id?: string
+          payment_id?: string | null
+          purchase_type?: string
+          purchased_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          class_id?: string
+          id?: string
+          payment_id?: string | null
+          purchase_type?: string
+          purchased_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_purchases_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_purchases_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_transcripts: {
         Row: {
           class_id: string
@@ -564,7 +609,10 @@ export type Database = {
           ended_at: string | null
           host_id: string
           id: string
+          is_purchasable: boolean | null
+          live_class_price: number | null
           recording_duration_seconds: number | null
+          recording_price: number | null
           recording_url: string | null
           scheduled_at: string | null
           started_at: string | null
@@ -581,7 +629,10 @@ export type Database = {
           ended_at?: string | null
           host_id: string
           id?: string
+          is_purchasable?: boolean | null
+          live_class_price?: number | null
           recording_duration_seconds?: number | null
+          recording_price?: number | null
           recording_url?: string | null
           scheduled_at?: string | null
           started_at?: string | null
@@ -598,7 +649,10 @@ export type Database = {
           ended_at?: string | null
           host_id?: string
           id?: string
+          is_purchasable?: boolean | null
+          live_class_price?: number | null
           recording_duration_seconds?: number | null
+          recording_price?: number | null
           recording_url?: string | null
           scheduled_at?: string | null
           started_at?: string | null

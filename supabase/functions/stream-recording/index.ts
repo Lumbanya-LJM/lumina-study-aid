@@ -69,20 +69,39 @@ serve(async (req) => {
       });
     }
 
-    // Check if user has access (is host or enrolled in the course)
+    // Check if user has access (is host, enrolled in course, or purchased this class)
     const isHost = liveClass.host_id === user.id;
     
-    if (!isHost && liveClass.course_id) {
-      const { data: enrollment } = await supabaseAdmin
-        .from("academy_enrollments")
-        .select("id")
-        .eq("course_id", liveClass.course_id)
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
+    if (!isHost) {
+      // Check for course enrollment
+      let hasAccess = false;
+      
+      if (liveClass.course_id) {
+        const { data: enrollment } = await supabaseAdmin
+          .from("academy_enrollments")
+          .select("id")
+          .eq("course_id", liveClass.course_id)
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .maybeSingle();
+        
+        if (enrollment) hasAccess = true;
+      }
+      
+      // Check for individual class purchase
+      if (!hasAccess) {
+        const { data: purchase } = await supabaseAdmin
+          .from("class_purchases")
+          .select("id")
+          .eq("class_id", classId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        if (purchase) hasAccess = true;
+      }
 
-      if (!enrollment) {
-        return new Response(JSON.stringify({ error: "Access denied - not enrolled" }), {
+      if (!hasAccess) {
+        return new Response(JSON.stringify({ error: "Access denied - not enrolled or purchased" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
