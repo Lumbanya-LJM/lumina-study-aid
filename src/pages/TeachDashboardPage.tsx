@@ -11,6 +11,9 @@ import { TutorSidebar } from '@/components/teach/TutorSidebar';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { StatsDetailModal } from '@/components/teach/StatsDetailModal';
 import { EditClassModal } from '@/components/teach/EditClassModal';
+import { ClearStatsDialog } from '@/components/admin/ClearStatsDialog';
+import { StatsHistoryModal } from '@/components/admin/StatsHistoryModal';
+import { toast as sonnerToast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +45,8 @@ import {
   ExternalLink,
   PhoneOff,
   Loader2,
+  Trash2,
+  History,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PostUpdateForm from '@/components/teach/PostUpdateForm';
@@ -208,6 +213,8 @@ const TeachDashboardPage: React.FC = () => {
   const [endingClassId, setEndingClassId] = useState<string | null>(null);
   const [endClassConfirmOpen, setEndClassConfirmOpen] = useState(false);
   const [classToEnd, setClassToEnd] = useState<{ id: string; title: string; dailyRoomName: string | null } | null>(null);
+  const [clearStatsOpen, setClearStatsOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -468,6 +475,31 @@ const TeachDashboardPage: React.FC = () => {
 
   const renderOverview = () => (
     <div className="space-y-6">
+      {/* Stats Header with Actions */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Your Stats</h2>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setHistoryModalOpen(true)}
+            className="gap-1"
+          >
+            <History className="w-4 h-4" />
+            History
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setClearStatsOpen(true)}
+            className="gap-1 text-destructive hover:text-destructive"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear Stats
+          </Button>
+        </div>
+      </div>
+
       {/* Stats Cards - Clickable */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card 
@@ -1187,6 +1219,25 @@ const TeachDashboardPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Clear Stats Dialog */}
+      <ClearStatsDialog
+        open={clearStatsOpen}
+        onOpenChange={setClearStatsOpen}
+        dashboardType="tutor"
+        currentStats={stats}
+        onClear={async () => {
+          // Tutor stats are derived from activities - snapshot saved for historical record
+          sonnerToast.success('Stats snapshot saved. Your stats reflect your activity history.');
+        }}
+      />
+
+      {/* Stats History Modal */}
+      <StatsHistoryModal
+        open={historyModalOpen}
+        onOpenChange={setHistoryModalOpen}
+        dashboardType="tutor"
+      />
     </div>
   );
 };

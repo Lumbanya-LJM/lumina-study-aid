@@ -10,11 +10,15 @@ import { OnboardingTutorial } from '@/components/onboarding/OnboardingTutorial';
 import { StudentStatsDetailModal, StudentStatType } from '@/components/student/StudentStatsDetailModal';
 import { PersonalizedGreeting, useGreeting } from '@/components/premium/PersonalizedGreeting';
 import { useCelebration } from '@/components/premium/ProgressCelebration';
+import { ClearStatsDialog } from '@/components/admin/ClearStatsDialog';
+import { StatsHistoryModal } from '@/components/admin/StatsHistoryModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundNotifications } from '@/hooks/useSoundNotifications';
 import { haptics } from '@/lib/haptics';
+import { toast } from 'sonner';
 import lmvLogo from '@/assets/lmv-logo.png';
+import { Button } from '@/components/ui/button';
 import { 
   Flame, 
   Clock, 
@@ -35,7 +39,9 @@ import {
   Sunrise,
   Sun,
   Sunset,
-  Moon
+  Moon,
+  Trash2,
+  History
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -67,6 +73,8 @@ const HomePage: React.FC = () => {
   const [statsModalOpen, setStatsModalOpen] = useState(false);
   const [statsModalType, setStatsModalType] = useState<StudentStatType>(null);
   const [lastStreakCelebrated, setLastStreakCelebrated] = useState<number>(0);
+  const [clearStatsOpen, setClearStatsOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
   
   const greetingData = useGreeting();
   const { celebrate } = useCelebration();
@@ -245,22 +253,35 @@ const HomePage: React.FC = () => {
         <StudyRemindersCard />
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {stats.map((stat, index) => (
-            <div 
-              key={index}
-              className="animate-fade-in-up opacity-0"
-              style={{ animationDelay: `${0.2 + index * 0.05}s`, animationFillMode: 'forwards' }}
-            >
-              <StatCard
-                icon={stat.icon}
-                label={stat.label}
-                value={stat.value}
-                trend={stat.trend}
-                onClick={() => { setStatsModalType(stat.statType); setStatsModalOpen(true); }}
-              />
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-foreground">Your Progress</h2>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setHistoryModalOpen(true)}>
+                <History className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setClearStatsOpen(true)} className="text-destructive">
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </div>
-          ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {stats.map((stat, index) => (
+              <div 
+                key={index}
+                className="animate-fade-in-up opacity-0"
+                style={{ animationDelay: `${0.2 + index * 0.05}s`, animationFillMode: 'forwards' }}
+              >
+                <StatCard
+                  icon={stat.icon}
+                  label={stat.label}
+                  value={stat.value}
+                  trend={stat.trend}
+                  onClick={() => { setStatsModalType(stat.statType); setStatsModalOpen(true); }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -351,6 +372,37 @@ const HomePage: React.FC = () => {
         open={statsModalOpen}
         onOpenChange={setStatsModalOpen}
         statType={statsModalType}
+      />
+
+      {/* Clear Stats Dialog */}
+      <ClearStatsDialog
+        open={clearStatsOpen}
+        onOpenChange={setClearStatsOpen}
+        dashboardType="student"
+        currentStats={{
+          streak_days: profile?.streak_days || 0,
+          total_study_hours: profile?.total_study_hours || 0,
+          tasks_completed: profile?.tasks_completed || 0,
+          cases_read: profile?.cases_read || 0,
+        }}
+        onClear={async () => {
+          if (!user) return;
+          await supabase.from('profiles').update({
+            streak_days: 0,
+            total_study_hours: 0,
+            tasks_completed: 0,
+            cases_read: 0,
+          }).eq('user_id', user.id);
+          setProfile(prev => prev ? { ...prev, streak_days: 0, total_study_hours: 0, tasks_completed: 0, cases_read: 0 } : null);
+          toast.success('Stats cleared successfully');
+        }}
+      />
+
+      {/* Stats History Modal */}
+      <StatsHistoryModal
+        open={historyModalOpen}
+        onOpenChange={setHistoryModalOpen}
+        dashboardType="student"
       />
     </MobileLayout>
   );
