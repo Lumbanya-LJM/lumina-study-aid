@@ -613,10 +613,14 @@ export type Database = {
           host_id: string
           id: string
           is_purchasable: boolean | null
+          is_recurring: boolean | null
           live_class_price: number | null
           recording_duration_seconds: number | null
           recording_price: number | null
           recording_url: string | null
+          recurrence_day: string | null
+          recurrence_description: string | null
+          recurrence_time: string | null
           scheduled_at: string | null
           started_at: string | null
           status: string
@@ -633,10 +637,14 @@ export type Database = {
           host_id: string
           id?: string
           is_purchasable?: boolean | null
+          is_recurring?: boolean | null
           live_class_price?: number | null
           recording_duration_seconds?: number | null
           recording_price?: number | null
           recording_url?: string | null
+          recurrence_day?: string | null
+          recurrence_description?: string | null
+          recurrence_time?: string | null
           scheduled_at?: string | null
           started_at?: string | null
           status?: string
@@ -653,10 +661,14 @@ export type Database = {
           host_id?: string
           id?: string
           is_purchasable?: boolean | null
+          is_recurring?: boolean | null
           live_class_price?: number | null
           recording_duration_seconds?: number | null
           recording_price?: number | null
           recording_url?: string | null
+          recurrence_day?: string | null
+          recurrence_description?: string | null
+          recurrence_time?: string | null
           scheduled_at?: string | null
           started_at?: string | null
           status?: string

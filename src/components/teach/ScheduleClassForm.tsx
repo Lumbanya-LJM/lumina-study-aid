@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, Video, Link as LinkIcon, Play, Loader2 } from 'lucide-react';
+import { Calendar, Clock, Video, Link as LinkIcon, Play, Loader2, RefreshCw } from 'lucide-react';
 import { fromZonedTime } from 'date-fns-tz';
 
 interface ScheduleClassFormProps {
@@ -14,6 +16,8 @@ interface ScheduleClassFormProps {
   tutorId: string;
   onSuccess: () => void;
 }
+
+const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId, onSuccess }) => {
   const { toast } = useToast();
@@ -24,7 +28,10 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
     content: '',
     classDate: '',
     classTime: '',
-    classLink: ''
+    classLink: '',
+    isRecurring: false,
+    recurrenceDay: '',
+    recurrenceTime: ''
   });
 
   // Reset form when course changes
@@ -34,7 +41,10 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
       content: '',
       classDate: '',
       classTime: '',
-      classLink: ''
+      classLink: '',
+      isRecurring: false,
+      recurrenceDay: '',
+      recurrenceTime: ''
     });
   }, [courseId]);
 
@@ -98,6 +108,11 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
         }
       }
 
+      // Build recurrence description
+      const recurrenceDescription = formData.isRecurring && formData.recurrenceDay && formData.recurrenceTime
+        ? `Every ${formData.recurrenceDay} at ${formData.recurrenceTime}`
+        : null;
+
       // Create a live_classes entry for scheduled class
       const { data: liveClassData, error: liveClassError } = await supabase
         .from('live_classes')
@@ -110,6 +125,10 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
           scheduled_at: classDateTime.toISOString(),
           daily_room_name: roomName,
           daily_room_url: roomUrl || null,
+          is_recurring: formData.isRecurring,
+          recurrence_day: formData.isRecurring ? formData.recurrenceDay : null,
+          recurrence_time: formData.isRecurring ? formData.recurrenceTime : null,
+          recurrence_description: recurrenceDescription,
         })
         .select()
         .single();
@@ -188,12 +207,14 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
       toast({
         title: 'Success',
-        description: roomUrl 
-          ? 'Class scheduled with video room! Students have been notified.'
-          : 'Class scheduled successfully! Students have been notified.',
+        description: formData.isRecurring 
+          ? `Recurring class scheduled! Students will see: "${formData.recurrenceDay} at ${formData.recurrenceTime}"`
+          : roomUrl 
+            ? 'Class scheduled with video room! Students have been notified.'
+            : 'Class scheduled successfully! Students have been notified.',
       });
 
-      setFormData({ title: '', content: '', classDate: '', classTime: '', classLink: '' });
+      setFormData({ title: '', content: '', classDate: '', classTime: '', classLink: '', isRecurring: false, recurrenceDay: '', recurrenceTime: '' });
       onSuccess();
     } catch (error) {
       console.error('Error scheduling class:', error);
@@ -470,6 +491,62 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
                 maxLength={500}
               />
             </div>
+
+            {/* Recurring Class Settings */}
+            <Card className="border-dashed">
+              <CardContent className="pt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 text-muted-foreground" />
+                    <Label htmlFor="isRecurring" className="font-medium">Recurring Class</Label>
+                  </div>
+                  <Switch
+                    id="isRecurring"
+                    checked={formData.isRecurring}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
+                  />
+                </div>
+                
+                {formData.isRecurring && (
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="space-y-2">
+                      <Label>Day of Week</Label>
+                      <Select
+                        value={formData.recurrenceDay}
+                        onValueChange={(value) => setFormData({ ...formData, recurrenceDay: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DAYS_OF_WEEK.map((day) => (
+                            <SelectItem key={day} value={day}>{day}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Recurring Time</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          type="time"
+                          className="pl-10"
+                          value={formData.recurrenceTime}
+                          onChange={(e) => setFormData({ ...formData, recurrenceTime: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {formData.isRecurring && formData.recurrenceDay && formData.recurrenceTime && (
+                  <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                    Students will see: <span className="font-medium">"Classes held every {formData.recurrenceDay} at {formData.recurrenceTime}"</span>
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             <Button type="submit" variant="outline" className="w-full" disabled={loading || !courseId}>
               {loading ? (

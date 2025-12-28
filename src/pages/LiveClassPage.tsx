@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, Users, PhoneOff, MonitorUp, ExternalLink, Minimize2, Maximize2, Home, Crown } from "lucide-react";
+import { Loader2, Video, ArrowLeft, Clock, Mic, Camera, Users, PhoneOff, MonitorUp, ExternalLink, Minimize2, Maximize2, Home, Crown, PictureInPicture2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +35,9 @@ const LiveClassPage: React.FC = () => {
   const [meetingToken, setMeetingToken] = useState<string | null>(null);
   const [participantCount, setParticipantCount] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isPipActive, setIsPipActive] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Get user display name from profile
   const getUserName = useCallback(() => {
@@ -295,6 +297,21 @@ const LiveClassPage: React.FC = () => {
     return `${liveClass.daily_room_url}?t=${meetingToken}`;
   };
 
+  // Handle Picture-in-Picture toggle
+  const togglePiP = async () => {
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+        setIsPipActive(false);
+      } else if (videoRef.current && document.pictureInPictureEnabled) {
+        await videoRef.current.requestPictureInPicture();
+        setIsPipActive(true);
+      }
+    } catch (error) {
+      console.error('PiP error:', error);
+    }
+  };
+
   // Minimized floating video view
   if (isMinimized && inCall && meetingToken) {
     return (
@@ -306,7 +323,7 @@ const LiveClassPage: React.FC = () => {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
             </span>
             <span className="text-xs font-medium truncate">{liveClass.title}</span>
-            {isHost && <Crown className="w-3 h-3 text-amber-500 flex-shrink-0" />}
+            {isHost && <Crown className="w-3 h-3 text-primary flex-shrink-0" />}
           </div>
           <div className="flex items-center gap-1">
             <Button
@@ -383,7 +400,7 @@ const LiveClassPage: React.FC = () => {
                   {liveClass.status === "live" ? "🔴 Live" : "Scheduled"}
                 </span>
                 {isHost && (
-                  <span className="text-xs bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
                     <Crown className="h-3 w-3" />
                     Host
                   </span>
@@ -480,8 +497,20 @@ const LiveClassPage: React.FC = () => {
                   className="gap-2"
                 >
                   <Minimize2 className="h-4 w-4" />
-                  Minimize & Browse
+                  Minimize
                 </Button>
+
+                {document.pictureInPictureEnabled && (
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    onClick={togglePiP}
+                    className="gap-2"
+                  >
+                    <PictureInPicture2 className="h-4 w-4" />
+                    PiP
+                  </Button>
+                )}
               </div>
             </div>
           </>
@@ -489,24 +518,18 @@ const LiveClassPage: React.FC = () => {
           /* Pre-join screen */
           <div className="flex-1 flex items-center justify-center p-4">
             <div className="max-w-md w-full space-y-6">
-              <Card className={cn(
-                "border-2",
-                isHost ? "border-amber-500/30" : "border-primary/20"
-              )}>
+              <Card className="border-2 border-primary/20">
                 <CardContent className="pt-6 space-y-6">
                   <div className="text-center space-y-2">
-                    <div className={cn(
-                      "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4",
-                      isHost ? "bg-amber-500/10" : "bg-primary/10"
-                    )}>
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 bg-primary/10">
                       {isHost ? (
-                        <Crown className="h-10 w-10 text-amber-500" />
+                        <Crown className="h-10 w-10 text-primary" />
                       ) : (
                         <Video className="h-10 w-10 text-primary" />
                       )}
                     </div>
                     {isHost && (
-                      <p className="text-sm font-medium text-amber-600 bg-amber-500/10 px-3 py-1 rounded-full inline-block">
+                      <p className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full inline-block">
                         You are the host of this class
                       </p>
                     )}
@@ -525,10 +548,7 @@ const LiveClassPage: React.FC = () => {
                       liveClass.daily_room_url.includes('daily.co') ? (
                         <Button
                           size="lg"
-                          className={cn(
-                            "w-full",
-                            isHost ? "bg-amber-500 hover:bg-amber-600" : "gradient-primary"
-                          )}
+                          className="w-full gradient-primary"
                           onClick={handleJoinMeeting}
                           disabled={joining}
                         >
@@ -584,7 +604,7 @@ const LiveClassPage: React.FC = () => {
                         You'll join with your Lumina name
                       </p>
                       {isHost && (
-                        <p className="flex items-center gap-2 text-amber-600">
+                        <p className="flex items-center gap-2 text-primary">
                           <Crown className="h-3 w-3" />
                           You have host controls (mute all, remove participants)
                         </p>

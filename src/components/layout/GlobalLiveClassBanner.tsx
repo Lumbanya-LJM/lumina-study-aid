@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Video, Play, X, Clock, Crown } from 'lucide-react';
+import { Video, Play, X, Clock, Crown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { haptics } from '@/lib/haptics';
 import { sounds, isSoundEnabledState } from '@/lib/sounds';
@@ -20,6 +20,8 @@ interface LiveClass {
   host_id: string;
   course_name?: string;
   daily_room_url?: string | null;
+  is_recurring?: boolean;
+  recurrence_description?: string | null;
 }
 
 export const GlobalLiveClassBanner: React.FC = () => {
@@ -47,7 +49,7 @@ export const GlobalLiveClassBanner: React.FC = () => {
         // For tutors: fetch classes they are hosting
         const { data: tutorClasses, error: tutorError } = await supabase
           .from('live_classes')
-          .select('id, title, status, started_at, scheduled_at, course_id, host_id, daily_room_url, academy_courses(name)')
+          .select('id, title, status, started_at, scheduled_at, course_id, host_id, daily_room_url, is_recurring, recurrence_description, academy_courses(name)')
           .eq('host_id', user.id)
           .in('status', ['live', 'scheduled'])
           .order('scheduled_at', { ascending: true });
@@ -75,7 +77,7 @@ export const GlobalLiveClassBanner: React.FC = () => {
 
         const { data: studentClasses, error: classError } = await supabase
           .from('live_classes')
-          .select('id, title, status, started_at, scheduled_at, course_id, host_id, daily_room_url')
+          .select('id, title, status, started_at, scheduled_at, course_id, host_id, daily_room_url, is_recurring, recurrence_description')
           .in('course_id', courseIds)
           .in('status', ['live', 'scheduled'])
           .order('scheduled_at', { ascending: true });
@@ -187,12 +189,7 @@ export const GlobalLiveClassBanner: React.FC = () => {
         {liveClasses.map((cls) => (
           <div
             key={cls.id}
-            className={cn(
-              "relative rounded-xl p-3 border shadow-xl overflow-hidden backdrop-blur-md",
-              isHost(cls)
-                ? "bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-orange-500/15 border-amber-500/40"
-                : "bg-gradient-to-r from-red-500/20 via-red-500/15 to-orange-500/15 border-red-500/40"
-            )}
+            className="relative rounded-xl p-3 border shadow-xl overflow-hidden backdrop-blur-md bg-gradient-to-r from-red-500/20 via-red-500/15 to-orange-500/15 border-red-500/40"
           >
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm -z-10" />
             
@@ -200,28 +197,18 @@ export const GlobalLiveClassBanner: React.FC = () => {
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="relative flex-shrink-0">
                   <span className="relative flex h-3 w-3">
-                    <span className={cn(
-                      "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
-                      isHost(cls) ? "bg-amber-500" : "bg-red-500"
-                    )} />
-                    <span className={cn(
-                      "relative inline-flex rounded-full h-3 w-3",
-                      isHost(cls) ? "bg-amber-500" : "bg-red-500"
-                    )} />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
                   </span>
                 </div>
                 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={cn(
-                      "text-xs font-bold uppercase tracking-wide",
-                      isHost(cls) ? "text-amber-500" : "text-red-500"
-                    )}>
+                    <span className="text-xs font-bold uppercase tracking-wide text-red-500">
                       {isHost(cls) ? 'Your Class is Live' : 'Live Now'}
                     </span>
-                    {isHost(cls) && (
-                      <Crown className="w-3 h-3 text-amber-500" />
-                    )}
+                    {isHost(cls) && <Crown className="w-3 h-3 text-primary" />}
+                    {cls.is_recurring && <RefreshCw className="w-3 h-3 text-muted-foreground" />}
                     {cls.course_name && (
                       <span className="text-xs text-muted-foreground hidden sm:inline">• {cls.course_name}</span>
                     )}
@@ -229,6 +216,9 @@ export const GlobalLiveClassBanner: React.FC = () => {
                   <h3 className="font-semibold text-foreground text-sm truncate">
                     {cls.title}
                   </h3>
+                  {cls.is_recurring && cls.recurrence_description && (
+                    <p className="text-xs text-muted-foreground">{cls.recurrence_description}</p>
+                  )}
                 </div>
               </div>
               
@@ -244,10 +234,7 @@ export const GlobalLiveClassBanner: React.FC = () => {
                 <Button
                   onClick={() => handleJoinClass(cls.id)}
                   size="sm"
-                  className={cn(
-                    "font-semibold shadow-md text-white text-xs h-8",
-                    isHost(cls) ? "bg-amber-500 hover:bg-amber-600" : "bg-red-500 hover:bg-red-600"
-                  )}
+                  className="font-semibold shadow-md text-white text-xs h-8 bg-red-500 hover:bg-red-600"
                 >
                   <Play className="w-3 h-3 mr-1 fill-current" />
                   {isHost(cls) ? 'Manage Class' : 'Join Now'}
@@ -268,11 +255,9 @@ export const GlobalLiveClassBanner: React.FC = () => {
               key={cls.id}
               className={cn(
                 "relative rounded-xl p-3 border shadow-xl overflow-hidden backdrop-blur-md",
-                isHosting
-                  ? "bg-gradient-to-r from-amber-500/15 to-yellow-500/10 border-amber-500/30"
-                  : hasStarted 
-                    ? "bg-gradient-to-r from-orange-500/15 to-yellow-500/10 border-orange-500/30"
-                    : "bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border-emerald-500/30"
+                hasStarted 
+                  ? "bg-gradient-to-r from-orange-500/15 to-yellow-500/10 border-orange-500/30"
+                  : "bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border-emerald-500/30"
               )}
             >
               <div className="absolute inset-0 bg-background/80 backdrop-blur-sm -z-10" />
@@ -281,21 +266,22 @@ export const GlobalLiveClassBanner: React.FC = () => {
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <Video className={cn(
                     "w-4 h-4 flex-shrink-0",
-                    isHosting ? "text-amber-500" : hasStarted ? "text-orange-500" : "text-emerald-500"
+                    hasStarted ? "text-orange-500" : "text-emerald-500"
                   )} />
                   
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={cn(
                         "text-xs font-semibold uppercase tracking-wide",
-                        isHosting ? "text-amber-500" : hasStarted ? "text-orange-500" : "text-emerald-500"
+                        hasStarted ? "text-orange-500" : "text-emerald-500"
                       )}>
                         {isHosting 
                           ? (hasStarted ? 'Your Class Started!' : 'Your Class Starting Soon')
                           : (hasStarted ? 'Class Started!' : 'Starting Soon')
                         }
                       </span>
-                      {isHosting && <Crown className="w-3 h-3 text-amber-500" />}
+                      {isHosting && <Crown className="w-3 h-3 text-primary" />}
+                      {cls.is_recurring && <RefreshCw className="w-3 h-3 text-muted-foreground" />}
                     </div>
                     <h3 className="font-semibold text-foreground text-sm truncate">
                       {cls.title}
@@ -306,6 +292,9 @@ export const GlobalLiveClassBanner: React.FC = () => {
                         ? `Started ${Math.abs(minutesUntil)} min ago`
                         : `Starts in ${minutesUntil} min`
                       }
+                      {cls.is_recurring && cls.recurrence_description && (
+                        <span className="ml-2">• {cls.recurrence_description}</span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -324,11 +313,9 @@ export const GlobalLiveClassBanner: React.FC = () => {
                     size="sm"
                     className={cn(
                       "font-semibold shadow-md text-white text-xs h-8",
-                      isHosting 
-                        ? "bg-amber-500 hover:bg-amber-600"
-                        : hasStarted 
-                          ? "bg-orange-500 hover:bg-orange-600"
-                          : "bg-emerald-500 hover:bg-emerald-600"
+                      hasStarted 
+                        ? "bg-orange-500 hover:bg-orange-600"
+                        : "bg-emerald-500 hover:bg-emerald-600"
                     )}
                   >
                     <Play className="w-3 h-3 mr-1 fill-current" />
