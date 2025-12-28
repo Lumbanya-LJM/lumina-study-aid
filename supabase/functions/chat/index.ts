@@ -512,13 +512,22 @@ async function executeToolCall(supabase: any, userId: string, toolName: string, 
       }
       
       case "create_flashcard_deck": {
+        // Transform cards from question/answer to front/back format expected by FlashcardsPage
+        const transformedCards = args.cards.map((card: any, index: number) => ({
+          id: index + 1,
+          front: card.question,
+          back: card.answer,
+          hint: card.hint || undefined
+        }));
+        
         const { data, error } = await supabase
           .from('flashcard_decks')
           .insert({
             user_id: userId,
             title: args.title,
             subject: args.subject,
-            cards: args.cards
+            cards: transformedCards,
+            next_review_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
           })
           .select()
           .single();
@@ -528,14 +537,23 @@ async function executeToolCall(supabase: any, userId: string, toolName: string, 
       }
       
       case "create_quiz": {
+        // Transform questions to use camelCase format expected by QuizPage
+        const transformedQuestions = args.questions.map((q: any, index: number) => ({
+          id: index + 1,
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correct_answer,
+          explanation: q.explanation || ""
+        }));
+        
         const { data, error } = await supabase
           .from('quizzes')
           .insert({
             user_id: userId,
             title: args.title,
             subject: args.subject,
-            questions: args.questions,
-            total_questions: args.questions.length
+            questions: transformedQuestions,
+            total_questions: transformedQuestions.length
           })
           .select()
           .single();
