@@ -95,7 +95,12 @@ const ChatPage: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [enableWebSearch, setEnableWebSearch] = useState(true);
+  // Read deep search default from localStorage (true if not set - making deep search the default)
+  const [enableWebSearch, setEnableWebSearch] = useState(() => {
+    const saved = localStorage.getItem('lumina_deep_search_default');
+    // Default to true if no preference is saved (deep search is default)
+    return saved !== null ? saved === 'true' : true;
+  });
   const [isZambiaLiiSearchOpen, setIsZambiaLiiSearchOpen] = useState(false);
 
   // Voice input hook
