@@ -69,6 +69,7 @@ const soundConfigs: Record<SoundType, SoundConfig> = {
 
 let audioContext: AudioContext | null = null;
 let isSoundEnabled = true;
+let isLuminaSoundsEnabled = false; // Lumina sounds OFF by default
 
 // Initialize audio context (must be called after user interaction)
 function getAudioContext(): AudioContext {
@@ -154,6 +155,27 @@ export function initSoundState(): void {
   if (stored !== null) {
     isSoundEnabled = stored === 'true';
   }
+  // Initialize Lumina sounds state (OFF by default)
+  const luminaStored = localStorage.getItem('lumina_sounds_enabled');
+  if (luminaStored !== null) {
+    isLuminaSoundsEnabled = luminaStored === 'true';
+  } else {
+    isLuminaSoundsEnabled = false; // Default to OFF
+  }
+}
+
+// Lumina sounds specific functions
+export function setLuminaSoundsEnabled(enabled: boolean): void {
+  isLuminaSoundsEnabled = enabled;
+  localStorage.setItem('lumina_sounds_enabled', String(enabled));
+}
+
+export function isLuminaSoundsEnabledState(): boolean {
+  const stored = localStorage.getItem('lumina_sounds_enabled');
+  if (stored !== null) {
+    isLuminaSoundsEnabled = stored === 'true';
+  }
+  return isLuminaSoundsEnabled;
 }
 
 // Sound notification utilities
@@ -164,10 +186,24 @@ export const sounds = {
   success: () => playSound('success'),
   reminder: () => playSound('reminder'),
   recordingReady: () => playSound('recordingReady'),
-  taskComplete: () => playSound('taskComplete'),
-  typing: () => playSound('typing'),
+  taskComplete: () => {
+    // Only play if Lumina sounds are enabled
+    if (isLuminaSoundsEnabledState()) {
+      return playSound('taskComplete');
+    }
+    return Promise.resolve();
+  },
+  typing: () => {
+    // Only play if Lumina sounds are enabled
+    if (isLuminaSoundsEnabledState()) {
+      return playSound('typing');
+    }
+    return Promise.resolve();
+  },
   setEnabled: setSoundEnabled,
   isEnabled: isSoundEnabledState,
+  setLuminaEnabled: setLuminaSoundsEnabled,
+  isLuminaEnabled: isLuminaSoundsEnabledState,
   init: initSoundState,
 };
 
