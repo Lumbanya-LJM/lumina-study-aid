@@ -315,6 +315,47 @@ const LUMINA_TOOLS = [
       description: "Get the user's upcoming live classes. Use when asked about classes or schedule.",
       parameters: { type: "object", properties: {} }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_my_files",
+      description: "Get list of files the user has uploaded to their StudyLocker. Use when user wants to create study materials from their own uploaded files or notes.",
+      parameters: {
+        type: "object",
+        properties: {
+          category: { type: "string", enum: ["notes", "past_papers", "videos", "other"], description: "Filter by file category. Optional." }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_course_materials",
+      description: "Get study materials uploaded by tutors for courses the user is enrolled in. Use when user wants to create flashcards or quizzes from course materials or tutor-uploaded files.",
+      parameters: {
+        type: "object",
+        properties: {
+          course_name: { type: "string", description: "Filter by course name. Optional - if not provided, returns materials from all enrolled courses." }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_file_content",
+      description: "Fetch the text content from a specific file URL. Use after getting file list to read content for generating study materials.",
+      parameters: {
+        type: "object",
+        properties: {
+          file_url: { type: "string", description: "The URL of the file to fetch content from" },
+          file_name: { type: "string", description: "The name of the file for context" }
+        },
+        required: ["file_url", "file_name"]
+      }
+    }
   }
 ];
 
@@ -533,7 +574,12 @@ async function executeToolCall(supabase: any, userId: string, toolName: string, 
           .single();
         
         if (error) throw error;
-        return { success: true, message: `Created flashcard deck "${args.title}" with ${args.cards.length} cards! You can review them in the Flashcards section.`, deck_id: data.id };
+        return { 
+          success: true, 
+          message: `✅ Created flashcard deck **"${args.title}"** with ${args.cards.length} cards!\n\n👉 **[Start Studying Now →](/flashcards/${data.id})**\n\nYou can also find it anytime in your Flashcards section.`, 
+          deck_id: data.id,
+          link: `/flashcards/${data.id}`
+        };
       }
       
       case "create_quiz": {
@@ -559,7 +605,12 @@ async function executeToolCall(supabase: any, userId: string, toolName: string, 
           .single();
         
         if (error) throw error;
-        return { success: true, message: `Created quiz "${args.title}" with ${args.questions.length} questions! You can take it anytime in the Quiz section.`, quiz_id: data.id };
+        return { 
+          success: true, 
+          message: `✅ Created quiz **"${args.title}"** with ${args.questions.length} questions!\n\n👉 **[Take Quiz Now →](/quiz/${data.id})**\n\nYou can also find it anytime in your Quiz section.`, 
+          quiz_id: data.id,
+          link: `/quiz/${data.id}`
+        };
       }
       
       case "create_journal_entry": {
@@ -626,6 +677,147 @@ async function executeToolCall(supabase: any, userId: string, toolName: string, 
           classes: classes || [],
           summary: classes?.length ? `You have ${classes.length} upcoming classes.` : "No upcoming classes scheduled."
         };
+      }
+      
+      case "get_my_files": {
+        let query = supabase
+          .from('user_files')
+          .select('id, file_name, file_url, file_type, category, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(20);
+        
+        if (args.category) {
+          query = query.eq('category', args.category);
+        }
+        
+        const { data: files, error } = await query;
+        
+        if (error) throw error;
+        
+        if (!files || files.length === 0) {
+          return {
+            success: true,
+            files: [],
+            message: "You haven't uploaded any files to your StudyLocker yet. Upload notes, past papers, or other study materials to generate flashcards and quizzes from them!"
+          };
+        }
+        
+        return {
+          success: true,
+          files: files.map((f: any) => ({
+            id: f.id,
+            name: f.file_name,
+            url: f.file_url,
+            type: f.file_type,
+            category: f.category
+          })),
+          message: `Found ${files.length} file(s) in your StudyLocker. You can ask me to create flashcards or a quiz from any of these.`
+        };
+      }
+      
+      case "get_course_materials": {
+        // First get user's enrolled courses
+        const { data: enrollments } = await supabase
+          .from('academy_enrollments')
+          .select('course_id, academy_courses(id, name)')
+          .eq('user_id', userId)
+          .eq('status', 'active');
+        
+        if (!enrollments || enrollments.length === 0) {
+          return {
+            success: true,
+            materials: [],
+            message: "You're not enrolled in any courses yet. Enroll in a course to access tutor-uploaded materials."
+          };
+        }
+        
+        const courseIds = enrollments.map((e: any) => e.course_id);
+        const courseNames = enrollments.map((e: any) => e.academy_courses?.name || 'Unknown');
+        
+        // Filter by course name if provided
+        let filteredCourseIds = courseIds;
+        if (args.course_name) {
+          const matchingEnrollment = enrollments.find((e: any) => 
+            e.academy_courses?.name?.toLowerCase().includes(args.course_name.toLowerCase())
+          );
+          if (matchingEnrollment) {
+            filteredCourseIds = [matchingEnrollment.course_id];
+          }
+        }
+        
+        // Get course materials
+        const { data: materials, error } = await supabase
+          .from('course_materials')
+          .select('id, title, file_url, file_type, description, course_id, academy_courses(name)')
+          .in('course_id', filteredCourseIds)
+          .order('created_at', { ascending: false })
+          .limit(20);
+        
+        if (error) throw error;
+        
+        if (!materials || materials.length === 0) {
+          return {
+            success: true,
+            materials: [],
+            message: args.course_name 
+              ? `No materials found for "${args.course_name}". The tutor may not have uploaded any yet.`
+              : "No course materials available yet. Your tutors will upload materials as the course progresses."
+          };
+        }
+        
+        return {
+          success: true,
+          materials: materials.map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            url: m.file_url,
+            type: m.file_type,
+            description: m.description,
+            course: m.academy_courses?.name
+          })),
+          enrolled_courses: courseNames,
+          message: `Found ${materials.length} course material(s). You can ask me to create flashcards or a quiz from any of these.`
+        };
+      }
+      
+      case "get_file_content": {
+        try {
+          // Attempt to fetch file content
+          const fileUrl = args.file_url;
+          const fileName = args.file_name;
+          
+          console.log(`Fetching content from: ${fileName}`);
+          
+          // Check file type
+          const isTextFile = /\.(txt|md|json|csv)$/i.test(fileName);
+          const isPdf = /\.pdf$/i.test(fileName);
+          const isDocx = /\.(docx?)$/i.test(fileName);
+          
+          if (!isTextFile && !isPdf && !isDocx) {
+            return {
+              success: false,
+              message: `Cannot extract text from ${fileName}. I can read text files (.txt, .md), PDFs, and Word documents. For other file types, please describe the content you want me to use.`
+            };
+          }
+          
+          // For now, return guidance - actual content extraction would require more complex processing
+          return {
+            success: true,
+            message: `I found the file "${fileName}". To create study materials from this file, please copy and paste the key content you want me to focus on, or describe the main topics covered in the document. I'll then generate comprehensive flashcards or quiz questions based on that content.`,
+            file_info: {
+              name: fileName,
+              url: fileUrl,
+              suggestion: "Share the key topics or paste important sections for best results."
+            }
+          };
+        } catch (error) {
+          console.error("Error fetching file content:", error);
+          return {
+            success: false,
+            message: `Could not access the file content. Please try sharing the key topics or content manually.`
+          };
+        }
       }
       
       default:

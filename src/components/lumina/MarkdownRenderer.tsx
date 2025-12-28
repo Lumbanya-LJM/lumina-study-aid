@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 interface MarkdownRendererProps {
@@ -9,10 +10,22 @@ interface MarkdownRendererProps {
 }
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className, streaming }) => {
+  const navigate = useNavigate();
+  
   // Memoize the markdown content to prevent unnecessary re-renders during streaming
   const displayContent = useMemo(() => {
     return streaming ? content : content;
   }, [content, streaming]);
+
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string | undefined) => {
+    if (!href) return;
+    
+    // Check if it's an internal link (starts with /)
+    if (href.startsWith('/')) {
+      e.preventDefault();
+      navigate(href);
+    }
+  };
 
   return (
     <div className={cn("text-sm leading-relaxed", className)}>
@@ -99,17 +112,24 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
               {children}
             </blockquote>
           ),
-          // Links
-          a: ({ children, href }) => (
-            <a 
-              href={href} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary hover:underline underline-offset-2"
-            >
-              {children}
-            </a>
-          ),
+          // Links - handle internal navigation
+          a: ({ children, href }) => {
+            const isInternal = href?.startsWith('/');
+            return (
+              <a 
+                href={href} 
+                onClick={(e) => handleLinkClick(e, href)}
+                target={isInternal ? undefined : "_blank"}
+                rel={isInternal ? undefined : "noopener noreferrer"}
+                className={cn(
+                  "text-primary hover:underline underline-offset-2 font-medium",
+                  isInternal && "cursor-pointer"
+                )}
+              >
+                {children}
+              </a>
+            );
+          },
           // Horizontal rule
           hr: () => <hr className="border-border/50 my-4" />,
           // Tables
