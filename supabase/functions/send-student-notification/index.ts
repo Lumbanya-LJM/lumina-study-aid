@@ -13,7 +13,8 @@ type NotificationType =
   | 'recording_ready'
   | 'class_scheduled'
   | 'new_material'
-  | 'tutor_update';
+  | 'tutor_update'
+  | 'recurring_class_created';
 
 interface NotificationRequest {
   type: NotificationType;
@@ -197,6 +198,8 @@ function getEmailTitle(type: NotificationType): string {
       return '📚 New Course Material';
     case 'tutor_update':
       return '📢 Tutor Update';
+    case 'recurring_class_created':
+      return '🔄 Next Recurring Class Scheduled';
     default:
       return '🔔 Course Notification';
   }
@@ -290,6 +293,24 @@ function generateEmailContent(
           ${data.description ? `<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;"><p style="margin: 0;">${data.description}</p></div>` : ''}
           <p style="text-align: center;">
             <a href="{APP_URL}/academy" class="button">View Full Update</a>
+          </p>
+        `,
+      };
+
+    case 'recurring_class_created':
+      return {
+        subject: `🔄 Next ${data.title} class scheduled`,
+        emailContent: `
+          <p>Your next recurring class has been automatically scheduled!</p>
+          <div class="info-box">
+            <p><strong>Class:</strong> ${data.title}</p>
+            <p><strong>Course:</strong> ${courseName}</p>
+            <p><strong>When:</strong> ${formatDate(data.scheduledAt)}</p>
+            ${data.tutorName ? `<p><strong>Tutor:</strong> ${data.tutorName}</p>` : ''}
+          </div>
+          <p>This is a recurring class that meets at the same time each week. Mark your calendar!</p>
+          <p style="text-align: center;">
+            <a href="{APP_URL}/academy" class="button">View Class Schedule</a>
           </p>
         `,
       };

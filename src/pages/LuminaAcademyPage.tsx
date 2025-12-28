@@ -6,6 +6,7 @@ import {
   Bell,
   Video,
   Calendar,
+  CalendarDays,
   ExternalLink,
   BookOpen,
   Play,
@@ -31,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AddCourseModal } from '@/components/academy/AddCourseModal';
+import { WeeklyClassCalendar } from '@/components/academy/WeeklyClassCalendar';
 
 interface Course {
   id: string;
@@ -486,8 +488,12 @@ const LuminaAcademyPage: React.FC = () => {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue="classes" className="flex-1">
-          <TabsList className="w-full mb-4 grid grid-cols-4">
+        <Tabs defaultValue="schedule" className="flex-1">
+          <TabsList className="w-full mb-4 grid grid-cols-5">
+            <TabsTrigger value="schedule" className="text-xs gap-1">
+              <CalendarDays className="w-3.5 h-3.5" />
+              Schedule
+            </TabsTrigger>
             <TabsTrigger value="classes" className="text-xs gap-1">
               <Video className="w-3.5 h-3.5" />
               Classes
@@ -512,6 +518,11 @@ const LuminaAcademyPage: React.FC = () => {
             </div>
           ) : (
             <>
+              {/* Schedule Tab - Weekly Calendar */}
+              <TabsContent value="schedule" className="space-y-4">
+                <WeeklyClassCalendar />
+              </TabsContent>
+
               {/* Classes Tab */}
               <TabsContent value="classes" className="space-y-4">
                 {scheduledClasses.length > 0 ? (
