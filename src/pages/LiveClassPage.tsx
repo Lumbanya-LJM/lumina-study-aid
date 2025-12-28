@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, Users, PhoneOff, MonitorUp } from "lucide-react";
+import { Loader2, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, Users, PhoneOff, MonitorUp, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 
 interface LiveClass {
@@ -121,10 +121,32 @@ const LiveClassPage: React.FC = () => {
   }, []);
 
   const handleJoinMeeting = async () => {
-    if (!liveClass?.daily_room_name || !liveClass?.daily_room_url) {
+    if (!liveClass?.daily_room_url) {
       toast({
         title: "No Meeting Room",
-        description: "This class doesn't have a valid video room.",
+        description: "This class doesn't have a valid video room. Please edit the class to add one.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if this is a Daily.co room (we can only get tokens for Daily.co rooms)
+    const isDailyRoom = liveClass.daily_room_url.includes('daily.co');
+    
+    if (!isDailyRoom) {
+      // For external links (Zoom, Google Meet, etc.), open in new tab
+      window.open(liveClass.daily_room_url, '_blank');
+      toast({
+        title: "Opening External Link",
+        description: "The class is using an external meeting platform.",
+      });
+      return;
+    }
+
+    if (!liveClass.daily_room_name) {
+      toast({
+        title: "Invalid Room Configuration",
+        description: "The Daily.co room is not properly configured.",
         variant: "destructive",
       });
       return;
@@ -394,66 +416,95 @@ const LiveClassPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <Button
-                      size="lg"
-                      className="w-full gradient-primary"
-                      onClick={handleJoinMeeting}
-                      disabled={joining || !liveClass.daily_room_url}
-                    >
-                      {joining ? (
-                        <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Connecting...
-                        </>
+                    {liveClass.daily_room_url ? (
+                      liveClass.daily_room_url.includes('daily.co') ? (
+                        <Button
+                          size="lg"
+                          className="w-full gradient-primary"
+                          onClick={handleJoinMeeting}
+                          disabled={joining}
+                        >
+                          {joining ? (
+                            <>
+                              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                              Connecting...
+                            </>
+                          ) : (
+                            <>
+                              <Video className="h-5 w-5 mr-2" />
+                              Join Class
+                            </>
+                          )}
+                        </Button>
                       ) : (
-                        <>
-                          <Video className="h-5 w-5 mr-2" />
-                          Join Class
-                        </>
-                      )}
-                    </Button>
-
-                    {!liveClass.daily_room_url && (
-                      <p className="text-xs text-destructive text-center">
-                        No video room available. Please contact the tutor.
-                      </p>
+                        <Button
+                          size="lg"
+                          className="w-full"
+                          onClick={() => window.open(liveClass.daily_room_url!, '_blank')}
+                        >
+                          <ExternalLink className="h-5 w-5 mr-2" />
+                          Open Meeting Link
+                        </Button>
+                      )
+                    ) : (
+                      <div className="text-center p-4 bg-destructive/10 rounded-lg">
+                        <p className="text-sm text-destructive font-medium">
+                          No video room available
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          The tutor needs to add a meeting link for this class.
+                        </p>
+                      </div>
                     )}
                   </div>
 
-                  <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
-                    <p className="flex items-center gap-2">
-                      <Mic className="h-3 w-3" />
-                      Your microphone will be requested
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <Camera className="h-3 w-3" />
-                      Camera is optional but encouraged
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <Users className="h-3 w-3" />
-                      You'll join with your Lumina name
-                    </p>
-                  </div>
+                  {liveClass.daily_room_url?.includes('daily.co') && (
+                    <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
+                      <p className="flex items-center gap-2">
+                        <Mic className="h-3 w-3" />
+                        Your microphone will be requested
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Camera className="h-3 w-3" />
+                        Camera is optional but encouraged
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Users className="h-3 w-3" />
+                        You'll join with your Lumina name
+                      </p>
+                    </div>
+                  )}
+
+                  {!liveClass.daily_room_url?.includes('daily.co') && liveClass.daily_room_url && (
+                    <div className="text-xs text-muted-foreground pt-2 border-t">
+                      <p className="flex items-center gap-2">
+                        <ExternalLink className="h-3 w-3" />
+                        This class uses an external meeting platform
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Auto-recording info */}
-              <Card className="border-green-500/20 bg-green-500/5">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Video className="h-4 w-4 text-green-500" />
+              {/* Auto-recording info - only for Daily.co rooms */}
+              {liveClass.daily_room_url?.includes('daily.co') && (
+                <Card className="border-green-500/20 bg-green-500/5">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Video className="h-4 w-4 text-green-500" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-sm">Auto-Recording Enabled</h3>
+                        <p className="text-xs text-muted-foreground">
+                          This class is recorded automatically. The recording and AI summary 
+                          will be available after the class ends.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium text-sm">Auto-Recording Enabled</h3>
-                      <p className="text-xs text-muted-foreground">
-                        This class is recorded automatically. The recording and AI summary 
-                        will be available after the class ends.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         )}

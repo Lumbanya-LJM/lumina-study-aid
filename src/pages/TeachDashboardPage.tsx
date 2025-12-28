@@ -28,6 +28,8 @@ import {
   TrendingUp,
   Mail,
   Pencil,
+  Play,
+  ExternalLink,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PostUpdateForm from '@/components/teach/PostUpdateForm';
@@ -77,6 +79,7 @@ interface ScheduledClass {
   status: string;
   course_id: string;
   course_name?: string;
+  daily_room_url: string | null;
 }
 
 const TeachDashboardPage: React.FC = () => {
@@ -175,7 +178,7 @@ const TeachDashboardPage: React.FC = () => {
 
       const { data: upcomingClassesData } = await supabase
         .from('live_classes')
-        .select('id, title, description, scheduled_at, status, course_id')
+        .select('id, title, description, scheduled_at, status, course_id, daily_room_url')
         .eq('host_id', user.id)
         .in('status', ['scheduled', 'live'])
         .gte('scheduled_at', new Date().toISOString())
@@ -344,53 +347,102 @@ const TeachDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {scheduledClasses.map((cls) => (
-                <div
-                  key={cls.id}
-                  className="flex items-center justify-between p-3 bg-background rounded-lg border border-border/50 group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center",
-                      cls.status === 'live' ? "bg-red-500/20" : "bg-primary/10"
-                    )}>
-                      <Video className={cn(
-                        "w-5 h-5",
-                        cls.status === 'live' ? "text-red-500" : "text-primary"
-                      )} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{cls.title}</p>
-                      <p className="text-xs text-muted-foreground">{cls.course_name}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-right">
-                      {cls.status === 'live' ? (
-                        <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
-                      ) : (
-                        <Badge variant="secondary">Scheduled</Badge>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatInTimeZone(new Date(cls.scheduled_at), ZAMBIA_TIMEZONE, 'MMM d, h:mm a')} CAT
-                      </p>
-                    </div>
-                    {cls.status !== 'live' && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => {
-                          setEditingClassId(cls.id);
-                          setEditClassModalOpen(true);
-                        }}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
+              {scheduledClasses.map((cls) => {
+                const classDate = new Date(cls.scheduled_at);
+                const now = new Date();
+                const isToday = classDate.toDateString() === now.toDateString();
+                const isStartingSoon = classDate.getTime() - now.getTime() <= 30 * 60 * 1000; // Within 30 mins
+                const isLive = cls.status === 'live';
+                const canStart = isToday || isStartingSoon || isLive;
+
+                return (
+                  <div
+                    key={cls.id}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg border group",
+                      isLive ? "bg-red-500/10 border-red-500/30" :
+                      isStartingSoon ? "bg-emerald-500/10 border-emerald-500/30" :
+                      isToday ? "bg-primary/10 border-primary/30" :
+                      "bg-background border-border/50"
                     )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center",
+                        isLive ? "bg-red-500/20" :
+                        isStartingSoon ? "bg-emerald-500/20" :
+                        "bg-primary/10"
+                      )}>
+                        <Video className={cn(
+                          "w-5 h-5",
+                          isLive ? "text-red-500" :
+                          isStartingSoon ? "text-emerald-500" :
+                          "text-primary"
+                        )} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{cls.title}</p>
+                        <p className="text-xs text-muted-foreground">{cls.course_name}</p>
+                        {isToday && !isLive && (
+                          <p className="text-xs font-medium text-primary mt-0.5">
+                            {isStartingSoon ? '🔔 Starting soon!' : '📅 Today'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        {isLive ? (
+                          <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
+                        ) : isStartingSoon ? (
+                          <Badge className="bg-emerald-500 hover:bg-emerald-600">Ready</Badge>
+                        ) : isToday ? (
+                          <Badge variant="secondary" className="bg-primary/20 text-primary">Today</Badge>
+                        ) : (
+                          <Badge variant="secondary">Scheduled</Badge>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatInTimeZone(new Date(cls.scheduled_at), ZAMBIA_TIMEZONE, 'MMM d, h:mm a')} CAT
+                        </p>
+                      </div>
+                      
+                      {/* Start/Join Class Button */}
+                      {canStart && (
+                        <Button
+                          size="sm"
+                          variant={isLive ? "destructive" : "default"}
+                          className={cn(
+                            "gap-1.5",
+                            !isLive && "gradient-primary"
+                          )}
+                          onClick={() => navigate(`/live/${cls.id}`)}
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                          {isLive ? 'Join' : 'Start'}
+                        </Button>
+                      )}
+                      
+                      {/* Edit button for non-live classes */}
+                      {!isLive && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "transition-opacity",
+                            !canStart && "opacity-0 group-hover:opacity-100"
+                          )}
+                          onClick={() => {
+                            setEditingClassId(cls.id);
+                            setEditClassModalOpen(true);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -517,26 +569,78 @@ const TeachDashboardPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {scheduledClasses.map((cls) => (
-                <div
-                  key={cls.id}
-                  className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Video className="w-6 h-6 text-primary" />
+              {scheduledClasses.map((cls) => {
+                const classDate = new Date(cls.scheduled_at);
+                const now = new Date();
+                const isToday = classDate.toDateString() === now.toDateString();
+                const isStartingSoon = classDate.getTime() - now.getTime() <= 30 * 60 * 1000;
+                const isLive = cls.status === 'live';
+                const canStart = isToday || isStartingSoon || isLive;
+
+                return (
+                  <div
+                    key={cls.id}
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-lg",
+                      isLive ? "bg-red-500/10 border border-red-500/30" :
+                      isStartingSoon ? "bg-emerald-500/10 border border-emerald-500/30" :
+                      isToday ? "bg-primary/10 border border-primary/30" :
+                      "bg-muted/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-12 h-12 rounded-lg flex items-center justify-center",
+                        isLive ? "bg-red-500/20" :
+                        isStartingSoon ? "bg-emerald-500/20" :
+                        "bg-primary/10"
+                      )}>
+                        <Video className={cn(
+                          "w-6 h-6",
+                          isLive ? "text-red-500" :
+                          isStartingSoon ? "text-emerald-500" :
+                          "text-primary"
+                        )} />
+                      </div>
+                      <div>
+                        <p className="font-medium">{cls.title}</p>
+                        <p className="text-sm text-muted-foreground">{cls.course_name}</p>
+                        {isToday && !isLive && (
+                          <p className="text-xs font-medium text-primary mt-0.5">
+                            {isStartingSoon ? '🔔 Starting soon!' : '📅 Today'}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{cls.title}</p>
-                      <p className="text-sm text-muted-foreground">{cls.course_name}</p>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        {isLive ? (
+                          <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
+                        ) : isStartingSoon ? (
+                          <Badge className="bg-emerald-500 hover:bg-emerald-600">Ready</Badge>
+                        ) : isToday ? (
+                          <Badge variant="secondary" className="bg-primary/20 text-primary">Today</Badge>
+                        ) : (
+                          <Badge variant="secondary">Scheduled</Badge>
+                        )}
+                        <p className="font-medium mt-1">{format(new Date(cls.scheduled_at), 'MMM d, yyyy')}</p>
+                        <p className="text-sm text-muted-foreground">{format(new Date(cls.scheduled_at), 'h:mm a')}</p>
+                      </div>
+                      
+                      {canStart && (
+                        <Button
+                          variant={isLive ? "destructive" : "default"}
+                          className={cn("gap-2", !isLive && "gradient-primary")}
+                          onClick={() => navigate(`/live/${cls.id}`)}
+                        >
+                          <Play className="w-4 h-4" />
+                          {isLive ? 'Join Class' : 'Start Class'}
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{format(new Date(cls.scheduled_at), 'MMM d, yyyy')}</p>
-                    <p className="text-sm text-muted-foreground">{format(new Date(cls.scheduled_at), 'h:mm a')}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
