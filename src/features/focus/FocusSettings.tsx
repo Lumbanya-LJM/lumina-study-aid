@@ -3,6 +3,7 @@ import { useFocusSessionStore } from './useFocusSession';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   Sheet,
   SheetContent,
@@ -11,6 +12,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Settings } from 'lucide-react';
+import { AmbientSounds } from '@/components/premium/AmbientSounds';
 
 export const FocusSettings: React.FC = () => {
   const { settings, actions } = useFocusSessionStore(state => ({
@@ -33,34 +35,42 @@ export const FocusSettings: React.FC = () => {
           <Settings className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent>
+      <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Focus Settings</SheetTitle>
         </SheetHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="focus-duration" className="text-right">
-              Focus (minutes)
-            </Label>
-            <Input
-              id="focus-duration"
-              type="number"
-              value={settings.focusDuration / 60}
-              onChange={handleFocusChange}
-              className="col-span-3"
-            />
+        <div className="grid gap-6 py-4">
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-foreground">Timer Settings</h3>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="focus-duration" className="text-right text-sm">
+                Focus (min)
+              </Label>
+              <Input
+                id="focus-duration"
+                type="number"
+                value={settings.focusDuration / 60}
+                onChange={handleFocusChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="break-duration" className="text-right text-sm">
+                Break (min)
+              </Label>
+              <Input
+                id="break-duration"
+                type="number"
+                value={settings.breakDuration / 60}
+                onChange={handleBreakChange}
+                className="col-span-3"
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="break-duration" className="text-right">
-              Break (minutes)
-            </Label>
-            <Input
-              id="break-duration"
-              type="number"
-              value={settings.breakDuration / 60}
-              onChange={handleBreakChange}
-              className="col-span-3"
-            />
+          
+          <div className="border-t border-border pt-4">
+            <h3 className="text-sm font-medium text-foreground mb-4">Ambient Sounds</h3>
+            <AmbientSounds />
           </div>
         </div>
       </SheetContent>
