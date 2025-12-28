@@ -211,6 +211,14 @@ const TeachDashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    
+    // Auto-refresh class statuses every 30 seconds
+    const refreshInterval = setInterval(() => {
+      loadData();
+    }, 30000);
+    
+    return () => clearInterval(refreshInterval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
