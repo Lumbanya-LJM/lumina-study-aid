@@ -1,4 +1,6 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import {
   LayoutDashboard,
   Bell,
@@ -12,6 +14,8 @@ import {
   GraduationCap,
   Settings,
   Menu,
+  ArrowLeft,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -101,9 +105,22 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   onTabChange,
   onClose,
 }) => {
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+
   const handleClick = (id: string) => {
     onTabChange(id);
     onClose?.();
+  };
+
+  const handleExit = () => {
+    navigate('/home');
+    onClose?.();
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   return (
@@ -187,6 +204,24 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           })}
         </nav>
       </ScrollArea>
+
+      {/* Footer with Exit and Logout */}
+      <div className="p-2 border-t border-border/50 space-y-1">
+        <button
+          onClick={handleExit}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="w-5 h-5 shrink-0" />
+          <span className="font-medium text-sm">Exit to Student App</span>
+        </button>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:bg-destructive/10 text-destructive"
+        >
+          <LogOut className="w-5 h-5 shrink-0" />
+          <span className="font-medium text-sm">Log Out</span>
+        </button>
+      </div>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import {
   ArrowLeft,
   BarChart3,
@@ -12,6 +13,7 @@ import {
   Activity,
   Shield,
   Menu,
+  LogOut,
 } from 'lucide-react';
 import { SidebarUserHeader } from '@/components/layout/SidebarUserHeader';
 import { cn } from '@/lib/utils';
@@ -90,6 +92,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   onClose,
 }) => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   const handleClick = (id: string) => {
     onTabChange(id);
@@ -99,6 +102,11 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   const handleExit = () => {
     navigate('/home');
     onClose?.();
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   return (
@@ -153,16 +161,21 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         </nav>
       </ScrollArea>
 
-      {/* Exit Button */}
-      <div className="p-2 border-t border-border/50">
+      {/* Footer with Exit and Logout */}
+      <div className="p-2 border-t border-border/50 space-y-1">
         <button
           onClick={handleExit}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:bg-muted/50 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-5 h-5 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <span className="font-medium text-sm">Exit to Student App</span>
-          </div>
+          <span className="font-medium text-sm">Exit to Student App</span>
+        </button>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:bg-destructive/10 text-destructive"
+        >
+          <LogOut className="w-5 h-5 shrink-0" />
+          <span className="font-medium text-sm">Log Out</span>
         </button>
       </div>
     </div>

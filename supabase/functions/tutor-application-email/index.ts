@@ -81,19 +81,12 @@ const handler = async (req: Request): Promise<Response> => {
             });
         }
     } else if (type === 'approved') {
+        // For approved tutors - they already have an account, just inform them about tutor access
         const approvedContent = `
             <p>We are thrilled to inform you that your application to become a tutor at LMV Academy has been <strong style="color: #16a34a;">approved</strong>!</p>
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
-                <p style="color: #166534; margin: 0;">🌟 You're now part of our elite teaching team!</p>
+            <div class="info-box">
+                <p>🌟 You're now part of our elite teaching team!</p>
             </div>
-            ${temporaryPassword ? `
-                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
-                    <p style="font-weight: bold; margin-bottom: 15px;">Your Login Credentials:</p>
-                    <p><strong>Email:</strong> ${applicantEmail}</p>
-                    <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
-                </div>
-                <p style="color: #ef4444;"><strong>Important:</strong> Please change your password after your first login for security.</p>
-            ` : ''}
             <p>As a Luminary Tutor, you now have access to:</p>
             <ul>
                 <li><strong>Create and manage courses</strong></li>
@@ -102,8 +95,13 @@ const handler = async (req: Request): Promise<Response> => {
                 <li><strong>Post updates</strong></li>
                 <li><strong>Track student progress</strong></li>
             </ul>
-            <p>To get started, log in to your account and look for the <strong>"Teach"</strong> button in the Academy section.</p>
-            <p style="font-weight: bold; font-size: 18px; text-align: center; margin-top: 30px;">Welcome to the team! 🚀</p>
+            <div class="info-box">
+                <p><strong>How to access your Tutor Dashboard:</strong></p>
+                <p>1. Log in to LMV Academy using your existing account credentials</p>
+                <p>2. Look for the <strong>role switcher</strong> in the sidebar menu</p>
+                <p>3. Select <strong>"Tutor Dashboard"</strong> to access your teaching portal</p>
+            </div>
+            <p style="font-weight: bold; font-size: 18px; text-align: center; margin-top: 30px; color: #2A5A6A;">Welcome to the team! 🚀</p>
             <p>Best regards,<br><strong>The LMV Academy Team</strong></p>
         `;
         const approvedEmailHtml = getEmailTemplate({ title: '🎉 Congratulations!', name: applicantName, content: approvedContent });
