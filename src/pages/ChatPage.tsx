@@ -59,7 +59,15 @@ interface Conversation {
   updated_at: string;
 }
 
-const quickPrompts = [
+import type { LucideIcon } from 'lucide-react';
+
+interface QuickPrompt {
+  icon: LucideIcon;
+  label: string;
+  action: string;
+}
+
+const quickPrompts: QuickPrompt[] = [
   { icon: FileText, label: 'Summarise a case', action: 'summarise' },
   { icon: Brain, label: 'Create flashcards', action: 'flashcards' },
   { icon: BookOpen, label: 'Quiz me', action: 'quiz' },
@@ -135,22 +143,6 @@ const ChatPage: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load conversations on mount
-  useEffect(() => {
-    if (user) {
-      loadConversations();
-    }
-  }, [user, loadConversations]);
-
-  // Load messages when conversation changes
-  useEffect(() => {
-    if (user && currentConversationId) {
-      loadChatHistory(currentConversationId);
-    } else if (user && currentConversationId === null) {
-      setMessages([]);
-      setIsLoadingHistory(false);
-    }
-  }, [user, currentConversationId, loadChatHistory]);
 
   // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -216,6 +208,23 @@ const ChatPage: React.FC = () => {
     } catch (error) {
       console.error('Error loading chat history:', error);
     } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [user]);
+
+  // Load conversations on mount
+  useEffect(() => {
+    if (user) {
+      loadConversations();
+    }
+  }, [user, loadConversations]);
+
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (user && currentConversationId) {
+      loadChatHistory(currentConversationId);
+    } else if (user && currentConversationId === null) {
+      setMessages([]);
       setIsLoadingHistory(false);
     }
   }, [user]);
@@ -458,7 +467,8 @@ const ChatPage: React.FC = () => {
       }));
       
       // Build the current message content with images for vision analysis
-      let currentMessageContent: React.ChangeEvent<HTMLInputElement> | string = messageText;
+      type MessageContent = string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+      let currentMessageContent: MessageContent = messageText;
       
       // If we have image attachments, format for multimodal AI
       const imageAttachments = attachments.filter(a => a.type === 'image' && a.preview);
@@ -467,12 +477,12 @@ const ChatPage: React.FC = () => {
           { type: 'text', text: messageText || 'Please analyze this image.' },
           ...imageAttachments.map(img => ({
             type: 'image_url',
-            image_url: { url: img.preview }
+            image_url: { url: img.preview! }
           }))
         ];
       }
       
-      apiMessages.push({ role: 'user', content: currentMessageContent });
+      apiMessages.push({ role: 'user', content: currentMessageContent as string });
 
       // Get the user's session token for authenticated requests
       const { data: { session } } = await supabase.auth.getSession();

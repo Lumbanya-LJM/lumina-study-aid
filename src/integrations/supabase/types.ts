@@ -395,6 +395,36 @@ export type Database = {
         }
         Relationships: []
       }
+      focus_sessions: {
+        Row: {
+          created_at: string
+          end_time: string | null
+          id: string
+          settings: Json | null
+          start_time: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          settings?: Json | null
+          start_time: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          settings?: Json | null
+          start_time?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       journal_entries: {
         Row: {
           content: string
