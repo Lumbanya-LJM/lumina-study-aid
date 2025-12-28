@@ -247,35 +247,33 @@ const ClassRecordingsPage: React.FC = () => {
   const handleSyncRecordings = async () => {
     setSyncing(true);
     try {
-      // Check for recordings on all pending classes
-      let syncedCount = 0;
-      
-      for (const pending of pendingRecordings) {
-        if (!pending.daily_room_name) continue;
-        
-        const { data } = await supabase.functions.invoke("daily-room", {
-          body: {
-            action: "get-recordings",
-            roomName: pending.daily_room_name,
-          },
-        });
+      // Call the sync-recordings edge function
+      const { data, error } = await supabase.functions.invoke("sync-recordings");
 
-        if (data?.recordings?.length > 0) {
-          syncedCount++;
-        }
+      if (error) {
+        throw error;
       }
 
-      if (syncedCount > 0) {
-        toast({
-          title: "Recordings Synced",
-          description: `${syncedCount} new recording(s) are now available.`,
-        });
-        loadClasses();
-      } else {
-        toast({
-          title: "No New Recordings",
-          description: "All recordings are up to date or still processing.",
-        });
+      if (data?.results) {
+        const { synced, notReady, noRecording } = data.results;
+        
+        if (synced > 0) {
+          toast({
+            title: "Recordings Synced",
+            description: `${synced} new recording(s) are now available! Students have been notified.`,
+          });
+          loadClasses();
+        } else if (notReady > 0) {
+          toast({
+            title: "Recordings Still Processing",
+            description: `${notReady} recording(s) are still being processed by Daily.co.`,
+          });
+        } else {
+          toast({
+            title: "No New Recordings",
+            description: "All recordings are up to date or have no recorded content.",
+          });
+        }
       }
     } catch (error) {
       console.error("Error syncing recordings:", error);

@@ -106,6 +106,59 @@ serve(async (req) => {
           continue;
         }
 
+        // Send notifications to enrolled students
+        if (liveClass.course_id) {
+          try {
+            const { data: enrollments } = await supabase
+              .from("academy_enrollments")
+              .select("user_id")
+              .eq("course_id", liveClass.course_id)
+              .eq("status", "active");
+
+            if (enrollments && enrollments.length > 0) {
+              const userIds = enrollments.map((e: any) => e.user_id);
+              console.log(`Notifying ${userIds.length} students about recording for ${liveClass.title}`);
+
+              // Send push notifications
+              await supabase.functions.invoke("send-push-notification", {
+                body: {
+                  userIds,
+                  payload: {
+                    title: "📹 Class Recording Available",
+                    body: `The recording for "${liveClass.title}" is now available!`,
+                    icon: "/pwa-192x192.png",
+                    data: {
+                      type: "recording_ready",
+                      classId: liveClass.id,
+                      url: "/recordings",
+                    },
+                  },
+                },
+              });
+
+              // Send email notifications
+              await supabase.functions.invoke("send-student-notification", {
+                body: {
+                  type: "recording_ready",
+                  courseId: liveClass.course_id,
+                  data: {
+                    title: liveClass.title,
+                    classId: liveClass.id,
+                    description: liveClass.description || undefined,
+                  },
+                },
+              });
+            }
+          } catch (notifyError) {
+            console.error(`Error sending notifications for ${liveClass.id}:`, notifyError);
+          }
+        }
+
+        if (updateError) {
+          console.error(`Error updating class ${liveClass.id}:`, updateError);
+          continue;
+        }
+
         console.log(`Successfully synced recording for: ${liveClass.title}`);
         results.synced++;
 
