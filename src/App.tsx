@@ -70,9 +70,9 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <CommandPalette />
-          <AchievementConfetti />
           <BrowserRouter>
+            <CommandPalette />
+            <AchievementConfetti />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<SplashScreen />} />
