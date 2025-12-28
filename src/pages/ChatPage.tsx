@@ -29,7 +29,7 @@ import {
   Image,
   X,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -79,6 +79,7 @@ const quickPrompts: QuickPrompt[] = [
 
 const ChatPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
   const { notify } = useLuminaTaskNotification();
@@ -107,8 +108,54 @@ const ChatPage: React.FC = () => {
     return saved !== null ? saved === 'true' : true;
   });
   const [isZambiaLiiSearchOpen, setIsZambiaLiiSearchOpen] = useState(false);
+  const [pendingFileId, setPendingFileId] = useState<string | null>(null);
+  const [pendingFileLoaded, setPendingFileLoaded] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const typingSoundIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle file query parameter from StudyLocker
+  useEffect(() => {
+    const fileId = searchParams.get('file');
+    if (fileId && !pendingFileLoaded && user) {
+      setPendingFileId(fileId);
+      loadFileForStudy(fileId);
+      // Clear the query param
+      setSearchParams({});
+    }
+  }, [searchParams, user, pendingFileLoaded]);
+
+  const loadFileForStudy = async (fileId: string) => {
+    try {
+      const { data: file, error } = await supabase
+        .from('user_files')
+        .select('*')
+        .eq('id', fileId)
+        .single();
+
+      if (error || !file) {
+        console.error('Error loading file:', error);
+        toast({
+          variant: 'destructive',
+          title: 'File not found',
+          description: 'Could not load the selected file.',
+        });
+        return;
+      }
+
+      // Set the message to ask Lumina to create study materials
+      const studyPrompt = `Please help me study from my file "${file.file_name}". First, read the content from this file (URL: ${file.file_url}) and then create flashcards and a quiz to help me learn the key concepts.`;
+      
+      setMessage(studyPrompt);
+      setPendingFileLoaded(true);
+      
+      toast({
+        title: 'File loaded',
+        description: `Ready to study from "${file.file_name}". Press send to generate study materials.`,
+      });
+    } catch (error) {
+      console.error('Error loading file for study:', error);
+    }
+  };
 
   // Voice input hook
   const handleVoiceResult = useCallback((transcript: string) => {
