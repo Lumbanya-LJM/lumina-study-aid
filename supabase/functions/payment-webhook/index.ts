@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,9 +13,25 @@ serve(async (req) => {
   }
 
   try {
-    const payload = await req.json();
+    const signature = req.headers.get("x-paystack-signature");
+    const body = await req.text();
+    const payload = JSON.parse(body);
     
-    console.log("Payment webhook received:", payload);
+    const secret = Deno.env.get("PAYSTACK_SECRET_KEY");
+
+    if (!secret) {
+        console.error("PAYSTACK_SECRET_KEY is not set");
+        return new Response("Webhook secret not configured", { status: 500 });
+    }
+
+    const hash = createHmac("sha512", secret).update(body).digest("hex");
+
+    if (signature !== hash) {
+      console.warn("Invalid webhook signature received");
+      return new Response("Invalid signature", { status: 401 });
+    }
+
+    console.log("Payment webhook received and signature verified:", payload);
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
