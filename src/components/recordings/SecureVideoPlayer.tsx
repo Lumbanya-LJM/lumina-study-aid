@@ -1,15 +1,18 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Play, Pause, Volume2, VolumeX, Maximize, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SecureVideoPlayerProps {
   classId: string;
   title?: string;
   onError?: (error: string) => void;
   className?: string;
+  initialProgress?: number;
+  onProgressUpdate?: (progress: number, duration: number, completed: boolean) => void;
 }
 
 const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
@@ -17,7 +20,10 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
   title,
   onError,
   className,
+  initialProgress = 0,
+  onProgressUpdate,
 }) => {
+  const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +34,10 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const [volume, setVolume] = useState(1);
+  const [hasSetInitialProgress, setHasSetInitialProgress] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedProgressRef = useRef<number>(0);
 
   useEffect(() => {
     const loadVideo = async () => {
@@ -148,17 +157,68 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
     }
   };
 
+  // Save progress with debounce
+  const saveProgress = useCallback((time: number, videoDuration: number, isCompleted: boolean) => {
+    // Only save if progress changed significantly (more than 5 seconds)
+    if (Math.abs(time - lastSavedProgressRef.current) < 5 && !isCompleted) {
+      return;
+    }
+    
+    lastSavedProgressRef.current = time;
+    onProgressUpdate?.(time, videoDuration, isCompleted);
+  }, [onProgressUpdate]);
+
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
+      const time = videoRef.current.currentTime;
+      const videoDuration = videoRef.current.duration;
+      setCurrentTime(time);
+      
+      // Debounced progress save
+      if (progressSaveTimeoutRef.current) {
+        clearTimeout(progressSaveTimeoutRef.current);
+      }
+      progressSaveTimeoutRef.current = setTimeout(() => {
+        const completed = videoDuration > 0 && time >= videoDuration - 10; // Consider complete if within 10s of end
+        saveProgress(time, videoDuration, completed);
+      }, 2000); // Save every 2 seconds max
     }
   };
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      setDuration(videoRef.current.duration);
+      const videoDuration = videoRef.current.duration;
+      setDuration(videoDuration);
+      
+      // Set initial progress if we have one and haven't set it yet
+      if (initialProgress > 0 && !hasSetInitialProgress && initialProgress < videoDuration - 10) {
+        videoRef.current.currentTime = initialProgress;
+        setCurrentTime(initialProgress);
+        setHasSetInitialProgress(true);
+      }
     }
   };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+    if (videoRef.current) {
+      saveProgress(videoRef.current.duration, videoRef.current.duration, true);
+    }
+  };
+
+  // Cleanup on unmount - save final progress
+  useEffect(() => {
+    return () => {
+      if (progressSaveTimeoutRef.current) {
+        clearTimeout(progressSaveTimeoutRef.current);
+      }
+      // Save final progress on unmount
+      if (videoRef.current && duration > 0) {
+        const completed = currentTime >= duration - 10;
+        onProgressUpdate?.(currentTime, duration, completed);
+      }
+    };
+  }, [currentTime, duration, onProgressUpdate]);
 
   const handleFullscreen = () => {
     if (containerRef.current) {
@@ -222,7 +282,7 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
         onPause={() => setIsPlaying(false)}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={handleVideoEnded}
         playsInline
         controlsList="nodownload nofullscreen noremoteplayback"
         disablePictureInPicture

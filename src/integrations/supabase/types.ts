@@ -811,6 +811,47 @@ export type Database = {
         }
         Relationships: []
       }
+      recording_watch_history: {
+        Row: {
+          class_id: string
+          completed: boolean
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          last_watched_at: string
+          progress_seconds: number
+          user_id: string
+        }
+        Insert: {
+          class_id: string
+          completed?: boolean
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          last_watched_at?: string
+          progress_seconds?: number
+          user_id: string
+        }
+        Update: {
+          class_id?: string
+          completed?: boolean
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          last_watched_at?: string
+          progress_seconds?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_watch_history_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       research_cache: {
         Row: {
           access_count: number
