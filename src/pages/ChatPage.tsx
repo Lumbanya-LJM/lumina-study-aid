@@ -36,6 +36,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { haptics } from '@/lib/haptics';
+import { sounds, isSoundEnabledState } from '@/lib/sounds';
 import { useLuminaTaskNotification } from '@/hooks/useLuminaTaskNotification';
 
 interface Attachment {
@@ -106,6 +107,8 @@ const ChatPage: React.FC = () => {
     return saved !== null ? saved === 'true' : true;
   });
   const [isZambiaLiiSearchOpen, setIsZambiaLiiSearchOpen] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const typingSoundIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Voice input hook
   const handleVoiceResult = useCallback((transcript: string) => {
@@ -532,6 +535,9 @@ const ChatPage: React.FC = () => {
         throw new Error('Please sign in to use Lumina chat');
       }
 
+      // Create abort controller for cancel functionality
+      abortControllerRef.current = new AbortController();
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
@@ -548,6 +554,7 @@ const ChatPage: React.FC = () => {
             deepSearch: enableWebSearch,
             hasImages: attachmentsWithPreview.length > 0,
           }),
+          signal: abortControllerRef.current.signal,
         },
       );
 
@@ -579,6 +586,13 @@ const ChatPage: React.FC = () => {
         let buffer = '';
         let updateScheduled = false;
         
+        // Start typing sound effect if sounds are enabled
+        if (isSoundEnabledState()) {
+          typingSoundIntervalRef.current = setInterval(() => {
+            sounds.typing();
+          }, 120);
+        }
+        
         // Use a more frequent update mechanism for smoother streaming
         const scheduleUpdate = () => {
           if (!updateScheduled && streamedContent) {
@@ -597,38 +611,46 @@ const ChatPage: React.FC = () => {
           }
         };
         
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
+            buffer += decoder.decode(value, { stream: true });
 
-          // Process SSE lines
-          let newlineIndex;
-          while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-            let line = buffer.slice(0, newlineIndex);
-            buffer = buffer.slice(newlineIndex + 1);
+            // Process SSE lines
+            let newlineIndex;
+            while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+              let line = buffer.slice(0, newlineIndex);
+              buffer = buffer.slice(newlineIndex + 1);
 
-            if (line.endsWith('\r')) line = line.slice(0, -1);
-            if (line.startsWith(':') || line.trim() === '') continue;
-            if (!line.startsWith('data: ')) continue;
+              if (line.endsWith('\r')) line = line.slice(0, -1);
+              if (line.startsWith(':') || line.trim() === '') continue;
+              if (!line.startsWith('data: ')) continue;
 
-            const jsonStr = line.slice(6).trim();
-            if (jsonStr === '[DONE]') continue;
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr === '[DONE]') continue;
 
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) {
-                streamedContent += content;
-                // Schedule update for each token for smoother appearance
-                scheduleUpdate();
+              try {
+                const parsed = JSON.parse(jsonStr);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) {
+                  streamedContent += content;
+                  // Schedule update for each token for smoother appearance
+                  scheduleUpdate();
+                }
+              } catch {
+                // Partial JSON, put it back
+                buffer = line + '\n' + buffer;
+                break;
               }
-            } catch {
-              // Partial JSON, put it back
-              buffer = line + '\n' + buffer;
-              break;
             }
+          }
+        } finally {
+          // Stop typing sound
+          if (typingSoundIntervalRef.current) {
+            clearInterval(typingSoundIntervalRef.current);
+            typingSoundIntervalRef.current = null;
           }
         }
         
@@ -671,6 +693,18 @@ const ChatPage: React.FC = () => {
         ),
       );
     } catch (error) {
+      // Stop typing sound on error
+      if (typingSoundIntervalRef.current) {
+        clearInterval(typingSoundIntervalRef.current);
+        typingSoundIntervalRef.current = null;
+      }
+
+      // Don't show error if request was cancelled
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Response cancelled by user');
+        return;
+      }
+
       console.error('Chat error:', error);
       toast({
         variant: 'destructive',
@@ -695,8 +729,32 @@ const ChatPage: React.FC = () => {
     } finally {
       setIsLoading(false);
       setCurrentAction(undefined);
+      abortControllerRef.current = null;
     }
   }, [message, attachments, isLoading, currentConversationId, createNewConversation, messages, updateConversationTitle, saveMessage, user, toast, enableWebSearch]);
+
+  // Cancel response handler
+  const handleCancelResponse = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (typingSoundIntervalRef.current) {
+      clearInterval(typingSoundIntervalRef.current);
+      typingSoundIntervalRef.current = null;
+    }
+    setIsLoading(false);
+    setCurrentAction(undefined);
+    
+    // Mark any streaming message as complete
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.streaming ? { ...msg, streaming: false, content: msg.content + ' [cancelled]' } : msg
+      )
+    );
+    
+    haptics.light();
+  }, []);
 
   const handleQuickPrompt = (action: string) => {
     // Special handling for ZambiaLII search
@@ -1005,7 +1063,7 @@ const ChatPage: React.FC = () => {
                   </div>
                 ))}
                 
-                {/* Thinking indicator */}
+                {/* Thinking indicator with cancel button */}
                 {isLoading && messages.length > 0 && messages[messages.length - 1]?.sender === 'user' && (
                   <div className="flex gap-4 animate-fade-in">
                     <div className="shrink-0">
@@ -1013,8 +1071,18 @@ const ChatPage: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <p className="text-xs font-medium text-muted-foreground mb-1.5">Lumina</p>
-                      <div className="bg-muted/60 rounded-2xl px-4 py-3 inline-block">
-                        <ThinkingIndicator action={currentAction} hasWebSearch={enableWebSearch} />
+                      <div className="flex items-center gap-3">
+                        <div className="bg-muted/60 rounded-2xl px-4 py-3 inline-block">
+                          <ThinkingIndicator action={currentAction} hasWebSearch={enableWebSearch} />
+                        </div>
+                        <button
+                          onClick={handleCancelResponse}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors text-xs font-medium"
+                          title="Stop generating"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Stop</span>
+                        </button>
                       </div>
                     </div>
                   </div>
