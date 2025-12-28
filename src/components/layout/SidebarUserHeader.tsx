@@ -18,15 +18,16 @@ export const SidebarUserHeader: React.FC<SidebarUserHeaderProps> = ({
   portalSubtitle,
 }) => {
   const { user } = useAuth();
+  const userId = user?.id;
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string>('');
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchProfile();
     }
-  }, [user]);
+  }, [userId]);
 
   const fetchProfile = async () => {
     if (!user) return;
