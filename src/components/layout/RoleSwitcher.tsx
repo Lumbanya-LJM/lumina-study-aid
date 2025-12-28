@@ -30,7 +30,7 @@ export const RoleSwitcher: React.FC = () => {
 
   useEffect(() => {
     const checkRoles = async () => {
-      if (!user) {
+      if (!user?.id) {
         setLoading(false);
         return;
       }
@@ -52,7 +52,7 @@ export const RoleSwitcher: React.FC = () => {
     };
 
     checkRoles();
-  }, [user]);
+  }, [user?.id]);
 
   // Don't show if user only has one role
   const hasMultipleRoles = roles.isAdmin || roles.isTutor;
