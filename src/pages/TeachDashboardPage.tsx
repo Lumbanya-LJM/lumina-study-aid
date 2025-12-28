@@ -130,6 +130,53 @@ const LiveDurationTimer: React.FC<{ startedAt: string }> = ({ startedAt }) => {
   );
 };
 
+// Countdown timer for upcoming classes
+const CountdownTimer: React.FC<{ scheduledAt: string }> = ({ scheduledAt }) => {
+  const [countdown, setCountdown] = useState('');
+  const [isOverdue, setIsOverdue] = useState(false);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const scheduled = new Date(scheduledAt).getTime();
+      const now = Date.now();
+      const diff = scheduled - now;
+      
+      if (diff <= 0) {
+        setIsOverdue(true);
+        setCountdown('Now');
+        return;
+      }
+      
+      setIsOverdue(false);
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      if (hours > 0) {
+        setCountdown(`${hours}h ${minutes}m`);
+      } else if (minutes > 0) {
+        setCountdown(`${minutes}m ${seconds}s`);
+      } else {
+        setCountdown(`${seconds}s`);
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [scheduledAt]);
+
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1 text-xs font-mono",
+      isOverdue ? "text-amber-500" : "text-emerald-500"
+    )}>
+      <Clock className="w-3 h-3" />
+      {countdown}
+    </span>
+  );
+};
+
 const TeachDashboardPage: React.FC = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
@@ -523,16 +570,22 @@ const TeachDashboardPage: React.FC = () => {
                             {cls.started_at && <LiveDurationTimer startedAt={cls.started_at} />}
                           </div>
                         ) : isStartingSoon ? (
-                          <Badge className="bg-emerald-500 hover:bg-emerald-600">Ready</Badge>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge className="bg-emerald-500 hover:bg-emerald-600">Ready</Badge>
+                            <CountdownTimer scheduledAt={cls.scheduled_at} />
+                          </div>
                         ) : isToday ? (
-                          <Badge variant="secondary" className="bg-primary/20 text-primary">Today</Badge>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="secondary" className="bg-primary/20 text-primary">Today</Badge>
+                            <CountdownTimer scheduledAt={cls.scheduled_at} />
+                          </div>
                         ) : (
-                          <Badge variant="secondary">Scheduled</Badge>
-                        )}
-                        {!isLive && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatInTimeZone(new Date(cls.scheduled_at), ZAMBIA_TIMEZONE, 'MMM d, h:mm a')} CAT
-                          </p>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="secondary">Scheduled</Badge>
+                            <p className="text-xs text-muted-foreground">
+                              {formatInTimeZone(new Date(cls.scheduled_at), ZAMBIA_TIMEZONE, 'MMM d, h:mm a')} CAT
+                            </p>
+                          </div>
                         )}
                       </div>
                       
@@ -778,17 +831,22 @@ const TeachDashboardPage: React.FC = () => {
                             {cls.started_at && <LiveDurationTimer startedAt={cls.started_at} />}
                           </div>
                         ) : isStartingSoon ? (
-                          <Badge className="bg-emerald-500 hover:bg-emerald-600">Ready</Badge>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge className="bg-emerald-500 hover:bg-emerald-600">Ready</Badge>
+                            <CountdownTimer scheduledAt={cls.scheduled_at} />
+                          </div>
                         ) : isToday ? (
-                          <Badge variant="secondary" className="bg-primary/20 text-primary">Today</Badge>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="secondary" className="bg-primary/20 text-primary">Today</Badge>
+                            <CountdownTimer scheduledAt={cls.scheduled_at} />
+                          </div>
                         ) : (
-                          <Badge variant="secondary">Scheduled</Badge>
-                        )}
-                        {!isLive && (
-                          <>
-                            <p className="font-medium mt-1">{format(new Date(cls.scheduled_at), 'MMM d, yyyy')}</p>
-                            <p className="text-sm text-muted-foreground">{format(new Date(cls.scheduled_at), 'h:mm a')}</p>
-                          </>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="secondary">Scheduled</Badge>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(cls.scheduled_at), 'MMM d, h:mm a')}
+                            </p>
+                          </div>
                         )}
                       </div>
                       
