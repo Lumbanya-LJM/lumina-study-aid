@@ -924,6 +924,42 @@ export type Database = {
           },
         ]
       }
+      research_bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          query: string
+          response: string
+          sources: Json | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          query: string
+          response: string
+          sources?: Json | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          query?: string
+          response?: string
+          sources?: Json | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       research_cache: {
         Row: {
           access_count: number
