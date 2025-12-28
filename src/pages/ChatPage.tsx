@@ -5,6 +5,7 @@ import { MarkdownRenderer } from '@/components/lumina/MarkdownRenderer';
 import { ConversationSidebar } from '@/components/lumina/ConversationSidebar';
 import { ConversationSearch } from '@/components/lumina/ConversationSearch';
 import { ZambiaLiiChatSearch } from '@/components/lumina/ZambiaLiiChatSearch';
+import { ThinkingIndicator } from '@/components/lumina/ThinkingIndicator';
 
 import {
   ArrowLeft,
@@ -90,6 +91,7 @@ const ChatPage: React.FC = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [currentAction, setCurrentAction] = useState<string | undefined>(undefined);
   
   // Conversation management
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -483,7 +485,7 @@ const ChatPage: React.FC = () => {
       inputRef.current.style.height = 'auto';
     }
     setIsLoading(true);
-
+    setCurrentAction(action);
     // Save user message to database
     await saveMessage(fullMessageContent, 'user', activeConversationId);
 
@@ -692,6 +694,7 @@ const ChatPage: React.FC = () => {
       ]);
     } finally {
       setIsLoading(false);
+      setCurrentAction(undefined);
     }
   }, [message, attachments, isLoading, currentConversationId, createNewConversation, messages, updateConversationTitle, saveMessage, user, toast, enableWebSearch]);
 
@@ -1002,7 +1005,7 @@ const ChatPage: React.FC = () => {
                   </div>
                 ))}
                 
-                {/* Typing indicator */}
+                {/* Thinking indicator */}
                 {isLoading && messages.length > 0 && messages[messages.length - 1]?.sender === 'user' && (
                   <div className="flex gap-4 animate-fade-in">
                     <div className="shrink-0">
@@ -1011,11 +1014,7 @@ const ChatPage: React.FC = () => {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-muted-foreground mb-1.5">Lumina</p>
                       <div className="bg-muted/60 rounded-2xl px-4 py-3 inline-block">
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 bg-primary/60 rounded-full animate-pulse" />
-                          <span className="w-2 h-2 bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
-                          <span className="w-2 h-2 bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
-                        </div>
+                        <ThinkingIndicator action={currentAction} hasWebSearch={enableWebSearch} />
                       </div>
                     </div>
                   </div>
