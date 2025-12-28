@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.send-tutor-daily-schedule]
 verify_jwt = false
+
+[functions.auto-create-recurring-class]
+verify_jwt = false
