@@ -88,12 +88,47 @@ interface ScheduledClass {
   title: string;
   description: string | null;
   scheduled_at: string;
+  started_at: string | null;
   status: string;
   course_id: string;
   course_name?: string;
   daily_room_url: string | null;
   daily_room_name: string | null;
 }
+
+// Live duration timer component
+const LiveDurationTimer: React.FC<{ startedAt: string }> = ({ startedAt }) => {
+  const [duration, setDuration] = useState('');
+
+  useEffect(() => {
+    const updateDuration = () => {
+      const start = new Date(startedAt).getTime();
+      const now = Date.now();
+      const diff = Math.max(0, now - start);
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      if (hours > 0) {
+        setDuration(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      } else {
+        setDuration(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      }
+    };
+
+    updateDuration();
+    const interval = setInterval(updateDuration, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt]);
+
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-mono text-red-500">
+      <Clock className="w-3 h-3" />
+      {duration}
+    </span>
+  );
+};
 
 const TeachDashboardPage: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -194,7 +229,7 @@ const TeachDashboardPage: React.FC = () => {
 
       const { data: upcomingClassesData } = await supabase
         .from('live_classes')
-        .select('id, title, description, scheduled_at, status, course_id, daily_room_url, daily_room_name')
+        .select('id, title, description, scheduled_at, started_at, status, course_id, daily_room_url, daily_room_name')
         .eq('host_id', user.id)
         .in('status', ['scheduled', 'live'])
         .order('scheduled_at', { ascending: true })
@@ -483,7 +518,10 @@ const TeachDashboardPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <div className="text-right">
                         {isLive ? (
-                          <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
+                            {cls.started_at && <LiveDurationTimer startedAt={cls.started_at} />}
+                          </div>
                         ) : isStartingSoon ? (
                           <Badge className="bg-emerald-500 hover:bg-emerald-600">Ready</Badge>
                         ) : isToday ? (
@@ -491,9 +529,11 @@ const TeachDashboardPage: React.FC = () => {
                         ) : (
                           <Badge variant="secondary">Scheduled</Badge>
                         )}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatInTimeZone(new Date(cls.scheduled_at), ZAMBIA_TIMEZONE, 'MMM d, h:mm a')} CAT
-                        </p>
+                        {!isLive && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatInTimeZone(new Date(cls.scheduled_at), ZAMBIA_TIMEZONE, 'MMM d, h:mm a')} CAT
+                          </p>
+                        )}
                       </div>
                       
                       {/* Start/Join Class Button */}
@@ -733,7 +773,10 @@ const TeachDashboardPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         {isLive ? (
-                          <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
+                            {cls.started_at && <LiveDurationTimer startedAt={cls.started_at} />}
+                          </div>
                         ) : isStartingSoon ? (
                           <Badge className="bg-emerald-500 hover:bg-emerald-600">Ready</Badge>
                         ) : isToday ? (
@@ -741,8 +784,12 @@ const TeachDashboardPage: React.FC = () => {
                         ) : (
                           <Badge variant="secondary">Scheduled</Badge>
                         )}
-                        <p className="font-medium mt-1">{format(new Date(cls.scheduled_at), 'MMM d, yyyy')}</p>
-                        <p className="text-sm text-muted-foreground">{format(new Date(cls.scheduled_at), 'h:mm a')}</p>
+                        {!isLive && (
+                          <>
+                            <p className="font-medium mt-1">{format(new Date(cls.scheduled_at), 'MMM d, yyyy')}</p>
+                            <p className="text-sm text-muted-foreground">{format(new Date(cls.scheduled_at), 'h:mm a')}</p>
+                          </>
+                        )}
                       </div>
                       
                       {/* Start Button for scheduled classes */}
