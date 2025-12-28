@@ -11,6 +11,7 @@ import { TutorProtectedRoute } from "@/components/auth/TutorProtectedRoute";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 import { CommandPalette } from "@/components/premium/CommandPalette";
 import { AchievementConfetti } from "@/components/premium/AchievementConfetti";
+import { CelebrationProvider } from "@/components/premium/ProgressCelebration";
 import SplashScreen from "./pages/SplashScreen";
 import RoleSelectionPage from "./pages/RoleSelectionPage";
 import AuthPage from "./pages/AuthPage";
@@ -74,6 +75,7 @@ const App = () => {
           <BrowserRouter>
             <CommandPalette />
             <AchievementConfetti />
+            <CelebrationProvider />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<SplashScreen />} />
