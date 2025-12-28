@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -28,7 +29,9 @@ import {
   ChevronDown,
   ChevronUp,
   Settings,
-  Save
+  Save,
+  UserPlus,
+  Search
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
@@ -41,6 +44,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Course {
   id: string;
@@ -80,6 +84,18 @@ const TutorApplicationsAdminPage: React.FC = () => {
   const [editingCourses, setEditingCourses] = useState<TutorApplication | null>(null);
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [savingCourses, setSavingCourses] = useState(false);
+  
+  // Direct add tutor modal state
+  const [showAddTutorModal, setShowAddTutorModal] = useState(false);
+  const [searchEmail, setSearchEmail] = useState('');
+  const [searchingUser, setSearchingUser] = useState(false);
+  const [foundUser, setFoundUser] = useState<{ id: string; email: string; full_name: string | null } | null>(null);
+  const [addTutorCourses, setAddTutorCourses] = useState<string[]>([]);
+  const [addingTutor, setAddingTutor] = useState(false);
+  const [noUserFound, setNoUserFound] = useState(false);
+  const [manualEntry, setManualEntry] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const [manualEmail, setManualEmail] = useState('');
 
   useEffect(() => {
     if (isAdmin) {
@@ -325,6 +341,194 @@ const TutorApplicationsAdminPage: React.FC = () => {
     );
   };
 
+  const searchUserByEmail = async () => {
+    if (!searchEmail.trim()) return;
+    
+    setSearchingUser(true);
+    setNoUserFound(false);
+    setFoundUser(null);
+    
+    try {
+      // First check if there's an existing tutor application with this email
+      const { data: existingApps } = await supabase
+        .from('tutor_applications')
+        .select('user_id, email, full_name')
+        .ilike('email', `%${searchEmail.trim()}%`)
+        .limit(5);
+
+      if (existingApps && existingApps.length > 0) {
+        const app = existingApps[0];
+        setFoundUser({
+          id: app.user_id,
+          email: app.email,
+          full_name: app.full_name
+        });
+        return;
+      }
+
+      // Search in profiles by name
+      const { data: profilesByName } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .ilike('full_name', `%${searchEmail.trim()}%`)
+        .limit(5);
+
+      if (profilesByName && profilesByName.length > 0) {
+        const profile = profilesByName[0];
+        setFoundUser({
+          id: profile.user_id,
+          email: searchEmail.trim(), // Use search term as email hint
+          full_name: profile.full_name
+        });
+        return;
+      }
+
+      // No user found, show manual entry option
+      setNoUserFound(true);
+    } catch (error) {
+      console.error('Error searching user:', error);
+      setNoUserFound(true);
+    } finally {
+      setSearchingUser(false);
+    }
+  };
+
+  const handleAddTutorDirectly = async () => {
+    const userId = foundUser?.id;
+    const userEmail = manualEntry ? manualEmail.trim() : foundUser?.email;
+    const userName = manualEntry ? manualName.trim() : foundUser?.full_name;
+    
+    if (!userEmail) {
+      toast({
+        title: 'Email Required',
+        description: 'Please provide the tutor email.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setAddingTutor(true);
+    try {
+      // For manual entry without a found user, we need to create a placeholder
+      if (manualEntry && !userId) {
+        // Create tutor application record without user_id link (they'll need to register)
+        // For now, we require the user to exist in the system
+        toast({
+          title: 'User Not Found',
+          description: 'Please search for an existing user or ask them to sign up first.',
+          variant: 'destructive'
+        });
+        setAddingTutor(false);
+        return;
+      }
+
+      if (!userId) {
+        toast({
+          title: 'Error',
+          description: 'Please select a user first.',
+          variant: 'destructive'
+        });
+        setAddingTutor(false);
+        return;
+      }
+
+      // Check if already a tutor
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('role', 'moderator')
+        .maybeSingle();
+
+      if (existingRole) {
+        toast({
+          title: 'Already a Tutor',
+          description: `${userName || userEmail} is already a tutor.`,
+          variant: 'destructive'
+        });
+        setAddingTutor(false);
+        return;
+      }
+
+      // Create or update tutor application record
+      const { data: existingApp } = await supabase
+        .from('tutor_applications')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingApp) {
+        // Update existing application
+        await supabase
+          .from('tutor_applications')
+          .update({
+            status: 'approved',
+            selected_courses: addTutorCourses,
+            reviewed_by: user?.id,
+            reviewed_at: new Date().toISOString()
+          })
+          .eq('id', existingApp.id);
+      } else {
+        // Create new application record marked as approved
+        await supabase
+          .from('tutor_applications')
+          .insert({
+            user_id: userId,
+            email: userEmail,
+            full_name: userName || 'Tutor',
+            status: 'approved',
+            selected_courses: addTutorCourses,
+            reviewed_by: user?.id,
+            reviewed_at: new Date().toISOString()
+          });
+      }
+
+      // Grant moderator role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'moderator'
+        });
+
+      if (roleError && !roleError.message.includes('duplicate')) {
+        throw roleError;
+      }
+
+      toast({
+        title: 'Tutor Added',
+        description: `${userName || userEmail} has been added as a tutor with ${addTutorCourses.length} course(s).`,
+      });
+
+      // Reset and close modal
+      setShowAddTutorModal(false);
+      setSearchEmail('');
+      setFoundUser(null);
+      setAddTutorCourses([]);
+      setManualEntry(false);
+      setManualName('');
+      setManualEmail('');
+      loadApplications();
+    } catch (error: any) {
+      console.error('Error adding tutor:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add tutor',
+        variant: 'destructive'
+      });
+    } finally {
+      setAddingTutor(false);
+    }
+  };
+
+  const toggleAddTutorCourse = (courseId: string) => {
+    setAddTutorCourses(prev => 
+      prev.includes(courseId)
+        ? prev.filter(id => id !== courseId)
+        : [...prev, courseId]
+    );
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -341,6 +545,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
   const navigate = useNavigate();
 
   const pendingCount = applications.filter(a => a.status === 'pending').length;
+  const approvedCount = applications.filter(a => a.status === 'approved').length;
   
   // Separate courses by institution
   const undergraduateCourses = courses.filter(c => c.institution !== 'ZIALE');
@@ -348,22 +553,51 @@ const TutorApplicationsAdminPage: React.FC = () => {
 
   return (
     <AdminLayout
-      title="Tutor Applications"
-      subtitle={`${pendingCount} pending applications`}
-      mobileTitle="Tutor Applications"
+      title="Tutor Management"
+      subtitle={`${pendingCount} pending · ${approvedCount} approved`}
+      mobileTitle="Tutors"
       showSidebar={false}
       showBackButton={true}
     >
       <div className="space-y-4">
-        {applications.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Shield className="w-12 h-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No tutor applications yet</p>
-            </CardContent>
-          </Card>
-        ) : (
-          applications.map((app) => {
+        {/* Add Tutor Button */}
+        <div className="flex justify-end">
+          <Button onClick={() => setShowAddTutorModal(true)}>
+            <UserPlus className="w-4 h-4 mr-2" />
+            Add Tutor Directly
+          </Button>
+        </div>
+
+        <Tabs defaultValue="pending" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="pending" className="relative">
+              Pending
+              {pendingCount > 0 && (
+                <Badge className="ml-2 h-5 w-5 rounded-full p-0 text-xs">{pendingCount}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="approved">
+              Approved
+              {approvedCount > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">{approvedCount}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="rejected">Rejected</TabsTrigger>
+          </TabsList>
+
+          {['pending', 'approved', 'rejected'].map((status) => (
+            <TabsContent key={status} value={status} className="mt-4 space-y-4">
+              {applications.filter(a => a.status === status).length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <Shield className="w-12 h-12 text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">
+                      No {status} applications
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                applications.filter(a => a.status === status).map((app) => {
             const { undergraduate, ziale } = getCoursesByIds(app.selected_courses);
             const age = calculateAge(app.date_of_birth);
             const isCoursesExpanded = expandedCourses === app.id;
@@ -581,7 +815,10 @@ const TutorApplicationsAdminPage: React.FC = () => {
               </Card>
             );
           })
-        )}
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
 
       {/* Course Assignment Dialog */}
@@ -686,6 +923,157 @@ const TutorApplicationsAdminPage: React.FC = () => {
                 Save Changes
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Tutor Directly Dialog */}
+      <Dialog open={showAddTutorModal} onOpenChange={setShowAddTutorModal}>
+        <DialogContent className="max-w-lg max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              Add Tutor Directly
+            </DialogTitle>
+            <DialogDescription>
+              Add an existing user as a tutor without requiring them to apply. Search by their email address.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Search by email */}
+            <div className="space-y-2">
+              <Label>Search User by Email</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter user email..."
+                  value={searchEmail}
+                  onChange={(e) => {
+                    setSearchEmail(e.target.value);
+                    setNoUserFound(false);
+                    setFoundUser(null);
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && searchUserByEmail()}
+                />
+                <Button
+                  variant="outline"
+                  onClick={searchUserByEmail}
+                  disabled={searchingUser || !searchEmail.trim()}
+                >
+                  {searchingUser ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {noUserFound && (
+              <div className="p-3 rounded-lg bg-muted/50 border text-center">
+                <p className="text-sm text-muted-foreground">
+                  No user found with that email. Make sure the user has signed up first.
+                </p>
+              </div>
+            )}
+
+            {foundUser && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <User className="w-5 h-5 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{foundUser.full_name || 'Unknown Name'}</p>
+                      <p className="text-sm text-muted-foreground">{foundUser.email}</p>
+                    </div>
+                    <Check className="w-5 h-5 text-green-500 ml-auto" />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Assign Courses</Label>
+                  <ScrollArea className="max-h-[200px] pr-4">
+                    <div className="space-y-2">
+                      {undergraduateCourses.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground font-medium">Undergraduate</p>
+                          {undergraduateCourses.map((course) => (
+                            <div
+                              key={course.id}
+                              className="flex items-center space-x-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors"
+                            >
+                              <Checkbox
+                                id={`add-${course.id}`}
+                                checked={addTutorCourses.includes(course.id)}
+                                onCheckedChange={() => toggleAddTutorCourse(course.id)}
+                              />
+                              <Label htmlFor={`add-${course.id}`} className="flex-1 cursor-pointer text-sm">
+                                {course.name}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {zialeCourses.length > 0 && (
+                        <div className="space-y-2 mt-3">
+                          <p className="text-xs text-muted-foreground font-medium">ZIALE</p>
+                          {zialeCourses.map((course) => (
+                            <div
+                              key={course.id}
+                              className="flex items-center space-x-3 p-2 rounded-lg border border-accent/30 hover:bg-accent/10 transition-colors"
+                            >
+                              <Checkbox
+                                id={`add-${course.id}`}
+                                checked={addTutorCourses.includes(course.id)}
+                                onCheckedChange={() => toggleAddTutorCourse(course.id)}
+                              />
+                              <Label htmlFor={`add-${course.id}`} className="flex-1 cursor-pointer text-sm">
+                                {course.name}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                  <p className="text-xs text-muted-foreground">
+                    {addTutorCourses.length} course{addTutorCourses.length !== 1 ? 's' : ''} selected
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddTutorModal(false);
+                setSearchEmail('');
+                setFoundUser(null);
+                setAddTutorCourses([]);
+                setNoUserFound(false);
+                setManualEntry(false);
+                setManualName('');
+                setManualEmail('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddTutorDirectly}
+              disabled={!foundUser || addingTutor}
+            >
+              {addingTutor ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <UserPlus className="w-4 h-4 mr-2" />
+              )}
+              Add as Tutor
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
