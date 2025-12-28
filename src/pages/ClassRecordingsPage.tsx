@@ -23,9 +23,12 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -119,6 +122,9 @@ const ClassRecordingsPage: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [recordingToDelete, setRecordingToDelete] = useState<ClassRecording | null>(null);
+  const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const loadClasses = useCallback(async () => {
     try {
@@ -397,6 +403,53 @@ const ClassRecordingsPage: React.FC = () => {
     }
   };
 
+  // Toggle selection for bulk delete
+  const toggleBulkSelection = (recordingId: string) => {
+    setSelectedForBulk((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(recordingId)) {
+        newSet.delete(recordingId);
+      } else {
+        newSet.add(recordingId);
+      }
+      return newSet;
+    });
+  };
+
+
+  // Bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedForBulk.size === 0) return;
+    
+    setBulkDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("live_classes")
+        .delete()
+        .in("id", Array.from(selectedForBulk));
+
+      if (error) throw error;
+
+      toast({
+        title: "Recordings Deleted",
+        description: `${selectedForBulk.size} recording(s) have been permanently removed.`,
+      });
+
+      setBulkDeleteConfirmOpen(false);
+      setSelectedForBulk(new Set());
+      loadClasses();
+    } catch (error) {
+      console.error("Error deleting recordings:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Could not delete recordings. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const formatDuration = (seconds: number | null) => {
     if (!seconds) return "Unknown duration";
     const hours = Math.floor(seconds / 3600);
@@ -477,7 +530,23 @@ const ClassRecordingsPage: React.FC = () => {
       r.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Get host recordings count
+  const hostRecordingsCount = recordings.filter((r) => r.host_id === user?.id).length;
+  const filteredHostRecordings = filteredRecordings.filter((r) => r.host_id === user?.id);
+  const allHostSelected = filteredHostRecordings.length > 0 && 
+    filteredHostRecordings.every((r) => selectedForBulk.has(r.id));
+
+  // Select all host recordings
+  const selectAllHostRecordings = () => {
+    if (allHostSelected) {
+      setSelectedForBulk(new Set());
+    } else {
+      setSelectedForBulk(new Set(filteredHostRecordings.map((r) => r.id)));
+    }
+  };
+
   if (loading) {
+
     return (
       <MobileLayout>
         <div className="flex items-center justify-center h-64">
@@ -614,6 +683,35 @@ const ClassRecordingsPage: React.FC = () => {
               />
             </div>
 
+            {/* Bulk selection toolbar - only for hosts */}
+            {hostRecordingsCount > 0 && (
+              <div className="flex items-center justify-between bg-muted/50 rounded-lg p-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allHostSelected}
+                    onCheckedChange={selectAllHostRecordings}
+                    aria-label="Select all your recordings"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {selectedForBulk.size > 0 
+                      ? `${selectedForBulk.size} selected` 
+                      : "Select recordings"}
+                  </span>
+                </div>
+                {selectedForBulk.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setBulkDeleteConfirmOpen(true)}
+                    className="h-7 text-xs"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete ({selectedForBulk.size})
+                  </Button>
+                )}
+              </div>
+            )}
+
             {/* Info about streaming-only */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
               <Video className="h-3 w-3 flex-shrink-0" />
@@ -641,12 +739,25 @@ const ClassRecordingsPage: React.FC = () => {
                   return (
                     <Card
                       key={recording.id}
-                      className="overflow-hidden transition-colors"
+                      className={cn(
+                        "overflow-hidden transition-colors",
+                        selectedForBulk.has(recording.id) && "ring-2 ring-primary"
+                      )}
                     >
                       <CardContent className="p-4">
-                        {/* Host actions menu */}
+                        {/* Host actions row with checkbox */}
                         {recording.host_id === user?.id && (
-                          <div className="flex justify-end mb-2 -mt-1 -mr-2">
+                          <div className="flex items-center justify-between mb-2 -mt-1 -mr-2">
+                            <div 
+                              className="flex items-center gap-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Checkbox
+                                checked={selectedForBulk.has(recording.id)}
+                                onCheckedChange={() => toggleBulkSelection(recording.id)}
+                                aria-label={`Select ${recording.title}`}
+                              />
+                            </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -1034,6 +1145,35 @@ const ClassRecordingsPage: React.FC = () => {
                 <Trash2 className="h-4 w-4 mr-2" />
               )}
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedForBulk.size} Recording(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedForBulk.size} recording(s)? This action cannot be undone and the recordings will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBulkDeleteConfirmOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Delete All
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
