@@ -13,14 +13,19 @@ import ClassPricingManager from '@/components/admin/ClassPricingManager';
 import { EmailTemplatesManager } from '@/components/admin/EmailTemplatesManager';
 import { AdminOnboardingTutorial } from '@/components/onboarding/AdminOnboardingTutorial';
 import { AdminStatsDetailModal, AdminStatType } from '@/components/admin/AdminStatsDetailModal';
+import { ClearStatsDialog } from '@/components/admin/ClearStatsDialog';
+import { StatsHistoryModal } from '@/components/admin/StatsHistoryModal';
+import { toast } from 'sonner';
 import { 
   Users, BookOpen, FileText, GraduationCap, 
   Clock, BarChart3, Activity, ChevronRight,
-  UserCheck, Calendar, ClipboardList, TrendingUp, AlertCircle
+  UserCheck, Calendar, ClipboardList, TrendingUp, AlertCircle,
+  Trash2, History
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface DashboardStats {
@@ -57,6 +62,8 @@ const AdminDashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [statsModalOpen, setStatsModalOpen] = useState(false);
   const [statsModalType, setStatsModalType] = useState<AdminStatType>(null);
+  const [clearStatsOpen, setClearStatsOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   useEffect(() => {
     if (isAdmin) {
@@ -222,6 +229,31 @@ const AdminDashboardPage: React.FC = () => {
       case 'overview':
         return (
           <div className="space-y-6">
+            {/* Stats Header with Actions */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Platform Stats</h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setHistoryModalOpen(true)}
+                  className="gap-1"
+                >
+                  <History className="w-4 h-4" />
+                  History
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setClearStatsOpen(true)}
+                  className="gap-1 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear Stats
+                </Button>
+              </div>
+            </div>
+
             {/* Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {loading ? (
@@ -441,6 +473,26 @@ const AdminDashboardPage: React.FC = () => {
         open={statsModalOpen}
         onOpenChange={setStatsModalOpen}
         statType={statsModalType}
+      />
+
+      {/* Clear Stats Dialog */}
+      <ClearStatsDialog
+        open={clearStatsOpen}
+        onOpenChange={setClearStatsOpen}
+        dashboardType="admin"
+        currentStats={stats}
+        onClear={async () => {
+          // Admin stats are live counts - no actual data to clear
+          // Just save the snapshot for historical record
+          toast.success('Stats snapshot saved. Platform stats reflect live data.');
+        }}
+      />
+
+      {/* Stats History Modal */}
+      <StatsHistoryModal
+        open={historyModalOpen}
+        onOpenChange={setHistoryModalOpen}
+        dashboardType="admin"
       />
     </AdminLayout>
   );

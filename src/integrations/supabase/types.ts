@@ -963,6 +963,39 @@ export type Database = {
         }
         Relationships: []
       }
+      stats_history: {
+        Row: {
+          cleared_at: string
+          cleared_by: string | null
+          dashboard_type: string
+          id: string
+          notes: string | null
+          snapshot_date: string
+          stats_data: Json
+          user_id: string | null
+        }
+        Insert: {
+          cleared_at?: string
+          cleared_by?: string | null
+          dashboard_type: string
+          id?: string
+          notes?: string | null
+          snapshot_date?: string
+          stats_data: Json
+          user_id?: string | null
+        }
+        Update: {
+          cleared_at?: string
+          cleared_by?: string | null
+          dashboard_type?: string
+          id?: string
+          notes?: string | null
+          snapshot_date?: string
+          stats_data?: Json
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       study_group_members: {
         Row: {
           group_id: string
