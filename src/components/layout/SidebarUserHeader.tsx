@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { AvatarCropModal } from '@/components/profile/AvatarCropModal';
 
 interface SidebarUserHeaderProps {
   portalIcon: React.ReactNode;
@@ -22,6 +23,8 @@ export const SidebarUserHeader: React.FC<SidebarUserHeaderProps> = ({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string>('');
   const [uploading, setUploading] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -62,7 +65,7 @@ export const SidebarUserHeader: React.FC<SidebarUserHeaderProps> = ({
     return name.substring(0, 2).toUpperCase();
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
@@ -73,22 +76,37 @@ export const SidebarUserHeader: React.FC<SidebarUserHeaderProps> = ({
       return;
     }
 
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be smaller than 2MB');
+    // Validate file size (max 5MB for cropping)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be smaller than 5MB');
       return;
     }
 
+    // Read file and open crop modal
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage(reader.result as string);
+      setCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset input
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!user) return;
+    
     setUploading(true);
+    setCropModalOpen(false);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/avatar.${fileExt}`;
+      const fileName = `${user.id}/avatar.jpg`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, croppedBlob, { upsert: true, contentType: 'image/jpeg' });
 
       if (uploadError) throw uploadError;
 
@@ -108,6 +126,7 @@ export const SidebarUserHeader: React.FC<SidebarUserHeaderProps> = ({
       if (updateError) throw updateError;
 
       setAvatarUrl(urlWithTimestamp);
+      setSelectedImage(null);
       toast.success('Profile photo updated!');
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
@@ -141,11 +160,24 @@ export const SidebarUserHeader: React.FC<SidebarUserHeaderProps> = ({
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
-            onChange={handleAvatarUpload}
+            onChange={handleFileSelect}
             className="hidden"
             disabled={uploading}
           />
         </label>
+
+        {/* Avatar Crop Modal */}
+        {selectedImage && (
+          <AvatarCropModal
+            isOpen={cropModalOpen}
+            onClose={() => {
+              setCropModalOpen(false);
+              setSelectedImage(null);
+            }}
+            imageSrc={selectedImage}
+            onCropComplete={handleCropComplete}
+          />
+        )}
 
         {/* User Info */}
         <div className="flex-1 min-w-0">

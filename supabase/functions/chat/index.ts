@@ -977,20 +977,23 @@ If they want to save their reflection, USE THE create_journal_entry tool to save
     // Use gemini-2.5-flash which supports both text and vision
     const model = "google/gemini-2.5-flash";
     
-    // Add image analysis context if images are present
-    let imageAnalysisPrompt = "";
+    // Add image/document analysis context if attachments are present
+    let attachmentAnalysisPrompt = "";
     if (hasImages) {
-      imageAnalysisPrompt = `
+      attachmentAnalysisPrompt = `
 
-## IMAGE ANALYSIS MODE
-The user has shared one or more images. You should:
+## DOCUMENT & IMAGE ANALYSIS MODE
+The user has shared one or more files (images or documents). You should:
 1. **Carefully analyze** the visual content of each image
-2. **Describe** what you see in detail if asked
-3. **Extract text** from documents, notes, or screenshots if present
-4. **Provide relevant study guidance** based on the image content
-5. **Answer questions** about the image content accurately
+2. **Extract and read text** from documents, PDFs, notes, or screenshots
+3. **Describe** what you see in detail if asked
+4. **Provide relevant study guidance** based on the content
+5. **Answer questions** about the content accurately
+6. **For legal documents**: Identify case names, citations, legal principles, and key holdings
+7. **For notes/handwritten content**: Transcribe and help organize the content
+8. **For diagrams/charts**: Explain what they represent
 
-If the image contains legal content, apply your legal expertise to help the student understand it.`;
+If the content is legal in nature, apply your legal expertise to help the student understand it.`;
     }
 
     // Initial AI request with tools
@@ -1003,7 +1006,7 @@ If the image contains legal content, apply your legal expertise to help the stud
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: systemPrompt + imageAnalysisPrompt },
+          { role: "system", content: systemPrompt + attachmentAnalysisPrompt },
           ...messages,
         ],
         tools: LUMINA_TOOLS,
@@ -1066,7 +1069,7 @@ If the image contains legal content, apply your legal expertise to help the stud
       
       // Send tool results back to AI for final response
       const followUpMessages = [
-        { role: "system", content: systemPrompt + imageAnalysisPrompt },
+        { role: "system", content: systemPrompt + attachmentAnalysisPrompt },
         ...messages,
         assistantMessage,
         ...toolResults
@@ -1105,15 +1108,17 @@ If the image contains legal content, apply your legal expertise to help the stud
     const content = assistantMessage?.content || "";
     
     // Create a streaming response from the non-streamed content
+    // Use smaller chunks for smoother word-by-word streaming
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
-        // Send content in chunks to simulate streaming
-        const chunkSize = 50;
-        for (let i = 0; i < content.length; i += chunkSize) {
-          const chunk = content.slice(i, i + chunkSize);
-          const data = JSON.stringify({ choices: [{ delta: { content: chunk } }] });
-          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+        // Send content word by word for smoother streaming
+        const words = content.split(/(\s+)/);
+        for (const word of words) {
+          if (word) {
+            const data = JSON.stringify({ choices: [{ delta: { content: word } }] });
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+          }
         }
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();

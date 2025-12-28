@@ -347,6 +347,7 @@ const ChatPage: React.FC = () => {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const isImage = file.type.startsWith('image/');
+      const isPdf = file.type === 'application/pdf';
       
       // Limit file size to 10MB
       if (file.size > 10 * 1024 * 1024) {
@@ -377,6 +378,26 @@ const ChatPage: React.FC = () => {
           );
         };
         reader.readAsDataURL(file);
+      }
+      
+      // For PDFs, convert to base64 for AI analysis
+      if (isPdf) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setAttachments(prev => 
+            prev.map(a => 
+              a.id === attachment.id 
+                ? { ...a, preview: e.target?.result as string }
+                : a
+            )
+          );
+        };
+        reader.readAsDataURL(file);
+        
+        toast({
+          title: 'PDF uploaded',
+          description: 'Lumina will analyze this document for you.',
+        });
       }
 
       newAttachments.push(attachment);
@@ -471,19 +492,31 @@ const ChatPage: React.FC = () => {
         content: msg.content,
       }));
       
-      // Build the current message content with images for vision analysis
+      // Build the current message content with images/PDFs for vision analysis
       type MessageContent = string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
       let currentMessageContent: MessageContent = messageText;
       
-      // If we have image attachments, format for multimodal AI
-      const imageAttachments = attachments.filter(a => a.type === 'image' && a.preview);
-      if (imageAttachments.length > 0) {
-        currentMessageContent = [
-          { type: 'text', text: messageText || 'Please analyze this image.' },
-          ...imageAttachments.map(img => ({
+      // If we have attachments with previews (images or PDFs as base64), format for multimodal AI
+      const attachmentsWithPreview = attachments.filter(a => a.preview);
+      if (attachmentsWithPreview.length > 0) {
+        const attachmentParts = attachmentsWithPreview.map(att => {
+          // For PDFs, Gemini can process them as document images
+          // The base64 data URL works for both images and PDFs
+          return {
             type: 'image_url',
-            image_url: { url: img.preview! }
-          }))
+            image_url: { url: att.preview! }
+          };
+        });
+        
+        const fileDescriptions = attachmentsWithPreview.map(att => 
+          att.file.type === 'application/pdf' 
+            ? `[PDF Document: ${att.file.name}]` 
+            : `[Image: ${att.file.name}]`
+        ).join('\n');
+        
+        currentMessageContent = [
+          { type: 'text', text: `${fileDescriptions}\n\n${messageText || 'Please analyze these documents/images.'}` },
+          ...attachmentParts
         ];
       }
       
@@ -509,7 +542,7 @@ const ChatPage: React.FC = () => {
             userId: user?.id,
             enableWebSearch,
             deepSearch: enableWebSearch,
-            hasImages: imageAttachments.length > 0,
+            hasImages: attachmentsWithPreview.length > 0,
           }),
         },
       );
