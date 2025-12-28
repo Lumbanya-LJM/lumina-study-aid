@@ -177,22 +177,20 @@ const AdminDashboardPage: React.FC = () => {
 
   if (adminLoading) {
     return (
-      <MobileLayout showNav={false}>
-        <div className="flex h-screen">
-          <div className="hidden lg:block w-64 border-r border-border/50 p-4">
-            <Skeleton className="h-16 mb-4" />
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12" />)}
-            </div>
-          </div>
-          <div className="flex-1 p-4 sm:p-6 lg:p-8">
-            <Skeleton className="h-24 w-full rounded-2xl mb-6" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
-            </div>
+      <div className="min-h-screen flex w-full bg-background">
+        <div className="hidden lg:block w-64 border-r border-border/50 p-4">
+          <Skeleton className="h-16 mb-4" />
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12" />)}
           </div>
         </div>
-      </MobileLayout>
+        <div className="flex-1 p-4 sm:p-6 lg:p-8">
+          <Skeleton className="h-24 w-full rounded-2xl mb-6" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -202,8 +200,8 @@ const AdminDashboardPage: React.FC = () => {
 
   if (!isAdmin) {
     return (
-      <MobileLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] p-5 text-center">
+      <div className="min-h-screen flex w-full bg-background items-center justify-center">
+        <div className="flex flex-col items-center justify-center p-5 text-center">
           <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
             <AlertCircle className="w-10 h-10 text-destructive" />
           </div>
@@ -215,7 +213,7 @@ const AdminDashboardPage: React.FC = () => {
             Return to Home
           </Link>
         </div>
-      </MobileLayout>
+      </div>
     );
   }
 

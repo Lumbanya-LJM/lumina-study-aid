@@ -218,6 +218,7 @@ export const GlobalLiveClassBanner: React.FC = () => {
       notifications={notifications}
       onDismiss={handleDismiss}
       onAction={handleAction}
+      showViewAll={false}
       maxVisible={3}
     />
   );
