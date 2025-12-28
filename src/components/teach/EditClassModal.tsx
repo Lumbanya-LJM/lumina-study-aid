@@ -102,45 +102,36 @@ export const EditClassModal: React.FC<EditClassModalProps> = ({
     }
   };
 
-  const regenerateZoomLink = async () => {
+  const regenerateDailyLink = async () => {
     if (!classId || !title) return;
 
     setRegeneratingLink(true);
     try {
-      // Parse scheduled time if available
-      let scheduledAt: Date | null = null;
-      if (date && time) {
-        const dateTimeStr = `${date}T${time}:00`;
-        const localDate = new Date(dateTimeStr);
-        const zambiaOffset = 2 * 60;
-        const localOffset = localDate.getTimezoneOffset();
-        scheduledAt = new Date(localDate.getTime() + (localOffset + zambiaOffset) * 60 * 1000);
-      }
-
-      const { data: meetingData, error: meetingError } = await supabase.functions.invoke('zoom-meeting', {
+      const { data: roomData, error: roomError } = await supabase.functions.invoke('daily-room', {
         body: {
           action: 'create',
-          topic: title,
-          duration: 60,
-          startTime: scheduledAt?.toISOString(),
+          title: title,
+          expiresInMinutes: 180,
         }
       });
 
-      if (meetingError) throw meetingError;
+      if (roomError || !roomData?.success) {
+        throw new Error(roomError?.message || roomData?.error || 'Failed to create room');
+      }
 
-      if (meetingData?.joinUrl) {
-        setMeetingLink(meetingData.joinUrl);
+      if (roomData?.roomUrl) {
+        setMeetingLink(roomData.roomUrl);
         toast({
           title: 'Link Regenerated',
-          description: 'New Zoom meeting link has been generated.',
+          description: 'New video room link has been generated.',
         });
       }
     } catch (error) {
-      console.error('Error regenerating Zoom link:', error);
+      console.error('Error regenerating Daily link:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to generate new Zoom link.',
+        description: 'Failed to generate new video room link.',
       });
     } finally {
       setRegeneratingLink(false);
@@ -410,16 +401,16 @@ export const EditClassModal: React.FC<EditClassModalProps> = ({
                   id="meetingLink"
                   value={meetingLink}
                   onChange={(e) => setMeetingLink(e.target.value)}
-                  placeholder="https://zoom.us/j/..."
+                  placeholder="Video room link"
                   className="flex-1"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
-                  onClick={regenerateZoomLink}
+                  onClick={regenerateDailyLink}
                   disabled={regeneratingLink}
-                  title="Generate new Zoom link"
+                  title="Generate new video room link"
                 >
                   {regeneratingLink ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -429,7 +420,7 @@ export const EditClassModal: React.FC<EditClassModalProps> = ({
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Click the refresh button to generate a new Zoom link
+                Click the refresh button to generate a new video room link
               </p>
             </div>
 

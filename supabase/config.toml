@@ -30,15 +30,6 @@ verify_jwt = false
 [functions.check-zambialii]
 verify_jwt = false
 
-[functions.zoom-meeting]
-verify_jwt = false
-
-[functions.zoom-webhook]
-verify_jwt = false
-
-[functions.sync-zoom-recordings]
-verify_jwt = false
-
 [functions.generate-class-summary]
 verify_jwt = false
 
