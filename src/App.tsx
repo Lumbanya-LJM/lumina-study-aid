@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { TutorProtectedRoute } from "@/components/auth/TutorProtectedRoute";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
+import { CommandPalette } from "@/components/premium/CommandPalette";
 import SplashScreen from "./pages/SplashScreen";
 import RoleSelectionPage from "./pages/RoleSelectionPage";
 import AuthPage from "./pages/AuthPage";
@@ -67,6 +68,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <CommandPalette />
           <BrowserRouter>
             <Routes>
               {/* Public routes */}
