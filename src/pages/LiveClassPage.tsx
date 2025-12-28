@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, Users, PhoneOff, MonitorUp, ExternalLink } from "lucide-react";
+import { Loader2, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, Users, PhoneOff, MonitorUp, ExternalLink, Minimize2, Maximize2, Home, Crown } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface LiveClass {
   id: string;
@@ -33,6 +34,7 @@ const LiveClassPage: React.FC = () => {
   const [inCall, setInCall] = useState(false);
   const [meetingToken, setMeetingToken] = useState<string | null>(null);
   const [participantCount, setParticipantCount] = useState(0);
+  const [isMinimized, setIsMinimized] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Get user display name from profile
@@ -293,30 +295,96 @@ const LiveClassPage: React.FC = () => {
     return `${liveClass.daily_room_url}?t=${meetingToken}`;
   };
 
+  // Minimized floating video view
+  if (isMinimized && inCall && meetingToken) {
+    return (
+      <div className="fixed bottom-20 right-4 z-50 w-80 md:w-96 shadow-2xl rounded-xl overflow-hidden border border-border bg-card">
+        <div className="bg-card/95 backdrop-blur-sm px-3 py-2 flex items-center justify-between border-b">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+            </span>
+            <span className="text-xs font-medium truncate">{liveClass.title}</span>
+            {isHost && <Crown className="w-3 h-3 text-amber-500 flex-shrink-0" />}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setIsMinimized(false)}
+            >
+              <Maximize2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+        <div className="aspect-video bg-black relative">
+          <iframe
+            src={getDailyRoomUrl()}
+            allow="camera; microphone; fullscreen; display-capture; autoplay"
+            className="w-full h-full absolute inset-0"
+            style={{ border: "none" }}
+          />
+        </div>
+        <div className="p-2 flex items-center justify-between gap-2 bg-card">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLeaveCall}
+            className="text-xs h-7"
+          >
+            <PhoneOff className="h-3 w-3 mr-1" />
+            Leave
+          </Button>
+          {isHost && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleEndClass}
+              disabled={ending}
+              className="text-xs h-7"
+            >
+              {ending ? <Loader2 className="h-3 w-3 animate-spin" /> : "End Class"}
+            </Button>
+          )}
+          <Link to="/home">
+            <Button variant="ghost" size="sm" className="text-xs h-7">
+              <Home className="h-3 w-3 mr-1" />
+              Home
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur-sm px-4 py-3 z-10">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-4">
-            {!inCall && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/academy")}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
             <div>
               <div className="flex items-center gap-2">
                 <Video className="h-4 w-4 text-primary" />
-                <span className="text-xs font-medium text-primary uppercase tracking-wide">
+                <span className={cn(
+                  "text-xs font-medium uppercase tracking-wide",
+                  liveClass.status === "live" ? "text-red-500" : "text-primary"
+                )}>
                   {liveClass.status === "live" ? "🔴 Live" : "Scheduled"}
                 </span>
                 {isHost && (
-                  <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                  <span className="text-xs bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Crown className="h-3 w-3" />
                     Host
                   </span>
                 )}
@@ -327,10 +395,21 @@ const LiveClassPage: React.FC = () => {
           
           <div className="flex items-center gap-4">
             {inCall && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span>{participantCount} in class</span>
-              </div>
+              <>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  <span>{participantCount} in class</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsMinimized(true)}
+                  className="gap-1"
+                >
+                  <Minimize2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Minimize</span>
+                </Button>
+              </>
             )}
             {(liveClass.started_at || liveClass.scheduled_at) && (
               <div className="hidden sm:flex items-center gap-1 text-sm text-muted-foreground">
@@ -393,6 +472,16 @@ const LiveClassPage: React.FC = () => {
                     )}
                   </Button>
                 )}
+
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  onClick={() => setIsMinimized(true)}
+                  className="gap-2"
+                >
+                  <Minimize2 className="h-4 w-4" />
+                  Minimize & Browse
+                </Button>
               </div>
             </div>
           </>
@@ -400,18 +489,34 @@ const LiveClassPage: React.FC = () => {
           /* Pre-join screen */
           <div className="flex-1 flex items-center justify-center p-4">
             <div className="max-w-md w-full space-y-6">
-              <Card className="border-primary/20">
+              <Card className={cn(
+                "border-2",
+                isHost ? "border-amber-500/30" : "border-primary/20"
+              )}>
                 <CardContent className="pt-6 space-y-6">
                   <div className="text-center space-y-2">
-                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Video className="h-10 w-10 text-primary" />
+                    <div className={cn(
+                      "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4",
+                      isHost ? "bg-amber-500/10" : "bg-primary/10"
+                    )}>
+                      {isHost ? (
+                        <Crown className="h-10 w-10 text-amber-500" />
+                      ) : (
+                        <Video className="h-10 w-10 text-primary" />
+                      )}
                     </div>
+                    {isHost && (
+                      <p className="text-sm font-medium text-amber-600 bg-amber-500/10 px-3 py-1 rounded-full inline-block">
+                        You are the host of this class
+                      </p>
+                    )}
                     <h2 className="text-xl font-semibold">{liveClass.title}</h2>
                     {liveClass.description && (
                       <p className="text-sm text-muted-foreground">{liveClass.description}</p>
                     )}
                     <p className="text-sm text-muted-foreground">
                       Joining as <span className="font-medium text-foreground">{getUserName()}</span>
+                      {isHost && " (Host)"}
                     </p>
                   </div>
 
@@ -420,7 +525,10 @@ const LiveClassPage: React.FC = () => {
                       liveClass.daily_room_url.includes('daily.co') ? (
                         <Button
                           size="lg"
-                          className="w-full gradient-primary"
+                          className={cn(
+                            "w-full",
+                            isHost ? "bg-amber-500 hover:bg-amber-600" : "gradient-primary"
+                          )}
                           onClick={handleJoinMeeting}
                           disabled={joining}
                         >
@@ -431,8 +539,8 @@ const LiveClassPage: React.FC = () => {
                             </>
                           ) : (
                             <>
-                              <Video className="h-5 w-5 mr-2" />
-                              Join Class
+                              {isHost ? <Crown className="h-5 w-5 mr-2" /> : <Video className="h-5 w-5 mr-2" />}
+                              {isHost ? "Start Class" : "Join Class"}
                             </>
                           )}
                         </Button>
@@ -452,7 +560,10 @@ const LiveClassPage: React.FC = () => {
                           No video room available
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          The tutor needs to add a meeting link for this class.
+                          {isHost 
+                            ? "Please add a meeting link to this class."
+                            : "The tutor needs to add a meeting link for this class."
+                          }
                         </p>
                       </div>
                     )}
@@ -472,6 +583,12 @@ const LiveClassPage: React.FC = () => {
                         <Users className="h-3 w-3" />
                         You'll join with your Lumina name
                       </p>
+                      {isHost && (
+                        <p className="flex items-center gap-2 text-amber-600">
+                          <Crown className="h-3 w-3" />
+                          You have host controls (mute all, remove participants)
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -505,6 +622,11 @@ const LiveClassPage: React.FC = () => {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Navigation hint */}
+              <div className="text-center text-xs text-muted-foreground">
+                <p>Tip: You can minimize the class and browse the app while in a meeting</p>
+              </div>
             </div>
           </div>
         )}
