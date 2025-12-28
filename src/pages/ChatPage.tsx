@@ -6,6 +6,7 @@ import { ConversationSidebar } from '@/components/lumina/ConversationSidebar';
 import { ConversationSearch } from '@/components/lumina/ConversationSearch';
 import { ZambiaLiiChatSearch } from '@/components/lumina/ZambiaLiiChatSearch';
 import { ThinkingIndicator } from '@/components/lumina/ThinkingIndicator';
+import { ResearchBookmarkButton } from '@/components/lumina/ResearchBookmarkButton';
 
 import {
   ArrowLeft,
@@ -53,6 +54,7 @@ interface Message {
   timestamp: Date;
   attachments?: { name: string; type: string; url?: string }[];
   streaming?: boolean;
+  userQuery?: string; // The user query that triggered this response (for Lumina messages)
 }
 
 interface Conversation {
@@ -626,6 +628,7 @@ const ChatPage: React.FC = () => {
           sender: 'lumina',
           timestamp: new Date(),
           streaming: true,
+          userQuery: messageText, // Store the user query for bookmarking
         },
       ]);
 
@@ -1086,7 +1089,7 @@ const ChatPage: React.FC = () => {
                       </div>
                       
                       {/* Actions for Lumina messages */}
-                      {msg.sender === 'lumina' && msg.content && (
+                      {msg.sender === 'lumina' && msg.content && !msg.streaming && (
                         <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => copyToClipboard(msg.content, msg.id)}
@@ -1105,6 +1108,12 @@ const ChatPage: React.FC = () => {
                               </>
                             )}
                           </button>
+                          {msg.userQuery && (
+                            <ResearchBookmarkButton
+                              userQuery={msg.userQuery}
+                              aiResponse={msg.content}
+                            />
+                          )}
                         </div>
                       )}
                     </div>

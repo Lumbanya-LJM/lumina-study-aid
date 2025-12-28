@@ -21,7 +21,8 @@ import {
   Settings,
   Scale,
   Sparkles,
-  X
+  X,
+  Bookmark
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -147,6 +148,24 @@ const LibraryPage: React.FC = () => {
               <Filter className="w-5 h-5 text-muted-foreground" />
             </button>
           )}
+        </div>
+
+        {/* Quick Links */}
+        <div className="flex gap-3 mb-6">
+          {/* Saved Research Quick Link */}
+          <button
+            onClick={() => navigate('/saved-research')}
+            className="flex-1 flex items-center gap-3 bg-secondary border border-border/50 rounded-2xl p-4 hover:bg-secondary/80 transition-colors"
+          >
+            <div className="p-2 rounded-xl bg-primary/10">
+              <Bookmark className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-medium text-foreground">Saved Research</p>
+              <p className="text-xs text-muted-foreground">Your bookmarked findings</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </button>
         </div>
 
         {/* ZambiaLii Quick Link - only show when not on ZambiaLII tab */}
