@@ -783,39 +783,145 @@ async function executeToolCall(supabase: any, userId: string, toolName: string, 
       
       case "get_file_content": {
         try {
-          // Attempt to fetch file content
           const fileUrl = args.file_url;
           const fileName = args.file_name;
           
-          console.log(`Fetching content from: ${fileName}`);
+          console.log(`Fetching content from: ${fileName} - ${fileUrl}`);
           
           // Check file type
           const isTextFile = /\.(txt|md|json|csv)$/i.test(fileName);
           const isPdf = /\.pdf$/i.test(fileName);
-          const isDocx = /\.(docx?)$/i.test(fileName);
           
-          if (!isTextFile && !isPdf && !isDocx) {
+          if (!isTextFile && !isPdf) {
             return {
               success: false,
-              message: `Cannot extract text from ${fileName}. I can read text files (.txt, .md), PDFs, and Word documents. For other file types, please describe the content you want me to use.`
+              message: `Cannot extract text from ${fileName}. I can read text files (.txt, .md) and PDFs. For other file types, please describe the content you want me to use.`
             };
           }
           
-          // For now, return guidance - actual content extraction would require more complex processing
-          return {
-            success: true,
-            message: `I found the file "${fileName}". To create study materials from this file, please copy and paste the key content you want me to focus on, or describe the main topics covered in the document. I'll then generate comprehensive flashcards or quiz questions based on that content.`,
-            file_info: {
-              name: fileName,
-              url: fileUrl,
-              suggestion: "Share the key topics or paste important sections for best results."
+          // Fetch the file content
+          const response = await fetch(fileUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch file: ${response.status}`);
+          }
+          
+          if (isTextFile) {
+            // For text files, just read as text
+            const textContent = await response.text();
+            console.log(`Extracted ${textContent.length} chars from text file`);
+            return {
+              success: true,
+              content: textContent.slice(0, 50000), // Limit to 50k chars
+              message: `Successfully extracted content from "${fileName}". Here's the content to use for generating study materials.`
+            };
+          }
+          
+          if (isPdf) {
+            // For PDFs, use the improved extraction
+            try {
+              const arrayBuffer = await response.arrayBuffer();
+              const bytes = new Uint8Array(arrayBuffer);
+              
+              console.log(`Loading PDF document, size: ${bytes.length} bytes`);
+              
+              // Decode to text for parsing
+              const pdfText = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+              
+              // Enhanced PDF text extraction
+              const extractedParts: string[] = [];
+              
+              // Method 1: Extract from stream objects using Tj/TJ operators
+              const streamRegex = /stream\s*([\s\S]*?)\s*endstream/gi;
+              let match;
+              while ((match = streamRegex.exec(pdfText)) !== null) {
+                const streamContent = match[1];
+                
+                // Extract Tj text
+                const tjMatches = streamContent.match(/\(([^)]+)\)\s*Tj/g);
+                if (tjMatches) {
+                  tjMatches.forEach(m => {
+                    const text = m.replace(/\(([^)]+)\)\s*Tj/, '$1')
+                      .replace(/\\n/g, '\n')
+                      .replace(/\\r/g, '')
+                      .replace(/\\t/g, ' ');
+                    if (text.length > 1 && /[a-zA-Z]/.test(text)) {
+                      extractedParts.push(text);
+                    }
+                  });
+                }
+                
+                // Extract TJ array text
+                const tjArrayMatches = streamContent.match(/\[([^\]]+)\]\s*TJ/gi);
+                if (tjArrayMatches) {
+                  tjArrayMatches.forEach(m => {
+                    const innerText = m.match(/\(([^)]*)\)/g);
+                    if (innerText) {
+                      const combined = innerText
+                        .map(t => t.replace(/[()]/g, ''))
+                        .filter(t => t.length > 0)
+                        .join('');
+                      if (combined.length > 1 && /[a-zA-Z]/.test(combined)) {
+                        extractedParts.push(combined);
+                      }
+                    }
+                  });
+                }
+              }
+              
+              // Method 2: Look for readable text patterns
+              const readableMatches = pdfText.match(/[\x20-\x7E]{15,}/g) || [];
+              const filteredReadable = readableMatches.filter(t => 
+                /[a-zA-Z]{4,}/.test(t) && // Has meaningful words
+                !/^[0-9\s.]+$/.test(t) && // Not just numbers
+                !t.includes('PDF-') &&
+                !t.includes('obj') &&
+                !t.includes('endobj') &&
+                !t.includes('/Type') &&
+                !t.includes('/Font') &&
+                !t.includes('stream') &&
+                !t.includes('xref') &&
+                t.split(/\s+/).length >= 3 // At least 3 words
+              );
+              extractedParts.push(...filteredReadable);
+              
+              // Combine and clean
+              let fullText = extractedParts.join(' ')
+                .replace(/\s+/g, ' ')
+                .replace(/([.!?])\s*/g, '$1\n')
+                .trim();
+              
+              console.log(`Extracted ${fullText.length} chars from PDF`);
+              
+              if (fullText.length < 100) {
+                return {
+                  success: false,
+                  message: `The PDF "${fileName}" appears to be image-based or scanned. I couldn't extract readable text. Please copy and paste the key content manually, or describe the topics covered.`
+                };
+              }
+              
+              return {
+                success: true,
+                content: fullText.slice(0, 50000), // Limit to 50k chars
+                message: `Successfully extracted content from "${fileName}". Ready to generate study materials from this content.`
+              };
+            } catch (pdfError) {
+              console.error("PDF parsing error:", pdfError);
+              return {
+                success: false,
+                message: `Could not extract text from "${fileName}". The PDF may be image-based or encrypted. Please copy and paste the key content you want me to use.`
+              };
             }
+          }
+          
+          return {
+            success: false,
+            message: `Unsupported file type for "${fileName}".`
           };
         } catch (error) {
           console.error("Error fetching file content:", error);
           return {
             success: false,
-            message: `Could not access the file content. Please try sharing the key topics or content manually.`
+            message: `Could not access "${args.file_name}". Please try sharing the key topics or content manually.`
           };
         }
       }

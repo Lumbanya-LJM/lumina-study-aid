@@ -472,10 +472,10 @@ const LuminaVaultPage: React.FC = () => {
                     key={file.id}
                     className="bg-card rounded-xl p-4 border border-border/50 hover:border-primary/20 transition-colors"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       <button
                         onClick={() => canPreview(file.file_type) ? setPreviewFile(file) : window.open(file.file_url, '_blank')}
-                        className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                        className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors flex-shrink-0"
                       >
                         <FileIcon className="w-5 h-5 text-primary" />
                       </button>
@@ -485,9 +485,17 @@ const LuminaVaultPage: React.FC = () => {
                           {formatFileSize(file.file_size)} • {file.category?.replace('_', ' ') || 'Other'}
                         </p>
                       </div>
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(`/chat?file=${file.id}`)}
+                        className="gradient-primary text-xs gap-1.5 flex-shrink-0"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Study
+                      </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="p-2 rounded-lg hover:bg-secondary transition-colors">
+                          <button className="p-2 rounded-lg hover:bg-secondary transition-colors flex-shrink-0">
                             <MoreVertical className="w-4 h-4 text-muted-foreground" />
                           </button>
                         </DropdownMenuTrigger>
@@ -499,12 +507,12 @@ const LuminaVaultPage: React.FC = () => {
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => window.open(file.file_url, '_blank')}>
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            Open in New Tab
+                            <Download className="w-4 h-4 mr-2" />
+                            Download
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/chat?file=${file.id}`)}>
                             <Sparkles className="w-4 h-4 mr-2" />
-                            Ask Lumina
+                            Create Study Materials
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive"
