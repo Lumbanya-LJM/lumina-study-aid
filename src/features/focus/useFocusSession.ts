@@ -7,10 +7,28 @@ import { notificationManager } from './notificationManager';
 // 1. Define types
 export type SessionPhase = 'focus' | 'break';
 export type SessionStatus = 'started' | 'completed' | 'interrupted';
+export type FocusMode = 'hard' | 'lite';
+
+export interface SessionPreset {
+  id: string;
+  name: string;
+  focusDuration: number;
+  breakDuration: number;
+  description: string;
+}
+
+export const SESSION_PRESETS: SessionPreset[] = [
+  { id: 'quick', name: 'Quick Focus', focusDuration: 25 * 60, breakDuration: 5 * 60, description: '25 min focus, 5 min break' },
+  { id: 'standard', name: 'Standard', focusDuration: 50 * 60, breakDuration: 10 * 60, description: '50 min focus, 10 min break' },
+  { id: 'deep', name: 'Deep Work', focusDuration: 90 * 60, breakDuration: 15 * 60, description: '90 min focus, 15 min break' },
+];
 
 export interface FocusSessionSettings {
   focusDuration: number;
   breakDuration: number;
+  mode: FocusMode;
+  goal: string;
+  presetId: string | null;
 }
 
 interface FocusSessionState {
@@ -35,6 +53,9 @@ interface FocusSessionState {
 const defaultSettings: FocusSessionSettings = {
   focusDuration: 50 * 60, // 50 minutes in seconds
   breakDuration: 10 * 60, // 10 minutes in seconds
+  mode: 'lite',
+  goal: '',
+  presetId: 'standard',
 };
 
 // 3. Create a Zustand store for session management
@@ -103,7 +124,7 @@ export const useFocusSessionStore = create<FocusSessionState>()(
         openDialog: () => set({ isDialogOpen: true }),
         closeDialog: () => set({ isDialogOpen: false }),
         startNextPhase: () => {
-          const { phase, actions, completedCycles } = get();
+          const { phase, completedCycles } = get();
           const nextPhase = phase === 'focus' ? 'break' : 'focus';
 
           if (nextPhase === 'focus') {
