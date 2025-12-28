@@ -124,6 +124,7 @@ export const AdminOnboardingTutorial: React.FC<AdminOnboardingTutorialProps> = (
             ))}
           </div>
           <button 
+            type="button"
             onClick={handleSkip}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -165,6 +166,7 @@ export const AdminOnboardingTutorial: React.FC<AdminOnboardingTutorialProps> = (
           <div className="flex gap-3">
             {currentStep > 0 && (
               <Button
+                type="button"
                 variant="outline"
                 onClick={handlePrev}
                 className="flex-1"
@@ -174,9 +176,10 @@ export const AdminOnboardingTutorial: React.FC<AdminOnboardingTutorialProps> = (
               </Button>
             )}
             <Button
+              type="button"
               onClick={handleNext}
               className={cn(
-                "flex-1 gradient-primary text-primary-foreground",
+                "flex-1 bg-primary hover:bg-primary/90 text-primary-foreground",
                 currentStep === 0 && "w-full"
               )}
             >
@@ -198,6 +201,7 @@ export const AdminOnboardingTutorial: React.FC<AdminOnboardingTutorialProps> = (
           <div className="flex justify-center gap-2">
             {adminSteps.map((_, index) => (
               <button
+                type="button"
                 key={index}
                 onClick={() => {
                   setIsAnimating(true);
