@@ -17,7 +17,8 @@ import {
   ChevronRight,
   Download,
   Plus,
-  ShoppingCart
+  ShoppingCart,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -519,14 +520,19 @@ const LuminaAcademyPage: React.FC = () => {
                       <Calendar className="w-4 h-4 text-primary" />
                       Upcoming Classes
                     </h3>
-                    {scheduledClasses.map((scheduledClass) => (
+                    {scheduledClasses.map((scheduledClass: any) => (
                       <div
                         key={scheduledClass.id}
                         className="bg-card rounded-2xl p-4 border border-border/50"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
-                            <h4 className="font-semibold text-foreground">{scheduledClass.title}</h4>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold text-foreground">{scheduledClass.title}</h4>
+                              {scheduledClass.is_recurring && (
+                                <RefreshCw className="w-3 h-3 text-muted-foreground" />
+                              )}
+                            </div>
                             {scheduledClass.description && (
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                 {scheduledClass.description}
@@ -538,6 +544,12 @@ const LuminaAcademyPage: React.FC = () => {
                                 <span className="text-foreground">
                                   {format(new Date(scheduledClass.scheduled_at), "PPP 'at' p")}
                                 </span>
+                              </div>
+                            )}
+                            {scheduledClass.is_recurring && scheduledClass.recurrence_description && (
+                              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-lg w-fit">
+                                <RefreshCw className="w-3 h-3" />
+                                <span>{scheduledClass.recurrence_description}</span>
                               </div>
                             )}
                           </div>
