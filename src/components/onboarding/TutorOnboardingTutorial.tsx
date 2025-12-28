@@ -9,7 +9,8 @@ import {
   ChevronLeft,
   Sparkles,
   Calendar,
-  BarChart3
+  BarChart3,
+  Hand
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
@@ -206,6 +207,14 @@ export const TutorOnboardingTutorial: React.FC<TutorOnboardingTutorialProps> = (
                 </>
               )}
             </Button>
+          </div>
+
+          {/* Swipe Hint */}
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-3">
+            <ChevronLeft className="w-3 h-3" />
+            <Hand className="w-4 h-4 animate-pulse" />
+            <span>Swipe to navigate</span>
+            <ChevronRight className="w-3 h-3" />
           </div>
 
           {/* Quick Navigation Dots */}
