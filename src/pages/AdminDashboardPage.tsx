@@ -10,6 +10,7 @@ import TutorActivityDashboard from '@/components/admin/TutorActivityDashboard';
 import StudentManagement from '@/components/admin/StudentManagement';
 import BulkEnrollmentManager from '@/components/admin/BulkEnrollmentManager';
 import ClassPricingManager from '@/components/admin/ClassPricingManager';
+import { EmailTemplatesManager } from '@/components/admin/EmailTemplatesManager';
 import { AdminOnboardingTutorial } from '@/components/onboarding/AdminOnboardingTutorial';
 import { AdminStatsDetailModal, AdminStatType } from '@/components/admin/AdminStatsDetailModal';
 import { 
@@ -411,7 +412,12 @@ const AdminDashboardPage: React.FC = () => {
         return <ClassPricingManager />;
 
       case 'settings':
-        return <AdminManagement />;
+        return (
+          <div className="space-y-6">
+            <AdminManagement />
+            <EmailTemplatesManager />
+          </div>
+        );
 
       default:
         return null;
