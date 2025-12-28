@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MobileLayout } from '@/components/layout/MobileLayout';
+import { AdminLayout } from '@/components/layout/AdminLayout';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useAuth } from '@/hooks/useAuth';
@@ -198,27 +198,18 @@ const AdminContentPage: React.FC = () => {
     }
   };
 
-  if (adminLoading || loading) {
-    return (
-      <MobileLayout showNav={false}>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-        </div>
-      </MobileLayout>
-    );
-  }
-
-  if (!isAdmin) return null;
-
   return (
-    <MobileLayout showNav={false}>
-      <div className="py-6 safe-top">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-secondary">
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-          <h1 className="text-lg font-semibold text-foreground">Admin: Content Manager</h1>
+    <AdminLayout
+      title="Content Manager"
+      subtitle="Manage library resources"
+      mobileTitle="Content Manager"
+      showSidebar={false}
+      showBackButton={true}
+    >
+      <div className="space-y-6">
+        {/* Header Actions */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-foreground">Library Content</h2>
           <button
             onClick={() => setShowForm(!showForm)}
             className="p-2 rounded-xl bg-primary text-primary-foreground"
@@ -454,7 +445,7 @@ const AdminContentPage: React.FC = () => {
           </div>
         )}
       </div>
-    </MobileLayout>
+    </AdminLayout>
   );
 };
 
