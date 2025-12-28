@@ -30,6 +30,8 @@ import {
   Pencil,
   Play,
   ExternalLink,
+  PhoneOff,
+  Loader2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PostUpdateForm from '@/components/teach/PostUpdateForm';
@@ -80,6 +82,7 @@ interface ScheduledClass {
   course_id: string;
   course_name?: string;
   daily_room_url: string | null;
+  daily_room_name: string | null;
 }
 
 const TeachDashboardPage: React.FC = () => {
@@ -110,6 +113,7 @@ const TeachDashboardPage: React.FC = () => {
   const [statsModalType, setStatsModalType] = useState<'students' | 'updates' | 'upcoming' | 'completed' | 'attendance' | 'materials' | null>(null);
   const [editClassModalOpen, setEditClassModalOpen] = useState(false);
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
+  const [endingClassId, setEndingClassId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -178,12 +182,11 @@ const TeachDashboardPage: React.FC = () => {
 
       const { data: upcomingClassesData } = await supabase
         .from('live_classes')
-        .select('id, title, description, scheduled_at, status, course_id, daily_room_url')
+        .select('id, title, description, scheduled_at, status, course_id, daily_room_url, daily_room_name')
         .eq('host_id', user.id)
         .in('status', ['scheduled', 'live'])
-        .gte('scheduled_at', new Date().toISOString())
         .order('scheduled_at', { ascending: true })
-        .limit(5);
+        .limit(10);
 
       if (upcomingClassesData) {
         const classesWithCourseNames = upcomingClassesData.map(cls => ({
@@ -249,6 +252,68 @@ const TeachDashboardPage: React.FC = () => {
       console.error('Error loading students:', error);
     } finally {
       setLoadingStudents(false);
+    }
+  };
+
+  const handleEndClass = async (classId: string, dailyRoomName: string | null) => {
+    if (endingClassId) return; // Prevent double-click
+    
+    setEndingClassId(classId);
+    
+    try {
+      // Stop recording via Daily.co API if room exists
+      if (dailyRoomName) {
+        console.log("Stopping recording for room:", dailyRoomName);
+        await supabase.functions.invoke("daily-room", {
+          body: {
+            action: "stop-recording",
+            roomName: dailyRoomName,
+          },
+        });
+      }
+
+      // Update class status to ended
+      const { error: updateError } = await supabase
+        .from("live_classes")
+        .update({
+          status: "ended",
+          ended_at: new Date().toISOString(),
+        })
+        .eq("id", classId);
+
+      if (updateError) throw updateError;
+
+      // Trigger auto-create for recurring classes
+      const { data: recurringResult, error: recurringError } = await supabase.functions.invoke(
+        "auto-create-recurring-class",
+        { body: { classId } }
+      );
+
+      if (recurringError) {
+        console.error("Failed to auto-create recurring class:", recurringError);
+      } else if (recurringResult?.newClassId) {
+        toast({
+          title: "Next Class Scheduled",
+          description: "Your next recurring class has been automatically scheduled.",
+        });
+      }
+
+      toast({
+        title: "Class Ended",
+        description: "The class has been ended successfully.",
+      });
+
+      // Refresh the data
+      loadData();
+    } catch (error) {
+      console.error("Error ending class:", error);
+      toast({
+        title: "Error",
+        description: "Failed to end class. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setEndingClassId(null);
     }
   };
 
@@ -407,18 +472,46 @@ const TeachDashboardPage: React.FC = () => {
                       </div>
                       
                       {/* Start/Join Class Button */}
-                      {canStart && (
+                      {canStart && !isLive && (
                         <Button
                           size="sm"
-                          variant={isLive ? "destructive" : "default"}
-                          className={cn(
-                            "gap-1.5",
-                            !isLive && "gradient-primary"
-                          )}
+                          variant="default"
+                          className="gap-1.5 gradient-primary"
                           onClick={() => navigate(`/live/${cls.id}`)}
                         >
                           <Play className="w-3.5 h-3.5" />
-                          {isLive ? 'Join' : 'Start'}
+                          Start
+                        </Button>
+                      )}
+
+                      {/* Join Class Button for live classes */}
+                      {isLive && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => navigate(`/live/${cls.id}`)}
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                          Join
+                        </Button>
+                      )}
+
+                      {/* End Class Button for live classes */}
+                      {isLive && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="gap-1.5"
+                          disabled={endingClassId === cls.id}
+                          onClick={() => handleEndClass(cls.id, cls.daily_room_name)}
+                        >
+                          {endingClassId === cls.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <PhoneOff className="w-3.5 h-3.5" />
+                          )}
+                          End
                         </Button>
                       )}
                       
@@ -627,15 +720,43 @@ const TeachDashboardPage: React.FC = () => {
                         <p className="text-sm text-muted-foreground">{format(new Date(cls.scheduled_at), 'h:mm a')}</p>
                       </div>
                       
-                      {canStart && (
+                      {/* Start Button for scheduled classes */}
+                      {canStart && !isLive && (
                         <Button
-                          variant={isLive ? "destructive" : "default"}
-                          className={cn("gap-2", !isLive && "gradient-primary")}
+                          variant="default"
+                          className="gap-2 gradient-primary"
                           onClick={() => navigate(`/live/${cls.id}`)}
                         >
                           <Play className="w-4 h-4" />
-                          {isLive ? 'Join Class' : 'Start Class'}
+                          Start Class
                         </Button>
+                      )}
+
+                      {/* Join and End buttons for live classes */}
+                      {isLive && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => navigate(`/live/${cls.id}`)}
+                          >
+                            <Play className="w-4 h-4" />
+                            Join
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            className="gap-2"
+                            disabled={endingClassId === cls.id}
+                            onClick={() => handleEndClass(cls.id, cls.daily_room_name)}
+                          >
+                            {endingClassId === cls.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <PhoneOff className="w-4 h-4" />
+                            )}
+                            End Class
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
