@@ -237,6 +237,11 @@ const SettingsPage: React.FC = () => {
     return saved === 'true';
   });
 
+  const [typingSoundEnabled, setTypingSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem('lumina_typing_sound');
+    return saved !== 'false'; // Default to true
+  });
+
   const notificationOptions = [
     { key: 'dailyReminders' as const, label: 'Daily Study Reminders', description: 'Get reminded to study every day' },
     { key: 'weeklyReports' as const, label: 'Weekly Progress Reports', description: 'Receive weekly summary of your progress' },
@@ -591,6 +596,43 @@ const SettingsPage: React.FC = () => {
                     When enabled, Lumina will search the internet for current information, 
                     ZambiaLII cases, and statutes to provide more accurate and up-to-date answers.
                     You can also toggle this per-conversation in the chat header.
+                  </p>
+                </div>
+              </div>
+
+              {/* Typing Sound Settings */}
+              <div className="bg-card rounded-2xl border border-border/50 shadow-card p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    {typingSoundEnabled ? (
+                      <Volume2 className="w-5 h-5 text-primary" />
+                    ) : (
+                      <VolumeX className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="font-semibold text-foreground">Typing Sound Effect</h2>
+                    <p className="text-xs text-muted-foreground">Play subtle sounds while Lumina responds</p>
+                  </div>
+                  <Switch
+                    checked={typingSoundEnabled}
+                    onCheckedChange={(checked) => {
+                      setTypingSoundEnabled(checked);
+                      localStorage.setItem('lumina_typing_sound', String(checked));
+                      toast({
+                        title: checked ? "Typing Sound Enabled" : "Typing Sound Disabled",
+                        description: checked 
+                          ? "You'll hear subtle sounds while Lumina types" 
+                          : "Lumina will respond silently",
+                      });
+                    }}
+                  />
+                </div>
+                
+                <div className="p-3 bg-secondary/50 rounded-xl">
+                  <p className="text-xs text-muted-foreground">
+                    Creates a more immersive experience with soft typing sounds 
+                    as Lumina generates responses.
                   </p>
                 </div>
               </div>

@@ -586,8 +586,9 @@ const ChatPage: React.FC = () => {
         let buffer = '';
         let updateScheduled = false;
         
-        // Start typing sound effect if sounds are enabled
-        if (isSoundEnabledState()) {
+        // Start typing sound effect if sounds are enabled and typing sound is enabled
+        const typingSoundEnabled = localStorage.getItem('lumina_typing_sound') !== 'false';
+        if (isSoundEnabledState() && typingSoundEnabled) {
           typingSoundIntervalRef.current = setInterval(() => {
             sounds.typing();
           }, 120);
