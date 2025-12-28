@@ -16,7 +16,8 @@ import {
   FolderOpen,
   ChevronRight,
   Download,
-  Plus
+  Plus,
+  ShoppingCart
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -330,6 +331,15 @@ const LuminaAcademyPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                onClick={() => navigate('/marketplace')}
+                size="sm"
+                variant="outline"
+                className="gap-1"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Buy Classes
+              </Button>
               {isTutor && (
                 <Button
                   onClick={() => navigate('/teach')}
