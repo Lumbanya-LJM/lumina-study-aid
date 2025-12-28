@@ -255,6 +255,23 @@ const LiveClassPage: React.FC = () => {
         throw updateError;
       }
 
+      // Auto-create next recurring class if applicable
+      console.log("Triggering auto-create for recurring class...");
+      const { data: recurringResult, error: recurringError } = await supabase.functions.invoke(
+        "auto-create-recurring-class",
+        { body: { classId: liveClass.id } }
+      );
+
+      if (recurringError) {
+        console.error("Failed to auto-create recurring class:", recurringError);
+      } else if (recurringResult?.newClassId) {
+        console.log("Next recurring class created:", recurringResult.newClassId);
+        toast({
+          title: "Next Class Scheduled",
+          description: `Your next recurring class has been automatically scheduled.`,
+        });
+      }
+
       toast({
         title: "Class Ended",
         description: "The recording will be processed and available shortly.",
