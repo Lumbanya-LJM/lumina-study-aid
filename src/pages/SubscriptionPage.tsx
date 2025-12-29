@@ -18,6 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { useSchool } from '@/hooks/useSchool';
+import { getSchoolConfig } from '@/config/schools';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -89,6 +91,7 @@ const SubscriptionPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { school, schoolConfig } = useSchool();
   
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -500,9 +503,9 @@ const SubscriptionPage: React.FC = () => {
                   </ul>
                 </div>
 
-                <h3 className="font-semibold text-foreground mb-3">Select ZIALE Courses</h3>
+                <h3 className="font-semibold text-foreground mb-3">Select {schoolConfig.name} Courses</h3>
                 <div className="space-y-2 mb-6">
-                  {courses.filter(c => c.institution === 'ZIALE').map((course) => {
+                  {courses.filter(c => schoolConfig.institutions.some(inst => inst.shortName === c.institution || inst.id === c.institution)).map((course) => {
                     const isEnrolled = enrollments.includes(course.id);
                     const isSelected = selectedCourses.includes(course.id);
                     

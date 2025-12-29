@@ -325,7 +325,7 @@ const MarketplacePage: React.FC = () => {
               <Button 
                 size="sm" 
                 onClick={() => type === 'live' 
-                  ? navigate(`/live-class/${item.id}`)
+                  ? navigate(`/class/${item.id}`)
                   : navigate(`/recordings?classId=${item.id}`)
                 }
               >
