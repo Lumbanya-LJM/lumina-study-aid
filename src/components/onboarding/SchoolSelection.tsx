@@ -15,6 +15,25 @@ const schoolIcons: Record<LMVSchool, React.ReactNode> = {
   health: <Heart className="w-8 h-8" />,
 };
 
+// School-specific color classes
+const schoolStyles: Record<LMVSchool, { bg: string; border: string; icon: string }> = {
+  law: {
+    bg: 'bg-[hsl(220,56%,25%)]',
+    border: 'border-[hsl(220,56%,25%)]',
+    icon: 'bg-[hsl(220,56%,25%)] text-white',
+  },
+  business: {
+    bg: 'bg-[hsl(155,45%,28%)]',
+    border: 'border-[hsl(155,45%,28%)]',
+    icon: 'bg-[hsl(155,45%,28%)] text-white',
+  },
+  health: {
+    bg: 'bg-[hsl(195,43%,29%)]',
+    border: 'border-[hsl(195,43%,29%)]',
+    icon: 'bg-[hsl(195,43%,29%)] text-white',
+  },
+};
+
 export const SchoolSelection: React.FC<SchoolSelectionProps> = ({
   selectedSchool,
   onSelect,
@@ -36,6 +55,7 @@ export const SchoolSelection: React.FC<SchoolSelectionProps> = ({
       <div className="grid gap-4">
         {schools.map((school) => {
           const isSelected = selectedSchool === school.id;
+          const styles = schoolStyles[school.id];
           
           return (
             <button
@@ -44,10 +64,10 @@ export const SchoolSelection: React.FC<SchoolSelectionProps> = ({
               type="button"
               className={cn(
                 "w-full p-5 rounded-xl border-2 text-left transition-all duration-200",
-                "hover:shadow-md hover:border-primary/50",
+                "hover:shadow-md",
                 isSelected
-                  ? "border-primary bg-primary/5 shadow-md"
-                  : "border-border/50 bg-card hover:bg-card/80"
+                  ? `${styles.border} bg-primary/5 shadow-md`
+                  : "border-border/50 bg-card hover:bg-card/80 hover:border-muted-foreground/30"
               )}
             >
               <div className="flex items-start gap-4">
@@ -55,7 +75,7 @@ export const SchoolSelection: React.FC<SchoolSelectionProps> = ({
                   className={cn(
                     "p-3 rounded-xl transition-colors",
                     isSelected
-                      ? "bg-primary text-primary-foreground"
+                      ? styles.icon
                       : "bg-secondary text-secondary-foreground"
                   )}
                 >
@@ -67,8 +87,8 @@ export const SchoolSelection: React.FC<SchoolSelectionProps> = ({
                       {school.name}
                     </h4>
                     {isSelected && (
-                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                        <ArrowRight className="w-4 h-4 text-primary-foreground" />
+                      <div className={cn("w-6 h-6 rounded-full flex items-center justify-center", styles.bg)}>
+                        <ArrowRight className="w-4 h-4 text-white" />
                       </div>
                     )}
                   </div>

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import { Scale, Briefcase, Heart, ArrowRight, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LMVSchool, SCHOOL_CONFIGS, getAllSchools } from '@/config/schools';
+import { applySchoolTheme } from '@/hooks/useSchoolTheme';
 
 const schoolIcons: Record<LMVSchool, React.ReactNode> = {
   law: <Scale className="w-8 h-8" />,
@@ -11,11 +12,37 @@ const schoolIcons: Record<LMVSchool, React.ReactNode> = {
   health: <Heart className="w-8 h-8" />,
 };
 
+// School-specific gradient and color classes
+const schoolStyles: Record<LMVSchool, { bg: string; border: string; icon: string }> = {
+  law: {
+    bg: 'bg-[hsl(220,56%,25%)]',
+    border: 'border-[hsl(220,56%,25%)]',
+    icon: 'bg-[hsl(220,56%,25%)] text-white',
+  },
+  business: {
+    bg: 'bg-[hsl(155,45%,28%)]',
+    border: 'border-[hsl(155,45%,28%)]',
+    icon: 'bg-[hsl(155,45%,28%)] text-white',
+  },
+  health: {
+    bg: 'bg-[hsl(195,43%,29%)]',
+    border: 'border-[hsl(195,43%,29%)]',
+    icon: 'bg-[hsl(195,43%,29%)] text-white',
+  },
+};
+
 const WelcomePage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedSchool, setSelectedSchool] = useState<LMVSchool | null>(null);
   
   const schools = getAllSchools();
+
+  // Apply school theme when selection changes (for preview)
+  useEffect(() => {
+    if (selectedSchool) {
+      applySchoolTheme(selectedSchool);
+    }
+  }, [selectedSchool]);
 
   const handleSchoolSelect = (school: LMVSchool) => {
     setSelectedSchool(school);
@@ -50,6 +77,7 @@ const WelcomePage: React.FC = () => {
         <div className="w-full max-w-lg space-y-4">
           {schools.map((school) => {
             const isSelected = selectedSchool === school.id;
+            const styles = schoolStyles[school.id];
             
             return (
               <button
@@ -57,17 +85,17 @@ const WelcomePage: React.FC = () => {
                 onClick={() => handleSchoolSelect(school.id)}
                 className={cn(
                   "w-full p-6 rounded-2xl border-2 text-left transition-all duration-300",
-                  "hover:shadow-lg hover:border-primary/50",
+                  "hover:shadow-lg",
                   isSelected
-                    ? "border-primary bg-primary/5 shadow-lg"
-                    : "border-border/50 bg-card hover:bg-card/80"
+                    ? `${styles.border} bg-primary/5 shadow-lg`
+                    : "border-border/50 bg-card hover:bg-card/80 hover:border-muted-foreground/30"
                 )}
               >
                 <div className="flex items-start gap-4">
                   <div className={cn(
                     "p-4 rounded-xl transition-all duration-300",
                     isSelected
-                      ? "bg-primary text-primary-foreground"
+                      ? styles.icon
                       : "bg-secondary text-secondary-foreground"
                   )}>
                     {schoolIcons[school.id]}
@@ -78,8 +106,8 @@ const WelcomePage: React.FC = () => {
                         {school.name}
                       </h3>
                       {isSelected && (
-                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                          <ArrowRight className="w-4 h-4 text-primary-foreground" />
+                        <div className={cn("w-6 h-6 rounded-full flex items-center justify-center", styles.bg)}>
+                          <ArrowRight className="w-4 h-4 text-white" />
                         </div>
                       )}
                     </div>
@@ -105,7 +133,7 @@ const WelcomePage: React.FC = () => {
             "flex items-center justify-center gap-2",
             "transition-all duration-300",
             selectedSchool
-              ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+              ? `${schoolStyles[selectedSchool].bg} text-white hover:opacity-90 shadow-lg`
               : "bg-muted text-muted-foreground cursor-not-allowed"
           )}
         >

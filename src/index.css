@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    /* LMV Brand Colors - Deep Teal Blue from Logo */
+    /* LMV Brand Colors - Deep Teal Blue from Logo (Default/Health) */
     --background: 0 0% 100%;
     --foreground: 200 35% 15%;
 
@@ -16,7 +16,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 200 35% 15%;
 
-    /* LMV Deep Teal Primary - #2A5A6A */
+    /* LMV Deep Teal Primary - #2A5A6A (Health) */
     --primary: 195 43% 29%;
     --primary-foreground: 0 0% 100%;
 
@@ -41,7 +41,7 @@
 
     --radius: 1rem;
 
-    /* Custom LMV Colors - Teal Blue Palette */
+    /* Custom LMV Colors - Teal Blue Palette (Health) */
     --lmv-teal-900: 200 35% 15%;
     --lmv-teal-800: 198 38% 22%;
     --lmv-teal-700: 195 43% 29%;
@@ -52,6 +52,24 @@
     --lmv-teal-200: 195 40% 85%;
     --lmv-teal-100: 195 45% 94%;
     --lmv-teal-50: 195 50% 97%;
+
+    /* School-specific colors - Law (Corporate Navy) */
+    --school-law-primary: 220 56% 25%;
+    --school-law-primary-light: 220 50% 35%;
+    --school-law-primary-dark: 220 60% 18%;
+    --school-law-accent: 220 45% 45%;
+    
+    /* School-specific colors - Business (Finance Gold/Emerald) */
+    --school-business-primary: 155 45% 28%;
+    --school-business-primary-light: 155 40% 38%;
+    --school-business-primary-dark: 155 50% 20%;
+    --school-business-accent: 45 85% 50%;
+    
+    /* School-specific colors - Health (Medical Teal) */
+    --school-health-primary: 195 43% 29%;
+    --school-health-primary-light: 195 40% 40%;
+    --school-health-primary-dark: 195 48% 20%;
+    --school-health-accent: 170 50% 45%;
 
     --lmv-grey-900: 200 9% 15%;
     --lmv-grey-800: 200 9% 25%;
@@ -89,6 +107,69 @@
     --sidebar-accent-foreground: 195 43% 29%;
     --sidebar-border: 200 13% 91%;
     --sidebar-ring: 195 43% 29%;
+  }
+
+  /* School of Law Theme - Corporate Navy */
+  .school-law {
+    --primary: 220 56% 25%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 220 45% 45%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 220 56% 25%;
+    --sidebar-primary: 220 56% 25%;
+    --sidebar-accent: 220 50% 94%;
+    --sidebar-accent-foreground: 220 56% 25%;
+    --sidebar-ring: 220 56% 25%;
+    --shadow-glow: 0 0 30px hsl(220 56% 25% / 0.2);
+  }
+
+  .dark.school-law {
+    --primary: 220 55% 50%;
+    --accent: 220 50% 55%;
+    --ring: 220 55% 50%;
+    --sidebar-primary: 220 55% 50%;
+  }
+
+  /* School of Business Theme - Emerald/Finance */
+  .school-business {
+    --primary: 155 45% 28%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 45 85% 50%;
+    --accent-foreground: 0 0% 15%;
+    --ring: 155 45% 28%;
+    --sidebar-primary: 155 45% 28%;
+    --sidebar-accent: 155 40% 94%;
+    --sidebar-accent-foreground: 155 45% 28%;
+    --sidebar-ring: 155 45% 28%;
+    --shadow-glow: 0 0 30px hsl(155 45% 28% / 0.2);
+  }
+
+  .dark.school-business {
+    --primary: 155 50% 45%;
+    --accent: 45 80% 55%;
+    --ring: 155 50% 45%;
+    --sidebar-primary: 155 50% 45%;
+  }
+
+  /* School of Health Theme - Medical Teal (default) */
+  .school-health {
+    --primary: 195 43% 29%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 170 50% 45%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 195 43% 29%;
+    --sidebar-primary: 195 43% 29%;
+    --sidebar-accent: 195 45% 94%;
+    --sidebar-accent-foreground: 195 43% 29%;
+    --sidebar-ring: 195 43% 29%;
+    --shadow-glow: 0 0 30px hsl(195 43% 29% / 0.2);
+  }
+
+  .dark.school-health {
+    --primary: 195 45% 45%;
+    --accent: 170 45% 50%;
+    --ring: 195 45% 45%;
+    --sidebar-primary: 195 45% 45%;
   }
 
   .dark {
@@ -159,11 +240,24 @@
   }
   
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(195, 43%, 29%) 0%, hsl(200, 35%, 22%) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
   }
 
   .dark .gradient-primary {
-    background: linear-gradient(135deg, hsl(195, 45%, 45%) 0%, hsl(200, 40%, 35%) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.7) 100%);
+  }
+
+  /* School-specific gradients */
+  .gradient-law {
+    background: linear-gradient(135deg, hsl(220, 56%, 25%) 0%, hsl(220, 60%, 18%) 100%);
+  }
+  
+  .gradient-business {
+    background: linear-gradient(135deg, hsl(155, 45%, 28%) 0%, hsl(155, 50%, 20%) 100%);
+  }
+  
+  .gradient-health {
+    background: linear-gradient(135deg, hsl(195, 43%, 29%) 0%, hsl(195, 48%, 20%) 100%);
   }
   
   .gradient-subtle {
@@ -203,14 +297,14 @@
   }
   
   .text-gradient {
-    background: linear-gradient(135deg, hsl(195, 43%, 29%) 0%, hsl(200, 35%, 22%) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.7) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .dark .text-gradient {
-    background: linear-gradient(135deg, hsl(195, 45%, 55%) 0%, hsl(200, 40%, 45%) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
