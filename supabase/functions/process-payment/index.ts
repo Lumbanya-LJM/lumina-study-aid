@@ -63,54 +63,6 @@ async function processLencoPayment(
   }
 }
 
-// Fallback to MoneyUnify if configured
-async function processMoneyUnifyPayment(
-  amount: number,
-  phoneNumber: string,
-  provider: string,
-  reference: string
-): Promise<{ success: boolean; transactionId?: string; error?: string }> {
-  const MONEYUNIFY_API_KEY = Deno.env.get("MONEYUNIFY_API_KEY");
-  const MONEYUNIFY_MERCHANT_ID = Deno.env.get("MONEYUNIFY_MERCHANT_ID");
-
-  if (!MONEYUNIFY_API_KEY || !MONEYUNIFY_MERCHANT_ID) {
-    return { success: false, error: "MoneyUnify not configured" };
-  }
-
-  try {
-    const response = await fetch("https://api.moneyunify.com/v1/payments/request", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${MONEYUNIFY_API_KEY}`,
-        "Content-Type": "application/json",
-        "X-Merchant-ID": MONEYUNIFY_MERCHANT_ID,
-      },
-      body: JSON.stringify({
-        amount: amount,
-        currency: "ZMW",
-        phone_number: phoneNumber,
-        provider: provider.toLowerCase(),
-        reference: reference,
-        description: "LMV Academy Payment",
-        callback_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/payment-webhook`,
-      }),
-    });
-
-    if (!response.ok) {
-      return { success: false, error: "MoneyUnify request failed" };
-    }
-
-    const data = await response.json();
-    return { 
-      success: true, 
-      transactionId: data.transaction_id || reference 
-    };
-  } catch (error) {
-    console.error("MoneyUnify error:", error);
-    return { success: false, error: "MoneyUnify gateway error" };
-  }
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -126,8 +78,7 @@ serve(async (req) => {
       selectedCourses, 
       classId, 
       classPurchaseType, 
-      purchaserEmail,
-      paymentGateway = 'lenco' // Default to Lenco
+      purchaserEmail
     } = await req.json();
 
     const authHeader = req.headers.get("Authorization");
@@ -154,7 +105,7 @@ serve(async (req) => {
       throw new Error("Invalid payment provider");
     }
 
-    console.log("Processing payment:", { amount, provider, productType, paymentGateway });
+    console.log("Processing payment:", { amount, provider, productType });
 
     // Create payment record
     const { data: payment, error: paymentError } = await supabaseClient
@@ -178,20 +129,8 @@ serve(async (req) => {
       throw new Error("Failed to create payment record");
     }
 
-    // Try Lenco first (preferred), then fallback to MoneyUnify
-    let paymentResult;
-    
-    if (paymentGateway === 'lenco' || !Deno.env.get("MONEYUNIFY_API_KEY")) {
-      paymentResult = await processLencoPayment(amount, cleanPhone, provider, payment.id);
-      
-      // If Lenco fails and MoneyUnify is configured, try MoneyUnify
-      if (!paymentResult.success && Deno.env.get("MONEYUNIFY_API_KEY")) {
-        console.log("Lenco failed, trying MoneyUnify...");
-        paymentResult = await processMoneyUnifyPayment(amount, cleanPhone, provider, payment.id);
-      }
-    } else {
-      paymentResult = await processMoneyUnifyPayment(amount, cleanPhone, provider, payment.id);
-    }
+    // Process payment via Lenco
+    const paymentResult = await processLencoPayment(amount, cleanPhone, provider, payment.id);
 
     let classTitle = '';
     let classScheduledAt = '';
