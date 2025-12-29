@@ -309,11 +309,53 @@ export default function TutorManagementPage() {
 
       if (error) throw error;
 
-      toast.success("Invitation cancelled");
+      toast.success("Invitation withdrawn");
       loadData();
     } catch (error: any) {
       console.error("Error cancelling invitation:", error);
-      toast.error("Failed to cancel invitation");
+      toast.error("Failed to withdraw invitation");
+    }
+  };
+
+  const handleDeleteInvitation = async (invitationId: string) => {
+    if (!confirm("Are you sure you want to permanently delete this invitation?")) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from("tutor_invitations")
+        .delete()
+        .eq("id", invitationId);
+
+      if (error) throw error;
+
+      toast.success("Invitation deleted");
+      loadData();
+    } catch (error: any) {
+      console.error("Error deleting invitation:", error);
+      toast.error("Failed to delete invitation");
+    }
+  };
+
+  const handleClearInvitationHistory = async () => {
+    if (!confirm("Are you sure you want to delete all non-pending invitations (cancelled, expired, accepted)?")) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from("tutor_invitations")
+        .delete()
+        .neq("status", "pending");
+
+      if (error) throw error;
+
+      toast.success("Invitation history cleared");
+      loadData();
+    } catch (error: any) {
+      console.error("Error clearing history:", error);
+      toast.error("Failed to clear history");
     }
   };
 
@@ -798,11 +840,24 @@ export default function TutorManagementPage() {
 
           <TabsContent value="invitations" className="mt-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Tutor Invitations</CardTitle>
-                <CardDescription>
-                  Track and manage sent tutor invitations
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Tutor Invitations</CardTitle>
+                  <CardDescription>
+                    Track and manage sent tutor invitations
+                  </CardDescription>
+                </div>
+                {invitations.some(inv => inv.status !== "pending") && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleClearInvitationHistory}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear History
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -853,28 +908,37 @@ export default function TutorManagementPage() {
                             {format(new Date(invitation.expires_at), "MMM d, yyyy")}
                           </TableCell>
                           <TableCell>
-                            {invitation.status === "pending" && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleResendInvitation(invitation)}>
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    Resend
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => handleCancelInvitation(invitation.id)}
-                                    className="text-destructive"
-                                  >
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Cancel
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {invitation.status === "pending" && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => handleResendInvitation(invitation)}>
+                                      <RefreshCw className="h-4 w-4 mr-2" />
+                                      Resend
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => handleCancelInvitation(invitation.id)}
+                                      className="text-amber-600"
+                                    >
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Withdraw
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteInvitation(invitation.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))}
