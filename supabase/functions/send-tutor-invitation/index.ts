@@ -66,27 +66,50 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("status", "pending")
       .single();
 
+    let invitation;
+
     if (existingInvitation) {
-      throw new Error("A pending invitation already exists for this email");
-    }
+      // Update existing invitation with new token and details
+      const { data: updatedInvitation, error: updateError } = await supabase
+        .from("tutor_invitations")
+        .update({
+          full_name: fullName,
+          selected_courses: selectedCourses || [],
+          invitation_token: invitationToken,
+          invited_by: user.id,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        })
+        .eq("id", existingInvitation.id)
+        .select()
+        .single();
 
-    // Create the invitation record
-    const { data: invitation, error: insertError } = await supabase
-      .from("tutor_invitations")
-      .insert({
-        email: email.toLowerCase(),
-        full_name: fullName,
-        selected_courses: selectedCourses || [],
-        invitation_token: invitationToken,
-        invited_by: user.id,
-        status: "pending"
-      })
-      .select()
-      .single();
+      if (updateError) {
+        console.error("Error updating invitation:", updateError);
+        throw new Error("Failed to update invitation");
+      }
+      invitation = updatedInvitation;
+      console.log("Updated existing invitation for:", email);
+    } else {
+      // Create new invitation record
+      const { data: newInvitation, error: insertError } = await supabase
+        .from("tutor_invitations")
+        .insert({
+          email: email.toLowerCase(),
+          full_name: fullName,
+          selected_courses: selectedCourses || [],
+          invitation_token: invitationToken,
+          invited_by: user.id,
+          status: "pending"
+        })
+        .select()
+        .single();
 
-    if (insertError) {
-      console.error("Error creating invitation:", insertError);
-      throw new Error("Failed to create invitation");
+      if (insertError) {
+        console.error("Error creating invitation:", insertError);
+        throw new Error("Failed to create invitation");
+      }
+      invitation = newInvitation;
+      console.log("Created new invitation for:", email);
     }
 
     // Get the app URL from environment - use custom domain as default
