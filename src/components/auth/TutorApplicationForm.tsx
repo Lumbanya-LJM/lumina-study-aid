@@ -11,19 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 
-const availableSubjects = [
-  'Constitutional Law',
-  'Criminal Law',
-  'Contract Law',
-  'Tort Law',
-  'Property Law',
-  'Administrative Law',
-  'Company Law',
-  'Family Law',
-  'Evidence Law',
-  'Legal Practice',
-  'Other',
-];
 
 interface DocumentUpload {
   name: string;
@@ -180,14 +167,6 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
     }
   };
 
-  const toggleSubject = (subject: string) => {
-    setFormData(prev => ({
-      ...prev,
-      subjects: prev.subjects.includes(subject)
-        ? prev.subjects.filter(s => s !== subject)
-        : [...prev.subjects, subject]
-    }));
-  };
 
   const handleFileChange = (index: number, file: File | null, isOther = false) => {
     if (isOther) {
@@ -309,18 +288,6 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
       return;
     }
     
-    // Validate subjects
-    const actualSubjects = formData.subjects.filter(s => s !== 'Other');
-    const hasOtherWithText = formData.subjects.includes('Other') && formData.otherSubject.trim();
-    
-    if (actualSubjects.length === 0 && !hasOtherWithText) {
-      toast({
-        title: 'Select Subjects',
-        description: 'Please select at least one subject you can teach',
-        variant: 'destructive'
-      });
-      return;
-    }
 
     // Validate motivation word count
     if (countWords(formData.motivation) > 300) {
@@ -342,11 +309,6 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
       return;
     }
     
-    const finalSubjects = [...actualSubjects];
-    if (hasOtherWithText) {
-      finalSubjects.push(formData.otherSubject.trim());
-    }
-
     // Combine all selected courses
     const allSelectedCourses = [...formData.selectedUndergraduateCourses, ...formData.selectedZialeCourses];
 
@@ -382,7 +344,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           full_name: fullName,
           qualifications: formData.qualifications,
           experience: formData.experience,
-          subjects: finalSubjects,
+          subjects: [],
           status: 'pending',
           is_employed: formData.isEmployed === 'yes',
           time_flexibility: formData.timeFlexibility,
@@ -433,7 +395,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+    <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 w-full max-w-2xl mx-auto">
       <div className="text-center mb-6">
         <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-accent to-accent/70 flex items-center justify-center">
           <BookOpen className="w-8 h-8 text-primary-foreground" />
@@ -805,47 +767,6 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
         </p>
       </div>
 
-      {/* Subjects */}
-      <div className="space-y-3">
-        <Label>Subjects You Can Teach</Label>
-        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-          {availableSubjects.map((subject) => (
-            <div
-              key={subject}
-              className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50"
-            >
-              <Checkbox
-                id={subject}
-                checked={formData.subjects.includes(subject)}
-                onCheckedChange={() => toggleSubject(subject)}
-              />
-              <label
-                htmlFor={subject}
-                className="text-sm cursor-pointer flex-1"
-              >
-                {subject}
-              </label>
-            </div>
-          ))}
-        </div>
-        
-        {formData.subjects.includes('Other') && (
-          <div className="mt-3">
-            <Input
-              placeholder="Enter the subject you'd like to teach..."
-              value={formData.otherSubject}
-              onChange={(e) => setFormData({ ...formData, otherSubject: e.target.value })}
-              className="w-full"
-            />
-          </div>
-        )}
-        
-        {formData.subjects.length > 0 && (
-          <p className="text-xs text-primary">
-            {formData.subjects.filter(s => s !== 'Other').length + (formData.subjects.includes('Other') && formData.otherSubject.trim() ? 1 : 0)} subject(s) selected
-          </p>
-        )}
-      </div>
 
       {/* Document Uploads */}
       <div className="space-y-4">
