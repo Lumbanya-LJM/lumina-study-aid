@@ -458,6 +458,35 @@ const QuizPage: React.FC = () => {
           </Button>
         )}
       </div>
+
+      {/* Edit Quiz Modal */}
+      <EditQuizModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        quiz={quiz}
+        onSave={handleQuizSave}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Quiz?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The quiz and all its questions will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => quizToDelete && handleDeleteQuiz(quizToDelete)} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MobileLayout>
   );
 };
