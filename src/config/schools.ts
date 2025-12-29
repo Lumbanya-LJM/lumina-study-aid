@@ -17,7 +17,14 @@ export interface SchoolConfig {
   tagline: string;
   description: string;
   icon: 'Scale' | 'Briefcase' | 'Heart';
-  accentColor: string;
+  themeClass: string;
+  primaryColor: string;
+  gradientClass: string;
+  emailColors: {
+    primary: string;
+    primaryDark: string;
+    accent: string;
+  };
   institutions: SchoolInstitution[];
   universities: string[];
   aiPersonality: {
@@ -26,7 +33,7 @@ export interface SchoolConfig {
     examples: string[];
   };
   statsLabel: {
-    casesRead: string; // Different label per school
+    casesRead: string;
   };
   luminaBranding: {
     name: string;
@@ -42,7 +49,14 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
     tagline: 'Legal education, redefined.',
     description: 'Preparing future legal professionals with rigorous academic training and practical skills.',
     icon: 'Scale',
-    accentColor: 'primary',
+    themeClass: 'school-law',
+    primaryColor: '#1e3a5f',
+    gradientClass: 'gradient-law',
+    emailColors: {
+      primary: '#1e3a5f',
+      primaryDark: '#0f1f33',
+      accent: '#3366a3',
+    },
     institutions: [
       { id: 'ZIALE', name: 'Zambia Institute of Advanced Legal Education', shortName: 'ZIALE' },
       { id: 'University', name: 'University Law Programmes', shortName: 'University' },
@@ -91,7 +105,14 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
     tagline: 'Shape the future of commerce.',
     description: 'Developing business leaders with analytical thinking and practical management skills.',
     icon: 'Briefcase',
-    accentColor: 'primary',
+    themeClass: 'school-business',
+    primaryColor: '#1a5c42',
+    gradientClass: 'gradient-business',
+    emailColors: {
+      primary: '#1a5c42',
+      primaryDark: '#0e3326',
+      accent: '#c9a227',
+    },
     institutions: [
       { id: 'ZICPA', name: 'Zambia Institute of Chartered Accountants', shortName: 'ZICA' },
       { id: 'University', name: 'University Business Programmes', shortName: 'University' },
@@ -140,7 +161,14 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
     tagline: 'Excellence in health sciences education.',
     description: 'Training healthcare professionals with clinical knowledge and compassionate care.',
     icon: 'Heart',
-    accentColor: 'primary',
+    themeClass: 'school-health',
+    primaryColor: '#2A5A6A',
+    gradientClass: 'gradient-health',
+    emailColors: {
+      primary: '#2A5A6A',
+      primaryDark: '#163945',
+      accent: '#3d8e8e',
+    },
     institutions: [
       { id: 'Medical School', name: 'Medical School', shortName: 'Medical' },
       { id: 'Nursing School', name: 'Nursing School', shortName: 'Nursing' },
@@ -199,4 +227,13 @@ export const getSchoolIcon = (school: LMVSchool) => {
 
 export const getAllSchools = (): SchoolConfig[] => {
   return Object.values(SCHOOL_CONFIGS);
+};
+
+export const getSchoolSubtitle = (school: LMVSchool): string => {
+  const subtitles: Record<LMVSchool, string> = {
+    law: 'Legal Excellence • Professional Growth',
+    business: 'Business Acumen • Leadership Development',
+    health: 'Clinical Excellence • Compassionate Care',
+  };
+  return subtitles[school] || subtitles.law;
 };
