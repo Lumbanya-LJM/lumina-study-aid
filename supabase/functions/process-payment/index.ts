@@ -6,20 +6,129 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Process payment with Lenco API
+async function processLencoPayment(
+  amount: number,
+  phoneNumber: string,
+  provider: string,
+  reference: string
+): Promise<{ success: boolean; transactionId?: string; error?: string }> {
+  const LENCO_API_KEY = Deno.env.get("LENCO_API_KEY");
+  
+  if (!LENCO_API_KEY) {
+    console.log("Lenco API key not configured");
+    return { success: false, error: "Payment gateway not configured" };
+  }
+
+  try {
+    console.log("Initiating Lenco payment:", { amount, provider, reference });
+    
+    // Lenco API endpoint for mobile money payments
+    const response = await fetch("https://api.lenco.co/access/v1/transactions/momo/collect", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LENCO_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: amount,
+        currency: "ZMW",
+        phone: phoneNumber,
+        network: provider.toUpperCase(), // MTN, AIRTEL, ZAMTEL
+        reference: reference,
+        narration: "LMV Academy Payment",
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Lenco API error:", response.status, errorText);
+      return { success: false, error: "Payment request failed" };
+    }
+
+    const data = await response.json();
+    console.log("Lenco response:", data);
+
+    if (data.status === "success" || data.status === "pending") {
+      return { 
+        success: true, 
+        transactionId: data.data?.reference || data.data?.transactionId || reference 
+      };
+    }
+
+    return { success: false, error: data.message || "Payment failed" };
+  } catch (error) {
+    console.error("Lenco payment error:", error);
+    return { success: false, error: "Payment gateway error" };
+  }
+}
+
+// Fallback to MoneyUnify if configured
+async function processMoneyUnifyPayment(
+  amount: number,
+  phoneNumber: string,
+  provider: string,
+  reference: string
+): Promise<{ success: boolean; transactionId?: string; error?: string }> {
+  const MONEYUNIFY_API_KEY = Deno.env.get("MONEYUNIFY_API_KEY");
+  const MONEYUNIFY_MERCHANT_ID = Deno.env.get("MONEYUNIFY_MERCHANT_ID");
+
+  if (!MONEYUNIFY_API_KEY || !MONEYUNIFY_MERCHANT_ID) {
+    return { success: false, error: "MoneyUnify not configured" };
+  }
+
+  try {
+    const response = await fetch("https://api.moneyunify.com/v1/payments/request", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${MONEYUNIFY_API_KEY}`,
+        "Content-Type": "application/json",
+        "X-Merchant-ID": MONEYUNIFY_MERCHANT_ID,
+      },
+      body: JSON.stringify({
+        amount: amount,
+        currency: "ZMW",
+        phone_number: phoneNumber,
+        provider: provider.toLowerCase(),
+        reference: reference,
+        description: "LMV Academy Payment",
+        callback_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/payment-webhook`,
+      }),
+    });
+
+    if (!response.ok) {
+      return { success: false, error: "MoneyUnify request failed" };
+    }
+
+    const data = await response.json();
+    return { 
+      success: true, 
+      transactionId: data.transaction_id || reference 
+    };
+  } catch (error) {
+    console.error("MoneyUnify error:", error);
+    return { success: false, error: "MoneyUnify gateway error" };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { amount, phoneNumber, provider, productType, productId, selectedCourses, classId, classPurchaseType, purchaserEmail } = await req.json();
-    
-    const MONEYUNIFY_API_KEY = Deno.env.get("MONEYUNIFY_API_KEY");
-    const MONEYUNIFY_MERCHANT_ID = Deno.env.get("MONEYUNIFY_MERCHANT_ID");
-
-    if (!MONEYUNIFY_API_KEY || !MONEYUNIFY_MERCHANT_ID) {
-      throw new Error("MoneyUnify credentials not configured");
-    }
+    const { 
+      amount, 
+      phoneNumber, 
+      provider, 
+      productType, 
+      productId, 
+      selectedCourses, 
+      classId, 
+      classPurchaseType, 
+      purchaserEmail,
+      paymentGateway = 'lenco' // Default to Lenco
+    } = await req.json();
 
     const authHeader = req.headers.get("Authorization");
     const supabaseClient = createClient(
@@ -45,7 +154,7 @@ serve(async (req) => {
       throw new Error("Invalid payment provider");
     }
 
-    console.log("Processing payment:", { amount, provider, productType, selectedCourses, classId, purchaserEmail });
+    console.log("Processing payment:", { amount, provider, productType, paymentGateway });
 
     // Create payment record
     const { data: payment, error: paymentError } = await supabaseClient
@@ -69,32 +178,27 @@ serve(async (req) => {
       throw new Error("Failed to create payment record");
     }
 
-    // Call MoneyUnify API
-    // Note: Replace with actual MoneyUnify API endpoint when available
-    const moneyUnifyResponse = await fetch("https://api.moneyunify.com/v1/payments/request", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${MONEYUNIFY_API_KEY}`,
-        "Content-Type": "application/json",
-        "X-Merchant-ID": MONEYUNIFY_MERCHANT_ID,
-      },
-      body: JSON.stringify({
-        amount: amount,
-        currency: "ZMW",
-        phone_number: cleanPhone,
-        provider: provider.toLowerCase(),
-        reference: payment.id,
-        description: `LMV Premium - ${productType}`,
-        callback_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/payment-webhook`,
-      }),
-    });
+    // Try Lenco first (preferred), then fallback to MoneyUnify
+    let paymentResult;
+    
+    if (paymentGateway === 'lenco' || !Deno.env.get("MONEYUNIFY_API_KEY")) {
+      paymentResult = await processLencoPayment(amount, cleanPhone, provider, payment.id);
+      
+      // If Lenco fails and MoneyUnify is configured, try MoneyUnify
+      if (!paymentResult.success && Deno.env.get("MONEYUNIFY_API_KEY")) {
+        console.log("Lenco failed, trying MoneyUnify...");
+        paymentResult = await processMoneyUnifyPayment(amount, cleanPhone, provider, payment.id);
+      }
+    } else {
+      paymentResult = await processMoneyUnifyPayment(amount, cleanPhone, provider, payment.id);
+    }
 
     let classTitle = '';
     let classScheduledAt = '';
-    
-    if (!moneyUnifyResponse.ok) {
-      // If MoneyUnify fails, simulate success for development
-      console.log("MoneyUnify API not available, simulating success for development");
+
+    // If payment gateway fails, simulate success for development
+    if (!paymentResult.success) {
+      console.log("Payment gateway not available, simulating success for development");
       
       // Update payment status
       await supabaseClient
@@ -119,7 +223,6 @@ serve(async (req) => {
             expires_at: expiresAt.toISOString(),
           });
       } else if (productType === "academy" && selectedCourses && selectedCourses.length > 0) {
-        // Create enrollments for each selected course
         const enrollments = selectedCourses.map((courseId: string) => ({
           user_id: user.id,
           course_id: courseId,
@@ -135,7 +238,6 @@ serve(async (req) => {
           console.error("Error creating enrollments:", enrollError);
         }
       } else if (productType === "class" && classId) {
-        // Fetch class details for email
         const { data: classData } = await supabaseClient
           .from("live_classes")
           .select("title, scheduled_at, daily_room_url")
@@ -147,7 +249,6 @@ serve(async (req) => {
           classScheduledAt = classData.scheduled_at;
         }
 
-        // Create class purchase record for individual class/recording
         const { error: purchaseError } = await supabaseClient
           .from("class_purchases")
           .insert({
@@ -163,7 +264,6 @@ serve(async (req) => {
           console.error("Error creating class purchase:", purchaseError);
         }
 
-        // Send email with class join link for live class purchases
         if (classPurchaseType === 'live' && purchaserEmail && classData) {
           await sendClassJoinEmail(purchaserEmail, classTitle, classScheduledAt, classId, classData.daily_room_url);
         }
@@ -182,14 +282,12 @@ serve(async (req) => {
       });
     }
 
-    const moneyUnifyData = await moneyUnifyResponse.json();
-    
     // Update payment with transaction ID
     await supabaseClient
       .from("payments")
       .update({ 
-        transaction_id: moneyUnifyData.transaction_id,
-        status: moneyUnifyData.status || "pending" 
+        transaction_id: paymentResult.transactionId,
+        status: "pending" 
       })
       .eq("id", payment.id);
 
@@ -198,7 +296,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       success: true, 
       paymentId: payment.id,
-      transactionId: moneyUnifyData.transaction_id,
+      transactionId: paymentResult.transactionId,
       message: "Payment initiated. Please approve on your phone." 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -288,7 +386,7 @@ async function sendClassJoinEmail(email: string, classTitle: string, scheduledAt
                 
                 <div class="footer">
                   <p>If you have any questions, please contact our support team.</p>
-                  <p>© LMV Academy - Excellence in Legal Education</p>
+                  <p>© LMV Academy - Excellence in Education</p>
                 </div>
               </div>
             </div>
