@@ -274,10 +274,17 @@ const TeachDashboardPage: React.FC = () => {
         setSelectedCourse(coursesData[0].id);
       }
 
-      const { count: studentsCount } = await supabase
-        .from('academy_enrollments')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
+      // Count students only for this tutor's assigned courses
+      let studentsCount = 0;
+      if (coursesData.length > 0) {
+        const courseIds = coursesData.map(c => c.id);
+        const { count } = await supabase
+          .from('academy_enrollments')
+          .select('*', { count: 'exact', head: true })
+          .in('course_id', courseIds)
+          .eq('status', 'active');
+        studentsCount = count || 0;
+      }
 
       const { count: updatesCount } = await supabase
         .from('tutor_updates')
