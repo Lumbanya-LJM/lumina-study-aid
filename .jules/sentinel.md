@@ -1,0 +1,4 @@
+## 2024-07-24 - Webhook Signature Verification Bypass
+**Vulnerability:** The `payment-webhook` Supabase function bypasses signature verification if the `LENCO_WEBHOOK_SECRET` environment variable is not set. This allows an attacker to send forged webhook events, potentially leading to unauthorized activation of services or fraudulent transaction records.
+**Learning:** The code was likely written with a permissive fallback for development environments where the secret might not be configured. However, this creates a dangerous default that can easily be misconfigured or overlooked in production, effectively disabling a critical security control.
+**Prevention:** All webhook handlers must enforce signature verification by default and fail securely if the secret is missing or the signature is invalid. There should be no "development mode" bypass for security-critical functions like signature validation in the production codebase.
