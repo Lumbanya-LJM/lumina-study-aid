@@ -277,13 +277,22 @@ const LiveClassPage: React.FC = () => {
       }).select();
 
       setInCall(true);
+      
+      console.log("[LiveClass] User joined meeting", {
+        isHost,
+        roomName: liveClass.daily_room_name,
+        classId: liveClass.id,
+        userId: user?.id,
+      });
 
       // Auto-start recording for hosts after joining
       if (isHost && liveClass.daily_room_name) {
+        console.log("[LiveClass] Host detected - will auto-start recording in 3 seconds...");
+        
         // Small delay to ensure the host has joined the meeting
         setTimeout(async () => {
+          console.log("[LiveClass] Triggering auto-start recording now...");
           try {
-            console.log("Auto-starting recording for host...");
             const { data: recData, error: recError } = await supabase.functions.invoke("daily-room", {
               body: {
                 action: "start-recording",
@@ -291,17 +300,29 @@ const LiveClassPage: React.FC = () => {
               },
             });
 
+            console.log("[LiveClass] Recording API response:", { recData, recError });
+
             if (recError || !recData?.success) {
-              console.error("Auto-start recording failed:", recData?.error || recError);
-              // Don't show error toast - host can manually start if needed
+              console.error("[LiveClass] Auto-start recording FAILED:", recData?.error || recError);
+              toast({
+                title: "Recording Notice",
+                description: recData?.error || "Auto-recording failed. You can start manually.",
+                variant: "destructive",
+              });
             } else {
-              console.log("Recording auto-started successfully");
+              console.log("[LiveClass] Recording auto-started SUCCESSFULLY:", recData);
               setIsRecording(true);
+              toast({
+                title: "Recording Started",
+                description: "Class recording has begun automatically.",
+              });
             }
           } catch (err) {
-            console.error("Failed to auto-start recording:", err);
+            console.error("[LiveClass] Exception during auto-start recording:", err);
           }
         }, 3000); // Wait 3 seconds for the meeting to fully initialize
+      } else {
+        console.log("[LiveClass] Not auto-starting recording:", { isHost, hasRoomName: !!liveClass.daily_room_name });
       }
 
       toast({
