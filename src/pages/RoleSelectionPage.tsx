@@ -7,6 +7,21 @@ import { cn } from '@/lib/utils';
 const RoleSelectionPage: React.FC = () => {
   const navigate = useNavigate();
 
+  const storedSchool = (() => {
+    try {
+      return localStorage.getItem('lmv_selected_school');
+    } catch {
+      return null;
+    }
+  })();
+
+  const withSchool = (path: string) => {
+    if (!storedSchool) return path;
+    const url = new URL(path, window.location.origin);
+    url.searchParams.set('school', storedSchool);
+    return url.pathname + url.search;
+  };
+
   const roles = [
     {
       id: 'student',
@@ -14,7 +29,7 @@ const RoleSelectionPage: React.FC = () => {
       description: 'Access courses, study materials, quizzes, and connect with tutors',
       icon: GraduationCap,
       color: 'from-primary to-primary/70',
-      path: '/auth?role=student'
+      path: withSchool('/auth?role=student'),
     },
     {
       id: 'tutor',
@@ -22,8 +37,8 @@ const RoleSelectionPage: React.FC = () => {
       description: 'Create courses, post updates, schedule live classes, and teach students',
       icon: BookOpen,
       color: 'from-accent to-accent/70',
-      path: '/auth?role=tutor'
-    }
+      path: withSchool('/auth?role=tutor'),
+    },
   ];
 
   return (
