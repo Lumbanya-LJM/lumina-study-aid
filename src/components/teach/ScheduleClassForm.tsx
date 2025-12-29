@@ -267,19 +267,8 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
 
       console.log('Daily room created:', roomData);
 
-      // Start recording immediately
-      try {
-        await supabase.functions.invoke('daily-room', {
-          body: {
-            action: 'start-recording',
-            roomName: roomName,
-          }
-        });
-        console.log('Recording started for room:', roomName);
-      } catch (recordingError) {
-        console.error('Failed to start recording:', recordingError);
-        // Continue anyway - recording can be started manually or via Daily.co dashboard
-      }
+      // Note: Recording will be auto-started when host joins the room
+      // Cannot start recording before participants join
 
       // Create live_classes entry
       const { data: liveClassData, error: liveClassError } = await supabase

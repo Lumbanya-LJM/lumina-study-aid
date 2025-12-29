@@ -278,6 +278,32 @@ const LiveClassPage: React.FC = () => {
 
       setInCall(true);
 
+      // Auto-start recording for hosts after joining
+      if (isHost && liveClass.daily_room_name) {
+        // Small delay to ensure the host has joined the meeting
+        setTimeout(async () => {
+          try {
+            console.log("Auto-starting recording for host...");
+            const { data: recData, error: recError } = await supabase.functions.invoke("daily-room", {
+              body: {
+                action: "start-recording",
+                roomName: liveClass.daily_room_name,
+              },
+            });
+
+            if (recError || !recData?.success) {
+              console.error("Auto-start recording failed:", recData?.error || recError);
+              // Don't show error toast - host can manually start if needed
+            } else {
+              console.log("Recording auto-started successfully");
+              setIsRecording(true);
+            }
+          } catch (err) {
+            console.error("Failed to auto-start recording:", err);
+          }
+        }, 3000); // Wait 3 seconds for the meeting to fully initialize
+      }
+
       toast({
         title: "Joining Class",
         description: "Connecting to video room...",
