@@ -18,6 +18,7 @@ import {
   Award,
   Scale,
   Briefcase,
+  Heart,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -60,6 +61,7 @@ const AuthPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialRole = searchParams.get('role') || 'student';
   const invitationToken = searchParams.get('invitation');
+  const schoolParam = (searchParams.get('school') as LMVSchool | null) ?? null;
   const { signUp, signIn } = useAuth();
   const { toast } = useToast();
 
@@ -81,6 +83,26 @@ const AuthPage: React.FC = () => {
     selected_courses: string[];
   } | null>(null);
   const [loadingInvitation, setLoadingInvitation] = useState(!!invitationToken);
+
+  const hasPresetSchool = (() => {
+    try {
+      return Boolean(schoolParam || localStorage.getItem('lmv_selected_school'));
+    } catch {
+      return Boolean(schoolParam);
+    }
+  })();
+
+  // If school is provided in the URL, treat it as the source of truth for this session
+  useEffect(() => {
+    if (schoolParam) {
+      setSelectedSchool(schoolParam);
+      try {
+        localStorage.setItem('lmv_selected_school', schoolParam);
+      } catch {
+        // ignore
+      }
+    }
+  }, [schoolParam]);
 
   // Apply school theme on mount and when selection changes
   useEffect(() => {
@@ -158,11 +180,14 @@ const AuthPage: React.FC = () => {
     }
   };
 
-  // Update URL when role changes
+  // Update URL when role changes (preserve existing params like school/invitation)
   const handleRoleChange = (role: 'student' | 'tutor') => {
     if (invitation) return; // Don't allow changing role if invited
     setSelectedRole(role);
-    setSearchParams({ role });
+
+    const next = new URLSearchParams(searchParams);
+    next.set('role', role);
+    setSearchParams(next);
   };
 
   const [formData, setFormData] = useState({
@@ -420,8 +445,8 @@ const AuthPage: React.FC = () => {
           setLoading(false);
         }
       } else {
-        // Go to school selection step for students
-        setStep('school');
+        // Student signup: only ask for school if it hasn't been chosen yet
+        setStep(hasPresetSchool ? 'profile' : 'school');
       }
     }
   };
@@ -684,7 +709,7 @@ const AuthPage: React.FC = () => {
       <form onSubmit={handleProfileSubmit} className="space-y-4">
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
-            {selectedSchool === 'law' ? <Scale className="w-3 h-3" /> : <Briefcase className="w-3 h-3" />}
+            {selectedSchool === 'law' ? <Scale className="w-3 h-3" /> : selectedSchool === 'business' ? <Briefcase className="w-3 h-3" /> : <Heart className="w-3 h-3" />}
             {getSchoolConfig(selectedSchool).name}
           </div>
           <h2 className="text-xl font-bold text-foreground">Complete Your Profile</h2>
@@ -751,7 +776,7 @@ const AuthPage: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => setStep('school')}
+          onClick={() => setStep(hasPresetSchool ? 'credentials' : 'school')}
           className="w-full py-3 text-primary font-medium hover:underline"
         >
           Go Back
@@ -989,9 +1014,11 @@ const AuthPage: React.FC = () => {
         {/* Step indicator for signup */}
         {!isLogin && (
           <div className="flex items-center justify-center gap-2 mt-4">
-            {(selectedRole === 'tutor' 
-              ? ['credentials', 'tutor-application'] 
-              : ['credentials', 'school', 'profile', 'courses']
+            {(selectedRole === 'tutor'
+              ? ['credentials', 'tutor-application']
+              : hasPresetSchool
+                ? ['credentials', 'profile', 'courses']
+                : ['credentials', 'school', 'profile', 'courses']
             ).map((s, idx, arr) => (
               <div
                 key={s}
