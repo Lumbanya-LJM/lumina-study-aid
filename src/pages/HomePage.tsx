@@ -216,9 +216,15 @@ const HomePage: React.FC = () => {
               <span className="font-display font-semibold text-foreground text-lg leading-tight">
                 Luminary
               </span>
-              <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
-                Study
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
+                  Study
+                </span>
+                <span className="text-[8px] text-muted-foreground">•</span>
+                <span className="text-[10px] font-medium tracking-wide text-primary">
+                  {schoolConfig.name.replace('LMV ', '')}
+                </span>
+              </div>
             </div>
           </div>
           <button 
