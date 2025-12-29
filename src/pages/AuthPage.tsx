@@ -952,7 +952,12 @@ const AuthPage: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="gradient-subtle px-5 md:px-8 pt-6 pb-6 text-center">
+      <div className={cn(
+        "px-5 md:px-8 pt-6 pb-6 text-center",
+        selectedSchool === 'law' ? "bg-gradient-to-b from-[hsl(220,56%,25%)]/15 to-transparent" :
+        selectedSchool === 'business' ? "bg-gradient-to-b from-[hsl(155,45%,28%)]/15 to-transparent" :
+        "bg-gradient-to-b from-[hsl(195,43%,29%)]/15 to-transparent"
+      )}>
         <LMVLogo size="lg" className="justify-center mb-6" />
         
         {/* Role Toggle - Show on credentials step */}
