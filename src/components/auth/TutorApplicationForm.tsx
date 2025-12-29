@@ -5,19 +5,21 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, BookOpen, Award, Briefcase, Clock, Scale, Upload, FileText, X, Users, Check, Calendar, User } from 'lucide-react';
+import { Loader2, BookOpen, Award, Briefcase, Clock, Upload, FileText, X, Users, Check, Calendar, User, Scale, Heart, GraduationCap } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
-
+import { LMVSchool, getSchoolConfig, getSchoolIcon, getDisciplineText, SCHOOL_CONFIGS } from '@/config/schools';
+import { getStoredSchool } from '@/hooks/useSchoolTheme';
 
 interface DocumentUpload {
   name: string;
-  type: 'bachelors_degree' | 'laz_certificate' | 'other';
+  type: string;
   file: File | null;
   customName?: string;
   url?: string;
+  required: boolean;
 }
 
 interface Course {
@@ -44,6 +46,12 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [selectedSchool, setSelectedSchool] = useState<LMVSchool>(() => getStoredSchool());
+  
+  const schoolConfig = getSchoolConfig(selectedSchool);
+  const SchoolIcon = getSchoolIcon(selectedSchool);
+  const disciplineTexts = getDisciplineText(selectedSchool);
+  
   const [formData, setFormData] = useState({
     qualifications: '',
     experience: '',
@@ -52,29 +60,46 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
     isEmployed: 'no' as 'yes' | 'no',
     timeFlexibility: '',
     preferredTeachingTimes: '',
-    calledToBar: 'no' as 'yes' | 'no',
-    yearsAtBar: '',
     motivation: '',
-    targetStudents: [] as ('university' | 'ziale')[],
-    selectedUndergraduateCourses: [] as string[],
-    selectedZialeCourses: [] as string[],
+    targetStudents: [] as string[],
+    selectedCourses: [] as string[],
     dateOfBirth: '',
     sex: '' as 'male' | 'female' | '',
     agreePrivacyPolicy: false,
     agreeDataConsent: false,
+    // Discipline-specific fields (Law)
+    calledToBar: 'no' as 'yes' | 'no',
+    yearsAtBar: '',
+    practiceArea: '',
+    // Discipline-specific fields (Business)
+    industryExperience: '',
+    businessSpecialty: '',
+    professionalCertifications: '',
+    // Discipline-specific fields (Health)
+    healthDiscipline: '',
+    clinicalExperience: '',
+    professionalRegistration: '',
   });
   
-  const [documents, setDocuments] = useState<DocumentUpload[]>([
-    { name: "Bachelor's Degree (Required)", type: 'bachelors_degree', file: null },
-    { name: "LAZ Practicing Certificate (If applicable)", type: 'laz_certificate', file: null },
-  ]);
-  
+  // Initialize documents based on school
+  const [documents, setDocuments] = useState<DocumentUpload[]>([]);
   const [otherQualifications, setOtherQualifications] = useState<DocumentUpload[]>([]);
 
-  // Load courses on mount
+  // Update documents when school changes
+  useEffect(() => {
+    const docTypes = schoolConfig.tutorApplication.documentTypes;
+    setDocuments(docTypes.map(doc => ({
+      name: doc.name,
+      type: doc.id,
+      file: null,
+      required: doc.required,
+    })));
+  }, [selectedSchool]);
+
+  // Load courses on mount and when school changes
   useEffect(() => {
     loadCourses();
-  }, []);
+  }, [selectedSchool]);
 
   const loadCourses = async () => {
     setLoadingCourses(true);
@@ -83,11 +108,14 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
         .from('academy_courses')
         .select('id, name, description, institution')
         .eq('is_active', true)
+        .eq('school', selectedSchool)
         .order('institution')
         .order('name');
 
       if (error) throw error;
       setCourses(data || []);
+      // Clear selected courses when school changes
+      setFormData(prev => ({ ...prev, selectedCourses: [], targetStudents: [] }));
     } catch (error) {
       console.error('Error loading courses:', error);
     } finally {
@@ -110,63 +138,23 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
 
   const age = calculateAge(formData.dateOfBirth);
 
-  // Course selection with constraints
-  const undergraduateCourses = courses.filter(c => c.institution !== 'ZIALE');
-  const zialeCourses = courses.filter(c => c.institution === 'ZIALE');
+  // Course selection
+  const selectedCourseCount = formData.selectedCourses.length;
+  const maxCourses = 3;
 
-  const selectedUndergradCount = formData.selectedUndergraduateCourses.length;
-  const selectedZialeCount = formData.selectedZialeCourses.length;
-  const hasMixedSelection = selectedUndergradCount > 0 && selectedZialeCount > 0;
-
-  // Determine max allowed based on selection pattern
-  const getMaxUndergrad = () => {
-    if (selectedZialeCount > 0) return 2; // Mixed: max 2 undergrad
-    return 3; // Only undergrad: max 3
-  };
-
-  const getMaxZiale = () => {
-    if (selectedUndergradCount > 0) return 1; // Mixed: max 1 ZIALE
-    return 3; // Only ZIALE: max 3
-  };
-
-  const canSelectUndergrad = (courseId: string) => {
-    if (formData.selectedUndergraduateCourses.includes(courseId)) return true;
-    return selectedUndergradCount < getMaxUndergrad();
-  };
-
-  const canSelectZiale = (courseId: string) => {
-    if (formData.selectedZialeCourses.includes(courseId)) return true;
-    return selectedZialeCount < getMaxZiale();
-  };
-
-  const toggleUndergraduateCourse = (courseId: string) => {
-    if (formData.selectedUndergraduateCourses.includes(courseId)) {
+  const toggleCourse = (courseId: string) => {
+    if (formData.selectedCourses.includes(courseId)) {
       setFormData(prev => ({
         ...prev,
-        selectedUndergraduateCourses: prev.selectedUndergraduateCourses.filter(id => id !== courseId)
+        selectedCourses: prev.selectedCourses.filter(id => id !== courseId)
       }));
-    } else if (canSelectUndergrad(courseId)) {
+    } else if (selectedCourseCount < maxCourses) {
       setFormData(prev => ({
         ...prev,
-        selectedUndergraduateCourses: [...prev.selectedUndergraduateCourses, courseId]
+        selectedCourses: [...prev.selectedCourses, courseId]
       }));
     }
   };
-
-  const toggleZialeCourse = (courseId: string) => {
-    if (formData.selectedZialeCourses.includes(courseId)) {
-      setFormData(prev => ({
-        ...prev,
-        selectedZialeCourses: prev.selectedZialeCourses.filter(id => id !== courseId)
-      }));
-    } else if (canSelectZiale(courseId)) {
-      setFormData(prev => ({
-        ...prev,
-        selectedZialeCourses: [...prev.selectedZialeCourses, courseId]
-      }));
-    }
-  };
-
 
   const handleFileChange = (index: number, file: File | null, isOther = false) => {
     if (isOther) {
@@ -185,7 +173,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
   };
 
   const addOtherQualification = () => {
-    setOtherQualifications(prev => [...prev, { name: '', type: 'other', file: null, customName: '' }]);
+    setOtherQualifications(prev => [...prev, { name: '', type: 'other', file: null, customName: '', required: false }]);
   };
 
   const removeOtherQualification = (index: number) => {
@@ -223,6 +211,16 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   };
 
+  // Check if law-specific credentials are required
+  const requiresBarAdmission = () => {
+    if (selectedSchool !== 'law') return false;
+    // Check if any selected target students require bar admission
+    return formData.targetStudents.some(cat => {
+      const category = schoolConfig.tutorApplication.targetStudentCategories.find(c => c.id === cat);
+      return category?.requiresCredential === 'calledToBar';
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -256,10 +254,8 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
       return;
     }
 
-    const totalSelectedCourses = formData.selectedUndergraduateCourses.length + formData.selectedZialeCourses.length;
-
     // Validate course selection
-    if (totalSelectedCourses === 0) {
+    if (formData.selectedCourses.length === 0) {
       toast({
         title: 'Select Courses',
         description: 'Please select at least one course you want to teach',
@@ -267,27 +263,16 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
       });
       return;
     }
-    
-    // Validate target students
-    if (formData.targetStudents.length === 0) {
-      toast({
-        title: 'Select Target Students',
-        description: 'Please select at least one student category you want to teach',
-        variant: 'destructive'
-      });
-      return;
-    }
 
-    // Validate bar admission for ZIALE tutors
-    if ((formData.targetStudents.includes('ziale') || formData.selectedZialeCourses.length > 0) && formData.calledToBar !== 'yes') {
+    // Validate bar admission for Law tutors teaching ZIALE
+    if (requiresBarAdmission() && formData.calledToBar !== 'yes') {
       toast({
         title: 'Bar Admission Required',
-        description: 'You must be called to the bar to teach ZIALE students',
+        description: 'You must be called to the bar to teach bar course students',
         variant: 'destructive'
       });
       return;
     }
-    
 
     // Validate motivation word count
     if (countWords(formData.motivation) > 300) {
@@ -299,18 +284,17 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
       return;
     }
 
-    // Validate bachelor's degree upload
-    if (!documents[0].file) {
+    // Validate required documents
+    const requiredDocs = documents.filter(d => d.required);
+    const missingDocs = requiredDocs.filter(d => !d.file);
+    if (missingDocs.length > 0) {
       toast({
         title: 'Document Required',
-        description: "Please upload your Bachelor's degree certificate",
+        description: `Please upload: ${missingDocs.map(d => d.name).join(', ')}`,
         variant: 'destructive'
       });
       return;
     }
-    
-    // Combine all selected courses
-    const allSelectedCourses = [...formData.selectedUndergraduateCourses, ...formData.selectedZialeCourses];
 
     setLoading(true);
     try {
@@ -335,7 +319,13 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
         }
       }
 
-      // Generate application ID (first 8 chars of UUID will be generated by DB)
+      // Prepare discipline-specific data
+      const disciplineData: Record<string, any> = {};
+      if (selectedSchool === 'law') {
+        disciplineData.called_to_bar = formData.calledToBar === 'yes';
+        disciplineData.years_at_bar = formData.calledToBar === 'yes' && formData.yearsAtBar ? parseInt(formData.yearsAtBar) : null;
+      }
+
       const { data: insertedApp, error } = await supabase
         .from('tutor_applications')
         .insert({
@@ -349,31 +339,30 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           is_employed: formData.isEmployed === 'yes',
           time_flexibility: formData.timeFlexibility,
           preferred_teaching_times: formData.preferredTeachingTimes,
-          called_to_bar: formData.calledToBar === 'yes',
-          years_at_bar: formData.calledToBar === 'yes' && formData.yearsAtBar ? parseInt(formData.yearsAtBar) : null,
           motivation: formData.motivation,
           documents: uploadedDocs,
           target_students: formData.targetStudents,
-          selected_courses: allSelectedCourses,
+          selected_courses: formData.selectedCourses,
           date_of_birth: formData.dateOfBirth,
-          sex: formData.sex
+          sex: formData.sex,
+          ...disciplineData,
         })
         .select('id')
         .single();
 
       if (error) throw error;
 
-      // Get short application ID (first 8 characters of UUID)
       const applicationId = insertedApp?.id ? insertedApp.id.substring(0, 8).toUpperCase() : 'N/A';
 
-      // Send email notification with application ID
+      // Send email notification
       await supabase.functions.invoke('tutor-application-email', {
         body: {
           type: 'submitted',
           applicantName: fullName,
           applicantEmail: email,
           adminEmail: 'mulengalumbanya@gmail.com',
-          applicationId: applicationId
+          applicationId: applicationId,
+          school: selectedSchool,
         }
       });
 
@@ -394,16 +383,206 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
     }
   };
 
+  // Render discipline-specific fields
+  const renderDisciplineFields = () => {
+    if (selectedSchool === 'law') {
+      return (
+        <>
+          {/* Called to Bar */}
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2">
+              <Scale className="w-4 h-4" />
+              Have you been called to the bar?
+            </Label>
+            <RadioGroup
+              value={formData.calledToBar}
+              onValueChange={(value: 'yes' | 'no') => setFormData({ ...formData, calledToBar: value })}
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="yes" id="bar-yes" />
+                <Label htmlFor="bar-yes" className="cursor-pointer">Yes</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="bar-no" />
+                <Label htmlFor="bar-no" className="cursor-pointer">No</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {formData.calledToBar === 'yes' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="yearsAtBar">Years at the bar</Label>
+                <Input
+                  id="yearsAtBar"
+                  type="number"
+                  min="0"
+                  max="50"
+                  placeholder="Enter number of years"
+                  value={formData.yearsAtBar}
+                  onChange={(e) => setFormData({ ...formData, yearsAtBar: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="practiceArea">Primary practice area</Label>
+                <Select
+                  value={formData.practiceArea}
+                  onValueChange={(value) => setFormData({ ...formData, practiceArea: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select practice area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {schoolConfig.tutorApplication.fields.find(f => f.id === 'practiceArea')?.options?.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+        </>
+      );
+    }
+
+    if (selectedSchool === 'business') {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="businessSpecialty">Business specialty</Label>
+            <Select
+              value={formData.businessSpecialty}
+              onValueChange={(value) => setFormData({ ...formData, businessSpecialty: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select your specialty" />
+              </SelectTrigger>
+              <SelectContent>
+                {schoolConfig.tutorApplication.fields.find(f => f.id === 'businessSpecialty')?.options?.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="industryExperience">Industry experience (years)</Label>
+            <Input
+              id="industryExperience"
+              type="number"
+              min="0"
+              max="50"
+              placeholder="Years of industry experience"
+              value={formData.industryExperience}
+              onChange={(e) => setFormData({ ...formData, industryExperience: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="professionalCertifications">Professional certifications</Label>
+            <Textarea
+              id="professionalCertifications"
+              placeholder="E.g., CA, ACCA, CFA, CPA, etc."
+              value={formData.professionalCertifications}
+              onChange={(e) => setFormData({ ...formData, professionalCertifications: e.target.value })}
+              rows={2}
+            />
+          </div>
+        </>
+      );
+    }
+
+    if (selectedSchool === 'health') {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="healthDiscipline">Health discipline</Label>
+            <Select
+              value={formData.healthDiscipline}
+              onValueChange={(value) => setFormData({ ...formData, healthDiscipline: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select your discipline" />
+              </SelectTrigger>
+              <SelectContent>
+                {schoolConfig.tutorApplication.fields.find(f => f.id === 'healthDiscipline')?.options?.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="clinicalExperience">Clinical experience (years)</Label>
+            <Input
+              id="clinicalExperience"
+              type="number"
+              min="0"
+              max="50"
+              placeholder="Years of clinical experience"
+              value={formData.clinicalExperience}
+              onChange={(e) => setFormData({ ...formData, clinicalExperience: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="professionalRegistration">Professional registration body</Label>
+            <Input
+              id="professionalRegistration"
+              placeholder="E.g., HPCZ, Nursing Council of Zambia"
+              value={formData.professionalRegistration}
+              onChange={(e) => setFormData({ ...formData, professionalRegistration: e.target.value })}
+            />
+          </div>
+        </>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 w-full max-w-2xl mx-auto">
       <div className="text-center mb-6">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-accent to-accent/70 flex items-center justify-center">
-          <BookOpen className="w-8 h-8 text-primary-foreground" />
+        <div className={cn(
+          "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
+          "bg-gradient-to-br from-primary to-primary/70"
+        )}>
+          <SchoolIcon className="w-8 h-8 text-primary-foreground" />
         </div>
         <h2 className="text-xl font-bold text-foreground">Tutor Application</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Complete your application to become a Luminary tutor
+          Apply to become a {schoolConfig.name} tutor
         </p>
+      </div>
+
+      {/* School Selection */}
+      <div className="space-y-3 p-4 rounded-xl bg-secondary/30 border border-border/50">
+        <Label className="flex items-center gap-2 text-sm font-semibold">
+          <GraduationCap className="w-4 h-4" />
+          Select Your Discipline
+        </Label>
+        <div className="grid grid-cols-3 gap-2">
+          {Object.values(SCHOOL_CONFIGS).map((school) => {
+            const Icon = getSchoolIcon(school.id);
+            const isSelected = selectedSchool === school.id;
+            return (
+              <button
+                key={school.id}
+                type="button"
+                onClick={() => setSelectedSchool(school.id)}
+                className={cn(
+                  "p-3 rounded-xl border transition-all flex flex-col items-center gap-2",
+                  isSelected 
+                    ? "bg-primary/10 border-primary/50" 
+                    : "bg-secondary/50 border-border/50 hover:border-primary/30"
+                )}
+              >
+                <Icon className={cn("w-5 h-5", isSelected ? "text-primary" : "text-muted-foreground")} />
+                <span className={cn("text-xs font-medium", isSelected ? "text-primary" : "text-muted-foreground")}>
+                  {school.name.replace('LMV ', '')}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Personal Information */}
@@ -413,7 +592,6 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           Personal Information
         </Label>
         
-        {/* Date of Birth */}
         <div className="space-y-2">
           <Label htmlFor="dateOfBirth" className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
@@ -428,13 +606,10 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
             required
           />
           {age !== null && (
-            <p className="text-xs text-muted-foreground">
-              Age: {age} years old
-            </p>
+            <p className="text-xs text-muted-foreground">Age: {age} years old</p>
           )}
         </div>
 
-        {/* Sex */}
         <div className="space-y-2">
           <Label>Sex</Label>
           <RadioGroup
@@ -461,108 +636,59 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           Select Courses to Teach
         </Label>
         <p className="text-xs text-muted-foreground">
-          Choose up to 3 courses from one category, or 1 ZIALE + 2 Undergraduate courses
+          Choose up to {maxCourses} courses from {schoolConfig.name}
         </p>
         
         {loadingCourses ? (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
+        ) : courses.length === 0 ? (
+          <div className="text-center py-4 text-muted-foreground">
+            <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No courses available for {schoolConfig.name} yet</p>
+          </div>
         ) : (
-          <div className="space-y-4">
-            {/* Undergraduate Courses Dropdown */}
-            {undergraduateCourses.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground">Undergraduate Courses</p>
-                  <span className="text-xs text-muted-foreground">
-                    {selectedUndergradCount}/{getMaxUndergrad()} selected
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 rounded-lg border border-border/50 bg-secondary/20">
-                  {undergraduateCourses.map((course) => {
-                    const isSelected = formData.selectedUndergraduateCourses.includes(course.id);
-                    const canSelect = canSelectUndergrad(course.id);
-                    return (
-                      <div
-                        key={course.id}
-                        onClick={() => canSelect && toggleUndergraduateCourse(course.id)}
-                        className={cn(
-                          "p-3 rounded-lg border transition-all",
-                          isSelected 
-                            ? "bg-primary/10 border-primary/50 cursor-pointer" 
-                            : canSelect
-                              ? "bg-secondary/50 border-border/50 hover:border-primary/30 cursor-pointer"
-                              : "bg-muted/30 border-border/30 opacity-50 cursor-not-allowed"
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                            isSelected ? "border-primary bg-primary" : "border-muted-foreground"
-                          )}>
-                            {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
-                          </div>
-                          <span className="text-sm font-medium text-foreground">{course.name}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* ZIALE Courses Dropdown */}
-            {zialeCourses.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">ZIALE Courses</p>
-                    <p className="text-xs text-muted-foreground">Requires bar admission to teach</p>
+          <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-2 rounded-lg border border-border/50 bg-secondary/20">
+            {courses.map((course) => {
+              const isSelected = formData.selectedCourses.includes(course.id);
+              const canSelect = isSelected || selectedCourseCount < maxCourses;
+              return (
+                <div
+                  key={course.id}
+                  onClick={() => canSelect && toggleCourse(course.id)}
+                  className={cn(
+                    "p-3 rounded-lg border transition-all",
+                    isSelected 
+                      ? "bg-primary/10 border-primary/50 cursor-pointer" 
+                      : canSelect
+                        ? "bg-secondary/50 border-border/50 hover:border-primary/30 cursor-pointer"
+                        : "bg-muted/30 border-border/30 opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0",
+                      isSelected ? "border-primary bg-primary" : "border-muted-foreground"
+                    )}>
+                      {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-foreground">{course.name}</span>
+                      {course.institution && (
+                        <span className="text-xs text-muted-foreground ml-2">({course.institution})</span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {selectedZialeCount}/{getMaxZiale()} selected
-                  </span>
                 </div>
-                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 rounded-lg border border-border/50 bg-secondary/20">
-                  {zialeCourses.map((course) => {
-                    const isSelected = formData.selectedZialeCourses.includes(course.id);
-                    const canSelect = canSelectZiale(course.id);
-                    return (
-                      <div
-                        key={course.id}
-                        onClick={() => canSelect && toggleZialeCourse(course.id)}
-                        className={cn(
-                          "p-3 rounded-lg border transition-all",
-                          isSelected 
-                            ? "bg-primary/10 border-primary/50 cursor-pointer" 
-                            : canSelect
-                              ? "bg-secondary/50 border-border/50 hover:border-primary/30 cursor-pointer"
-                              : "bg-muted/30 border-border/30 opacity-50 cursor-not-allowed"
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                            isSelected ? "border-primary bg-primary" : "border-muted-foreground"
-                          )}>
-                            {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
-                          </div>
-                          <span className="text-sm font-medium text-foreground">{course.name}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+              );
+            })}
           </div>
         )}
         
-        {(selectedUndergradCount + selectedZialeCount) > 0 && (
+        {selectedCourseCount > 0 && (
           <p className="text-xs text-primary font-medium">
-            {selectedUndergradCount + selectedZialeCount} course(s) selected
-            {hasMixedSelection && " (Mixed selection: 1 ZIALE + 2 Undergrad max)"}
+            {selectedCourseCount} course(s) selected
           </p>
         )}
       </div>
@@ -575,51 +701,34 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
         </Label>
         <p className="text-xs text-muted-foreground">Select the student category you want to tutor</p>
         <div className="space-y-2">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-            <Checkbox
-              id="target-university"
-              checked={formData.targetStudents.includes('university')}
-              onCheckedChange={(checked) => {
-                setFormData(prev => ({
-                  ...prev,
-                  targetStudents: checked 
-                    ? [...prev.targetStudents, 'university'] 
-                    : prev.targetStudents.filter(t => t !== 'university')
-                }));
-              }}
-            />
-            <label htmlFor="target-university" className="cursor-pointer flex-1">
-              <span className="font-medium">University Students</span>
-              <p className="text-xs text-muted-foreground">LLB students at universities</p>
-            </label>
-          </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-            <Checkbox
-              id="target-ziale"
-              checked={formData.targetStudents.includes('ziale')}
-              onCheckedChange={(checked) => {
-                setFormData(prev => ({
-                  ...prev,
-                  targetStudents: checked 
-                    ? [...prev.targetStudents, 'ziale'] 
-                    : prev.targetStudents.filter(t => t !== 'ziale')
-                }));
-              }}
-            />
-            <label htmlFor="target-ziale" className="cursor-pointer flex-1">
-              <span className="font-medium">ZIALE Students</span>
-              <p className="text-xs text-muted-foreground">Bar course students (requires bar admission)</p>
-            </label>
-          </div>
+          {schoolConfig.tutorApplication.targetStudentCategories.map((category) => (
+            <div key={category.id} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+              <Checkbox
+                id={`target-${category.id}`}
+                checked={formData.targetStudents.includes(category.id)}
+                onCheckedChange={(checked) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    targetStudents: checked 
+                      ? [...prev.targetStudents, category.id] 
+                      : prev.targetStudents.filter(t => t !== category.id)
+                  }));
+                }}
+              />
+              <label htmlFor={`target-${category.id}`} className="cursor-pointer flex-1">
+                <span className="font-medium">{category.label}</span>
+                <p className="text-xs text-muted-foreground">{category.description}</p>
+              </label>
+            </div>
+          ))}
         </div>
-        {(formData.targetStudents.includes('ziale') || formData.selectedZialeCourses.length > 0) && formData.calledToBar !== 'yes' && (
+        {requiresBarAdmission() && formData.calledToBar !== 'yes' && (
           <p className="text-xs text-destructive flex items-center gap-1">
             <Scale className="w-3 h-3" />
-            You must be called to the bar to teach ZIALE students
+            You must be called to the bar to teach bar course students
           </p>
         )}
       </div>
-
 
       {/* Qualifications */}
       <div className="space-y-2">
@@ -629,7 +738,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
         </Label>
         <Textarea
           id="qualifications"
-          placeholder="List your educational qualifications, degrees, certifications..."
+          placeholder={disciplineTexts.qualificationsPlaceholder}
           value={formData.qualifications}
           onChange={(e) => setFormData({ ...formData, qualifications: e.target.value })}
           rows={3}
@@ -645,12 +754,21 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
         </Label>
         <Textarea
           id="experience"
-          placeholder="Describe your teaching or legal practice experience..."
+          placeholder={disciplineTexts.experiencePlaceholder}
           value={formData.experience}
           onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
           rows={3}
           required
         />
+      </div>
+
+      {/* Discipline-Specific Fields */}
+      <div className="space-y-4 p-4 rounded-xl bg-secondary/30 border border-border/50">
+        <Label className="flex items-center gap-2 text-sm font-semibold">
+          <SchoolIcon className="w-4 h-4" />
+          {schoolConfig.name} Specific
+        </Label>
+        {renderDisciplineFields()}
       </div>
 
       {/* Employment Status */}
@@ -710,44 +828,6 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
         />
       </div>
 
-      {/* Called to Bar */}
-      <div className="space-y-3">
-        <Label className="flex items-center gap-2">
-          <Scale className="w-4 h-4" />
-          Have you been called to the bar?
-        </Label>
-        <RadioGroup
-          value={formData.calledToBar}
-          onValueChange={(value: 'yes' | 'no') => setFormData({ ...formData, calledToBar: value })}
-          className="flex gap-4"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="yes" id="bar-yes" />
-            <Label htmlFor="bar-yes" className="cursor-pointer">Yes</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="no" id="bar-no" />
-            <Label htmlFor="bar-no" className="cursor-pointer">No</Label>
-          </div>
-        </RadioGroup>
-      </div>
-
-      {/* Years at Bar */}
-      {formData.calledToBar === 'yes' && (
-        <div className="space-y-2">
-          <Label htmlFor="yearsAtBar">How many years at the bar?</Label>
-          <Input
-            id="yearsAtBar"
-            type="number"
-            min="0"
-            max="50"
-            placeholder="Enter number of years"
-            value={formData.yearsAtBar}
-            onChange={(e) => setFormData({ ...formData, yearsAtBar: e.target.value })}
-          />
-        </div>
-      )}
-
       {/* Motivation */}
       <div className="space-y-2">
         <Label htmlFor="motivation" className="flex items-center gap-2">
@@ -756,7 +836,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
         </Label>
         <Textarea
           id="motivation"
-          placeholder="What motivates you to become a tutor? Why do you want to teach law students?"
+          placeholder={disciplineTexts.motivationPlaceholder}
           value={formData.motivation}
           onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
           rows={4}
@@ -766,7 +846,6 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
           {countWords(formData.motivation)}/300 words
         </p>
       </div>
-
 
       {/* Document Uploads */}
       <div className="space-y-4">
@@ -804,7 +883,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
             <div key={index} className="flex items-start gap-2 mb-3 p-3 bg-secondary/30 rounded-lg">
               <div className="flex-1 space-y-2">
                 <Input
-                  placeholder="Name of qualification (e.g., Master's in Law)"
+                  placeholder="Name of qualification"
                   value={doc.customName}
                   onChange={(e) => updateOtherQualificationName(index, e.target.value)}
                 />
@@ -873,7 +952,7 @@ const TutorApplicationForm: React.FC<TutorApplicationFormProps> = ({
       <Button 
         type="submit" 
         className="w-full" 
-        disabled={loading || !formData.agreePrivacyPolicy || !formData.agreeDataConsent || (formData.selectedUndergraduateCourses.length + formData.selectedZialeCourses.length) === 0}
+        disabled={loading || !formData.agreePrivacyPolicy || !formData.agreeDataConsent || formData.selectedCourses.length === 0}
       >
         {loading ? (
           <span className="flex items-center gap-2">

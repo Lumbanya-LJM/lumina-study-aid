@@ -1067,10 +1067,7 @@ const AuthPage: React.FC = () => {
             🇿🇲 Premium academic support designed for Zambian students
           </p>
           <p className="text-[10px] text-center text-muted-foreground/70 mt-1">
-            {selectedSchool === 'business' 
-              ? 'Finance, Accounting, Marketing, Management & more'
-              : 'Case law, Statutes, and the Constitution of Zambia'
-            }
+            {getSchoolConfig(selectedSchool).footerTagline}
           </p>
         </div>
 
