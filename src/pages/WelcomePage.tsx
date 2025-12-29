@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LMVLogo } from '@/components/ui/lmv-logo';
-import { Scale, Briefcase, Heart, ArrowRight, Settings } from 'lucide-react';
+import { Scale, Briefcase, Heart, ArrowRight, Settings, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LMVSchool, SCHOOL_CONFIGS, getAllSchools } from '@/config/schools';
 import { applySchoolTheme } from '@/hooks/useSchoolTheme';
@@ -107,7 +107,7 @@ const WelcomePage: React.FC = () => {
                       </h3>
                       {isSelected && (
                         <div className={cn("w-6 h-6 rounded-full flex items-center justify-center", styles.bg)}>
-                          <ArrowRight className="w-4 h-4 text-white" />
+                          <Check className="w-4 h-4 text-white" />
                         </div>
                       )}
                     </div>

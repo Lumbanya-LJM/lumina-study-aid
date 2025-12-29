@@ -28,9 +28,13 @@ export interface SchoolConfig {
   institutions: SchoolInstitution[];
   universities: string[];
   aiPersonality: {
-    tone: string;
-    focus: string[];
+    role: string;
+    tone: string[];
+    toneDescription: string;
+    contextPreference: string[];
     examples: string[];
+    greeting: string;
+    avatarStyle: 'default' | 'clinical';
   };
   statsLabel: {
     casesRead: string;
@@ -74,12 +78,15 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
       'Other',
     ],
     aiPersonality: {
-      tone: 'Your communication is precise, authoritative, and academically rigorous. You use proper legal terminology and maintain the standards expected of legal professionals.',
-      focus: [
-        'Legal reasoning and case analysis',
+      role: 'Premium legal study mentor & case-law guide',
+      tone: ['analytical', 'ethical', 'professional', 'supportive'],
+      toneDescription: 'Your communication is precise, authoritative, and academically rigorous. You use proper legal terminology and maintain the standards expected of legal professionals.',
+      contextPreference: [
+        'Case law analysis',
         'Statutory interpretation',
+        'Legal reasoning',
+        'Exam preparation support (not writing assignments)',
         'Precedent and jurisprudence',
-        'Clarity and precision in expression',
         'Structured legal argumentation',
         'Professional ethics',
       ],
@@ -89,6 +96,8 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
         'Legal citation and referencing',
         'Moot court preparation',
       ],
+      greeting: "Hello! I'm Lumina, your legal study mentor. How can I assist with your legal studies today?",
+      avatarStyle: 'default',
     },
     statsLabel: {
       casesRead: 'Cases Read',
@@ -130,12 +139,16 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
       'Other',
     ],
     aiPersonality: {
-      tone: 'Your communication is professional, analytical, and results-oriented. You use business terminology and emphasize practical application of concepts.',
-      focus: [
-        'Practical business application',
-        'Analytical and critical thinking',
+      role: 'Business learning coach — practical, strategy-focused, entrepreneurial-minded',
+      tone: ['commercially aware', 'growth oriented', 'structured', 'motivational', 'professional'],
+      toneDescription: 'Your communication is professional, analytical, and results-oriented. You use business terminology and emphasize practical application of concepts.',
+      contextPreference: [
+        'Economics and financial analysis',
+        'Accounting principles',
+        'Management strategies',
+        'Entrepreneurship',
+        'Case-based business analysis',
         'Data-driven decision making',
-        'Business literacy and financial acumen',
         'Strategic reasoning',
         'Ethical business practice',
       ],
@@ -145,6 +158,8 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
         'Case study methodology',
         'Business plan development',
       ],
+      greeting: "Welcome! I'm Lumina, your business learning coach. Ready to explore strategies and insights?",
+      avatarStyle: 'default',
     },
     statsLabel: {
       casesRead: 'Reports Reviewed',
@@ -186,14 +201,18 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
       'Other',
     ],
     aiPersonality: {
-      tone: 'Your communication is precise, empathetic, and clinically accurate. You use proper medical terminology while ensuring concepts are accessible to students at various levels.',
-      focus: [
-        'Clinical reasoning and diagnosis',
+      role: 'Health sciences study mentor — clinically aware & evidence-based',
+      tone: ['calm', 'precise', 'safety-oriented', 'supportive', 'empathetic'],
+      toneDescription: 'Your communication is precise, empathetic, and clinically accurate. You use proper medical terminology while ensuring concepts are accessible to students at various levels.',
+      contextPreference: [
+        'Anatomy and physiology',
+        'Nursing care principles',
+        'Public health awareness',
+        'Clinical reasoning',
         'Evidence-based practice',
         'Patient-centered care',
-        'Medical ethics and professionalism',
-        'Anatomical and physiological understanding',
-        'Public health awareness',
+        'Medical ethics',
+        'Ethical patient-first language',
       ],
       examples: [
         'Clinical case presentations',
@@ -201,6 +220,8 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
         'Medical literature review',
         'Patient care planning',
       ],
+      greeting: "Hello! I'm Lumina, your health sciences mentor. How can I support your medical education today?",
+      avatarStyle: 'clinical',
     },
     statsLabel: {
       casesRead: 'Cases Studied',
