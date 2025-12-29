@@ -127,23 +127,79 @@ export default function TutorManagementPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load approved tutors
-      const { data: tutorsData, error: tutorsError } = await supabase
-        .from("tutor_applications")
-        .select(`
-          id,
-          user_id,
-          full_name,
-          email,
-          selected_courses,
-          status,
-          created_at
-        `)
-        .eq("status", "approved")
-        .order("created_at", { ascending: false });
+      // Load ALL users with moderator role (tutors from any source)
+      const { data: moderatorRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, created_at")
+        .eq("role", "moderator");
 
-      if (tutorsError) throw tutorsError;
-      setTutors(tutorsData || []);
+      if (rolesError) throw rolesError;
+
+      const tutorsList: Tutor[] = [];
+      
+      if (moderatorRoles && moderatorRoles.length > 0) {
+        const userIds = moderatorRoles.map(r => r.user_id);
+        
+        // Get profiles for all moderators
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_url, bio")
+          .in("user_id", userIds);
+
+        // Get tutor applications for those who applied
+        const { data: applications } = await supabase
+          .from("tutor_applications")
+          .select("user_id, full_name, email, selected_courses, created_at")
+          .in("user_id", userIds)
+          .eq("status", "approved");
+
+        // Get tutor invitations for those who were invited
+        const { data: acceptedInvites } = await supabase
+          .from("tutor_invitations")
+          .select("user_id, full_name, email, selected_courses, created_at")
+          .in("user_id", userIds)
+          .eq("status", "accepted");
+
+        // Get courses assigned to each tutor
+        const { data: coursesWithTutors } = await supabase
+          .from("academy_courses")
+          .select("id, name, tutor_id")
+          .in("tutor_id", userIds);
+
+        // Build tutor list from all moderators
+        for (const role of moderatorRoles) {
+          const profile = profiles?.find(p => p.user_id === role.user_id);
+          const application = applications?.find(a => a.user_id === role.user_id);
+          const invitation = acceptedInvites?.find(i => i.user_id === role.user_id);
+          
+          // Get courses assigned to this tutor
+          const assignedCourseNames = coursesWithTutors
+            ?.filter(c => c.tutor_id === role.user_id)
+            .map(c => c.name) || [];
+          
+          // Combine selected courses from application/invitation with assigned courses
+          const selectedCourses = [
+            ...(application?.selected_courses || []),
+            ...(invitation?.selected_courses || []),
+            ...assignedCourseNames
+          ].filter((v, i, a) => a.indexOf(v) === i); // Remove duplicates
+
+          tutorsList.push({
+            id: role.user_id, // Use user_id as id for tutors without applications
+            user_id: role.user_id,
+            full_name: application?.full_name || invitation?.full_name || profile?.full_name || "Unknown Tutor",
+            email: application?.email || invitation?.email || "",
+            selected_courses: selectedCourses,
+            status: "approved",
+            created_at: application?.created_at || invitation?.created_at || role.created_at,
+            profile: profile ? { avatar_url: profile.avatar_url, bio: profile.bio } : undefined
+          });
+        }
+      }
+
+      // Sort by created_at descending
+      tutorsList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setTutors(tutorsList);
 
       // Load invitations
       const { data: invitationsData, error: invitationsError } = await supabase
@@ -272,15 +328,21 @@ export default function TutorManagementPage() {
 
     setSavingCourses(true);
     try {
-      // Update tutor_applications with selected courses
-      const { error } = await supabase
+      // Try to update tutor_applications if they have one (optional - not all tutors have applications)
+      await supabase
         .from("tutor_applications")
         .update({ selected_courses: editSelectedCourses })
-        .eq("id", selectedTutor.id);
+        .eq("user_id", selectedTutor.user_id)
+        .eq("status", "approved");
 
-      if (error) throw error;
+      // Also try to update tutor_invitations if they were invited
+      await supabase
+        .from("tutor_invitations")
+        .update({ selected_courses: editSelectedCourses })
+        .eq("user_id", selectedTutor.user_id)
+        .eq("status", "accepted");
 
-      // Also update academy_courses to assign this tutor
+      // Update academy_courses to assign this tutor
       // First, remove this tutor from courses they're no longer assigned to
       const previousCourses = selectedTutor.selected_courses || [];
       const removedCourses = previousCourses.filter(c => !editSelectedCourses.includes(c));
@@ -376,7 +438,7 @@ export default function TutorManagementPage() {
     }
 
     try {
-      // Remove moderator role
+      // Remove moderator role - this is the primary action
       const { error: roleError } = await supabase
         .from("user_roles")
         .delete()
@@ -385,13 +447,25 @@ export default function TutorManagementPage() {
 
       if (roleError) throw roleError;
 
-      // Update application status
-      const { error: appError } = await supabase
+      // Optionally update application status if they have one
+      await supabase
         .from("tutor_applications")
         .update({ status: "removed" })
-        .eq("id", tutor.id);
+        .eq("user_id", tutor.user_id)
+        .eq("status", "approved");
 
-      if (appError) throw appError;
+      // Optionally update invitation status if they were invited
+      await supabase
+        .from("tutor_invitations")
+        .update({ status: "revoked" })
+        .eq("user_id", tutor.user_id)
+        .eq("status", "accepted");
+
+      // Remove them from any assigned courses
+      await supabase
+        .from("academy_courses")
+        .update({ tutor_id: null })
+        .eq("tutor_id", tutor.user_id);
 
       toast.success("Tutor removed successfully");
       loadData();
