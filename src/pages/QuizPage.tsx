@@ -10,7 +10,10 @@ import {
   ChevronRight,
   Sparkles,
   Clock,
-  RotateCcw
+  RotateCcw,
+  Pencil,
+  Trash2,
+  MoreVertical
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -20,6 +23,23 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLuminaTaskNotification } from '@/hooks/useLuminaTaskNotification';
+import { EditQuizModal } from '@/components/quiz/EditQuizModal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Question {
   id: number;
@@ -55,6 +75,35 @@ const QuizPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [topic, setTopic] = useState('');
   const [recentQuizzes, setRecentQuizzes] = useState<Quiz[]>([]);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [quizToDelete, setQuizToDelete] = useState<string | null>(null);
+
+  const handleDeleteQuiz = async (id: string) => {
+    try {
+      const { error } = await supabase.from('quizzes').delete().eq('id', id);
+      if (error) throw error;
+      toast({ title: "Deleted", description: "Quiz deleted successfully" });
+      if (quiz?.id === id) { setQuiz(null); navigate('/quiz'); }
+      loadRecentQuizzes();
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete quiz" });
+    } finally {
+      setDeleteDialogOpen(false);
+      setQuizToDelete(null);
+    }
+  };
+
+  const confirmDelete = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setQuizToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleQuizSave = (updatedQuiz: Quiz) => {
+    setQuiz(updatedQuiz);
+    loadRecentQuizzes();
+  };
 
   useEffect(() => {
     if (quizId) {
@@ -235,35 +284,35 @@ const QuizPage: React.FC = () => {
               <h2 className="font-semibold text-foreground mb-4">Recent Quizzes</h2>
               <div className="space-y-3">
                 {recentQuizzes.map((q) => (
-                  <button
-                    key={q.id}
-                    onClick={() => navigate(`/quiz/${q.id}`)}
-                    className="w-full bg-card rounded-2xl p-4 border border-border/50 text-left hover:shadow-premium transition-all flex items-center gap-4"
-                  >
-                    <div className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center",
-                      q.completed_at ? "bg-success/10" : "bg-primary/10"
-                    )}>
-                      {q.completed_at ? (
-                        <Trophy className="w-5 h-5 text-success" />
-                      ) : (
-                        <Brain className="w-5 h-5 text-primary" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{q.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {q.total_questions} questions • {q.subject}
-                        {q.score !== null && ` • Score: ${q.score}/${q.total_questions}`}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  </button>
+                  <div key={q.id} className="w-full bg-card rounded-2xl p-4 border border-border/50 text-left hover:shadow-premium transition-all flex items-center gap-4">
+                    <button onClick={() => navigate(`/quiz/${q.id}`)} className="flex items-center gap-4 flex-1">
+                      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", q.completed_at ? "bg-success/10" : "bg-primary/10")}>
+                        {q.completed_at ? <Trophy className="w-5 h-5 text-success" /> : <Brain className="w-5 h-5 text-primary" />}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-foreground">{q.title}</p>
+                        <p className="text-xs text-muted-foreground">{q.total_questions} questions • {q.subject}{q.score !== null && ` • Score: ${q.score}/${q.total_questions}`}</p>
+                      </div>
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/quiz/${q.id}`)}><ChevronRight className="w-4 h-4 mr-2" />Take Quiz</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => confirmDelete(q.id, e)} className="text-destructive"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 ))}
               </div>
             </div>
           )}
         </div>
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader><AlertDialogTitle>Delete Quiz?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => quizToDelete && handleDeleteQuiz(quizToDelete)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </MobileLayout>
     );
   }
@@ -316,10 +365,15 @@ const QuizPage: React.FC = () => {
           </button>
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {currentQuestion + 1}/{quiz.questions.length}
-            </span>
+            <span className="text-sm text-muted-foreground">{currentQuestion + 1}/{quiz.questions.length}</span>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditModalOpen(true)}><Pencil className="w-4 h-4 mr-2" />Edit Quiz</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => confirmDelete(quiz.id)} className="text-destructive"><Trash2 className="w-4 h-4 mr-2" />Delete Quiz</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Progress bar */}
