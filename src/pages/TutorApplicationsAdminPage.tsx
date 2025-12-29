@@ -303,6 +303,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
 
   const openCourseEditor = (application: TutorApplication) => {
     setEditingCourses(application);
+    // Convert existing course names to the same format for display
     setSelectedCourseIds(application.selected_courses || []);
   };
 
@@ -311,9 +312,14 @@ const TutorApplicationsAdminPage: React.FC = () => {
     
     setSavingCourses(true);
     try {
+      // IMPORTANT: Save course NAMES, not IDs - the system uses name-based matching
+      const selectedCourseNames = courses
+        .filter(course => selectedCourseIds.includes(course.name))
+        .map(course => course.name);
+      
       const { error } = await supabase
         .from('tutor_applications')
-        .update({ selected_courses: selectedCourseIds })
+        .update({ selected_courses: selectedCourseNames })
         .eq('id', editingCourses.id);
 
       if (error) throw error;
@@ -337,11 +343,12 @@ const TutorApplicationsAdminPage: React.FC = () => {
     }
   };
 
-  const toggleCourseSelection = (courseId: string) => {
+  // Toggle by course NAME for proper syncing
+  const toggleCourseSelection = (courseName: string) => {
     setSelectedCourseIds(prev => 
-      prev.includes(courseId)
-        ? prev.filter(id => id !== courseId)
-        : [...prev, courseId]
+      prev.includes(courseName)
+        ? prev.filter(name => name !== courseName)
+        : [...prev, courseName]
     );
   };
 
@@ -851,12 +858,12 @@ const TutorApplicationsAdminPage: React.FC = () => {
                         className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                       >
                         <Checkbox
-                          id={course.id}
-                          checked={selectedCourseIds.includes(course.id)}
-                          onCheckedChange={() => toggleCourseSelection(course.id)}
+                          id={`undergrad-${course.id}`}
+                          checked={selectedCourseIds.includes(course.name)}
+                          onCheckedChange={() => toggleCourseSelection(course.name)}
                         />
                         <Label
-                          htmlFor={course.id}
+                          htmlFor={`undergrad-${course.id}`}
                           className="flex-1 cursor-pointer text-sm"
                         >
                           {course.name}
@@ -880,12 +887,12 @@ const TutorApplicationsAdminPage: React.FC = () => {
                         className="flex items-center space-x-3 p-3 rounded-lg border border-accent/30 hover:bg-accent/10 transition-colors"
                       >
                         <Checkbox
-                          id={course.id}
-                          checked={selectedCourseIds.includes(course.id)}
-                          onCheckedChange={() => toggleCourseSelection(course.id)}
+                          id={`prof-${course.id}`}
+                          checked={selectedCourseIds.includes(course.name)}
+                          onCheckedChange={() => toggleCourseSelection(course.name)}
                         />
                         <Label
-                          htmlFor={course.id}
+                          htmlFor={`prof-${course.id}`}
                           className="flex-1 cursor-pointer text-sm"
                         >
                           {course.name}
