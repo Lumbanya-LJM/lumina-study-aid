@@ -154,7 +154,7 @@ const HomePage: React.FC = () => {
     { icon: Flame, label: 'Day Streak', value: profile?.streak_days || 0, trend: profile?.streak_days && profile.streak_days > 0 ? { value: 8, positive: true } : undefined, statType: 'streak' },
     { icon: Clock, label: 'Study Hours', value: (profile?.total_study_hours || 0).toFixed(1), trend: { value: 15, positive: true }, statType: 'hours' },
     { icon: Target, label: 'Tasks Done', value: profile?.tasks_completed || 0, trend: { value: 12, positive: true }, statType: 'tasks' },
-    { icon: BookOpen, label: schoolConfig.statsLabel.casesRead, value: profile?.cases_read || 0, statType: 'cases' },
+    { icon: BookOpen, label: schoolConfig.statsLabel.fourthStat, value: profile?.cases_read || 0, statType: 'cases' },
   ];
 
   const quickActions = [
