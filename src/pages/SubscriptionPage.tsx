@@ -10,7 +10,9 @@ import {
   Shield,
   Zap,
   GraduationCap,
-  Users
+  Users,
+  Smartphone,
+  Building2
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -103,6 +105,10 @@ const SubscriptionPage: React.FC = () => {
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [enrollments, setEnrollments] = useState<string[]>([]);
   const [classPurchase, setClassPurchase] = useState<ClassPurchaseInfo | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'bank_transfer'>('mobile_money');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [bankCode, setBankCode] = useState('');
+  const [accountName, setAccountName] = useState('');
 
   useEffect(() => {
     loadSubscription();
@@ -191,9 +197,25 @@ const SubscriptionPage: React.FC = () => {
   };
 
   const processPayment = async () => {
-    if (!phoneNumber.trim()) {
-      toast({ variant: "destructive", title: "Error", description: "Please enter your phone number" });
-      return;
+    // Validate based on payment method
+    if (paymentMethod === 'mobile_money') {
+      if (!phoneNumber.trim()) {
+        toast({ variant: "destructive", title: "Error", description: "Please enter your phone number" });
+        return;
+      }
+    } else {
+      if (!accountNumber.trim()) {
+        toast({ variant: "destructive", title: "Error", description: "Please enter your account number" });
+        return;
+      }
+      if (!bankCode) {
+        toast({ variant: "destructive", title: "Error", description: "Please select your bank" });
+        return;
+      }
+      if (!accountName.trim()) {
+        toast({ variant: "destructive", title: "Error", description: "Please enter the account holder name" });
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -215,8 +237,15 @@ const SubscriptionPage: React.FC = () => {
         },
         body: JSON.stringify({
           amount,
-          phoneNumber,
-          provider,
+          paymentMethod,
+          // Mobile money fields
+          phoneNumber: paymentMethod === 'mobile_money' ? phoneNumber : undefined,
+          provider: paymentMethod === 'mobile_money' ? provider : undefined,
+          // Bank transfer fields
+          accountNumber: paymentMethod === 'bank_transfer' ? accountNumber : undefined,
+          bankCode: paymentMethod === 'bank_transfer' ? bankCode : undefined,
+          accountName: paymentMethod === 'bank_transfer' ? accountName : undefined,
+          // Product info
           productType: selectedPlan === 'pro' ? 'subscription' : selectedPlan === 'class' ? 'class' : 'academy',
           selectedCourses: selectedPlan === 'academy' ? selectedCourses : undefined,
           classId: selectedPlan === 'class' ? classPurchase?.classId : undefined,
@@ -242,7 +271,7 @@ const SubscriptionPage: React.FC = () => {
       }
       
       toast({ 
-        title: "Payment Successful!", 
+        title: "Payment Initiated!", 
         description: result.message || successMessage 
       });
       
@@ -284,36 +313,128 @@ const SubscriptionPage: React.FC = () => {
           <div className="flex-1">
             <div className="bg-card rounded-3xl p-6 border border-border/50 mb-6">
               <h2 className="text-xl font-bold text-foreground mb-2">Payment Details</h2>
-              <p className="text-muted-foreground mb-6">Pay with Mobile Money</p>
+              <p className="text-muted-foreground mb-6">Choose your preferred payment method</p>
 
               <div className="space-y-4">
+                {/* Payment Method Selection */}
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Mobile Money Provider
+                  <label className="text-sm font-medium text-foreground mb-3 block">
+                    Payment Method
                   </label>
-                  <Select value={provider} onValueChange={setProvider}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mtn">MTN Mobile Money</SelectItem>
-                      <SelectItem value="airtel">Airtel Money</SelectItem>
-                      <SelectItem value="zamtel">Zamtel Kwacha</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('mobile_money')}
+                      className={cn(
+                        "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
+                        paymentMethod === 'mobile_money' 
+                          ? "border-primary bg-primary/10" 
+                          : "border-border hover:border-primary/50"
+                      )}
+                    >
+                      <Smartphone className="w-6 h-6 text-primary" />
+                      <span className="text-sm font-medium">Mobile Money</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('bank_transfer')}
+                      className={cn(
+                        "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
+                        paymentMethod === 'bank_transfer' 
+                          ? "border-primary bg-primary/10" 
+                          : "border-border hover:border-primary/50"
+                      )}
+                    >
+                      <Building2 className="w-6 h-6 text-primary" />
+                      <span className="text-sm font-medium">Bank Transfer</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Phone Number
-                  </label>
-                  <Input
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="e.g., 0971234567"
-                    type="tel"
-                  />
-                </div>
+                {/* Mobile Money Fields */}
+                {paymentMethod === 'mobile_money' && (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Mobile Money Provider
+                      </label>
+                      <Select value={provider} onValueChange={setProvider}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select provider" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="mtn">MTN Mobile Money</SelectItem>
+                          <SelectItem value="airtel">Airtel Money</SelectItem>
+                          <SelectItem value="zamtel">Zamtel Kwacha</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Phone Number
+                      </label>
+                      <Input
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        placeholder="e.g., 0971234567"
+                        type="tel"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Bank Transfer Fields */}
+                {paymentMethod === 'bank_transfer' && (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Select Bank
+                      </label>
+                      <Select value={bankCode} onValueChange={setBankCode}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your bank" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ZANACO">Zanaco</SelectItem>
+                          <SelectItem value="STANBIC">Stanbic Bank</SelectItem>
+                          <SelectItem value="FNB">First National Bank</SelectItem>
+                          <SelectItem value="ABSA">ABSA Bank</SelectItem>
+                          <SelectItem value="STANDARD">Standard Chartered</SelectItem>
+                          <SelectItem value="ATLAS">Atlas Mara</SelectItem>
+                          <SelectItem value="INDO">Indo Zambia Bank</SelectItem>
+                          <SelectItem value="ACCESS">Access Bank</SelectItem>
+                          <SelectItem value="UBA">United Bank for Africa</SelectItem>
+                          <SelectItem value="NATSAVE">National Savings</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Account Number
+                      </label>
+                      <Input
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value)}
+                        placeholder="Enter your account number"
+                        type="text"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Account Holder Name
+                      </label>
+                      <Input
+                        value={accountName}
+                        onChange={(e) => setAccountName(e.target.value)}
+                        placeholder="Name as it appears on account"
+                        type="text"
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div className="bg-secondary rounded-2xl p-4">
                   <div className="flex justify-between mb-2">
