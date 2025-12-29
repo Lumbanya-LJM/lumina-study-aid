@@ -12,9 +12,23 @@ interface UseSchoolResult {
   refresh: () => void;
 }
 
+// Cache the school from localStorage for immediate access
+function getCachedSchool(): LMVSchool {
+  try {
+    const cached = localStorage.getItem('lmv_selected_school');
+    if (cached && ['law', 'business', 'health'].includes(cached)) {
+      return cached as LMVSchool;
+    }
+  } catch {
+    // localStorage may not be available
+  }
+  return DEFAULT_SCHOOL;
+}
+
 export function useSchool(): UseSchoolResult {
   const { user } = useAuth();
-  const [school, setSchool] = useState<LMVSchool>(DEFAULT_SCHOOL);
+  // Initialize with cached value for immediate access (prevents flash)
+  const [school, setSchool] = useState<LMVSchool>(getCachedSchool);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshIndex, setRefreshIndex] = useState(0);
@@ -43,7 +57,14 @@ export function useSchool(): UseSchoolResult {
       } else {
         // Handle the school value - it could be null, undefined, or a valid value
         const schoolValue = data?.school as LMVSchool | null;
-        setSchool(schoolValue || DEFAULT_SCHOOL);
+        const resolvedSchool = schoolValue || DEFAULT_SCHOOL;
+        setSchool(resolvedSchool);
+        // Cache for immediate access on next render
+        try {
+          localStorage.setItem('lmv_selected_school', resolvedSchool);
+        } catch {
+          // localStorage may not be available
+        }
       }
     } catch (err) {
       console.error('Unexpected error fetching school:', err);

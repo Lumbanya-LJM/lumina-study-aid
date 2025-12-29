@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useSchool } from '@/hooks/useSchool';
 import luminaAvatarDefault from '@/assets/lumina-avatar.png';
@@ -33,7 +33,8 @@ export const LuminaAvatar: React.FC<LuminaAvatarProps> = ({
   isActive = false,
   school,
 }) => {
-  const { school: userSchool } = useSchool();
+  const { school: userSchool, loading: schoolLoading } = useSchool();
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   // Use provided school prop, or fall back to context, or default
   const activeSchool = school || userSchool || 'law';
@@ -49,6 +50,9 @@ export const LuminaAvatar: React.FC<LuminaAvatarProps> = ({
   const avatarSrc = avatarMap[activeSchool] || luminaAvatarDefault;
   const altText = altTextMap[activeSchool] || 'Lumina - Your AI Study Buddy';
 
+  // Show placeholder while loading to prevent flash
+  const showPlaceholder = schoolLoading || !imageLoaded;
+
   return (
     <div className={cn("relative", className)}>
       {isActive && (
@@ -62,10 +66,18 @@ export const LuminaAvatar: React.FC<LuminaAvatarProps> = ({
         sizes[size],
         isActive && "border-primary shadow-glow"
       )}>
+        {/* Placeholder shown during load */}
+        {showPlaceholder && (
+          <div className="absolute inset-0 bg-secondary animate-pulse" />
+        )}
         <img
           src={avatarSrc}
           alt={altText}
-          className="w-full h-full object-cover"
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-200",
+            showPlaceholder ? "opacity-0" : "opacity-100"
+          )}
+          onLoad={() => setImageLoaded(true)}
         />
       </div>
       {isActive && (

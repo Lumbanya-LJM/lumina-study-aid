@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LuminaAvatar } from '@/components/lumina/LuminaAvatar';
 import { MarkdownRenderer } from '@/components/lumina/MarkdownRenderer';
@@ -7,6 +7,8 @@ import { ConversationSearch } from '@/components/lumina/ConversationSearch';
 import { ZambiaLiiChatSearch } from '@/components/lumina/ZambiaLiiChatSearch';
 import { ThinkingIndicator } from '@/components/lumina/ThinkingIndicator';
 import { ResearchBookmarkButton } from '@/components/lumina/ResearchBookmarkButton';
+import { useSchool } from '@/hooks/useSchool';
+import { getSchoolPromptConfig, isLawSpecificAction } from '@/config/luminaPrompts';
 
 import {
   ArrowLeft,
@@ -85,9 +87,14 @@ const ChatPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { notify } = useLuminaTaskNotification();
+  const { school } = useSchool();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Get school-specific prompts and greeting
+  const promptConfig = useMemo(() => getSchoolPromptConfig(school), [school]);
+  const quickPrompts = promptConfig.quickPrompts;
 
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -806,22 +813,14 @@ const ChatPage: React.FC = () => {
   }, []);
 
   const handleQuickPrompt = (action: string) => {
-    // Special handling for ZambiaLII search
-    if (action === 'zambialii') {
+    // Special handling for ZambiaLII search - only for law school
+    if (action === 'zambialii' && school === 'law') {
       setIsZambiaLiiSearchOpen(true);
       return;
     }
 
-    const promptMap: Record<string, string> = {
-      summarise:
-        'Please summarise this Zambian case, focusing on the key facts, issue, holding, and reasoning.',
-      flashcards:
-        'Create detailed flashcards from my notes that focus on key principles, definitions, and case law.',
-      quiz:
-        'Generate a practice quiz based on my recent study topics with multiple choice questions.',
-    };
-
-    const prompt = promptMap[action] || '';
+    // Use school-specific prompt map
+    const prompt = promptConfig.promptMap[action] || '';
     if (!prompt) return;
 
     setMessage(prompt);
@@ -993,7 +992,7 @@ const ChatPage: React.FC = () => {
                   Hello, {displayName}!
                 </h2>
                 <p className="text-muted-foreground max-w-md mb-8">
-                  I'm Lumina, your AI study companion for Zambian law. What would you like to learn today?
+                  {promptConfig.greeting}
                 </p>
                 
                 {/* Quick Action Cards */}
