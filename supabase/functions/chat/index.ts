@@ -1688,10 +1688,12 @@ The student is sharing their thoughts or feelings. Respond with empathy and vali
 If they want to save their reflection, USE THE create_journal_entry tool to save it.`;
     }
 
-    console.log("Sending request to AI Gateway with action:", action || "general chat", "| Research mode:", needsResearch, "| Has images:", hasImages, "| Tools enabled: true");
-
-    // Use gemini-2.5-flash which supports both text and vision
-    const model = "google/gemini-2.5-flash";
+    // Determine model based on query complexity
+    // Use faster gemini-2.5-flash-lite for simple queries, gemini-2.5-flash for complex tasks
+    const isComplexQuery = needsResearch || hasImages || hasPdfContent || action === 'zambialii' || action === 'summarise';
+    const model = isComplexQuery ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash-lite";
+    
+    console.log("Sending request to AI Gateway with action:", action || "general chat", "| Research mode:", needsResearch, "| Has images:", hasImages, "| Model:", model, "| Tools enabled: true");
     
     // Add image/document analysis context if attachments are present
     let attachmentAnalysisPrompt = "";
