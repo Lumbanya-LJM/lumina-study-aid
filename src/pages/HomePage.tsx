@@ -188,6 +188,35 @@ const HomePage: React.FC = () => {
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Student';
 
+  // School-specific motivational messages
+  const getMotivationalMessage = () => {
+    const school = schoolConfig.id;
+    const messages = {
+      law: [
+        "Ready to master the law today?",
+        "Let's build your legal expertise!",
+        "Justice awaits your preparation.",
+        "Every case studied is progress made.",
+      ],
+      business: [
+        "Ready to lead with knowledge?",
+        "Let's sharpen your business acumen!",
+        "Success is built on preparation.",
+        "Every concept mastered is an advantage gained.",
+      ],
+      health: [
+        "Ready to advance your medical knowledge?",
+        "Let's strengthen your clinical skills!",
+        "Excellence in care starts with learning.",
+        "Every study session saves lives ahead.",
+      ],
+    };
+    const schoolMessages = messages[school] || messages.law;
+    // Use date to get consistent daily message
+    const dayIndex = new Date().getDate() % schoolMessages.length;
+    return schoolMessages[dayIndex];
+  };
+
   // Show onboarding tutorial for new users
   if (showOnboarding) {
     return <OnboardingTutorial onComplete={() => setShowOnboarding(false)} />;
@@ -243,7 +272,7 @@ const HomePage: React.FC = () => {
             <LuminaAvatar size="lg" isActive />
             <div className="flex-1">
               <p className="text-primary-foreground/80 text-sm mb-1">{greetingData.greeting}, {firstName}!</p>
-              <h1 className="text-primary-foreground text-xl font-bold mb-2">Ready to excel today?</h1>
+              <h1 className="text-primary-foreground text-xl font-bold mb-2">{getMotivationalMessage()}</h1>
               <button 
                 onClick={() => { haptics.medium(); navigate('/chat'); }}
                 className="flex items-center gap-2 bg-primary-foreground/20 rounded-full px-4 py-2 text-sm text-primary-foreground hover:bg-primary-foreground/30 transition-all hover:scale-105 active:scale-95"
