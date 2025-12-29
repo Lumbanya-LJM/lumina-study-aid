@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, Shield, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useSchoolTheme } from '@/hooks/useSchoolTheme';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -34,6 +35,9 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 }) => {
   const { isAdmin, loading: adminLoading } = useAdmin();
   const navigate = useNavigate();
+  
+  // Apply school-specific theme colors
+  useSchoolTheme();
 
   // Loading state
   if (adminLoading) {

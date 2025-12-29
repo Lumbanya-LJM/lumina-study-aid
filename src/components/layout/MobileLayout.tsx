@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { haptics } from '@/lib/haptics';
 import { StudentSidebar } from './StudentSidebar';
 import { FocusStatusBar } from '@/features/focus/FocusStatusBar';
+import { useSchoolTheme } from '@/hooks/useSchoolTheme';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -21,6 +22,9 @@ const bottomNavItems = [
 
 export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, showNav = true }) => {
   const location = useLocation();
+  
+  // Apply school-specific theme colors
+  useSchoolTheme();
 
   const handleNavClick = (isCurrentlyActive: boolean) => {
     if (!isCurrentlyActive) {
