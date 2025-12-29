@@ -60,7 +60,8 @@ export interface SchoolConfig {
     avatarStyle: 'default' | 'clinical';
   };
   statsLabel: {
-    casesRead: string;
+    fourthStat: string;
+    fourthStatDescription: string;
   };
   luminaBranding: {
     name: string;
@@ -126,7 +127,8 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
       avatarStyle: 'default',
     },
     statsLabel: {
-      casesRead: 'Cases Read',
+      fourthStat: 'Cases Read',
+      fourthStatDescription: 'Legal cases studied',
     },
     luminaBranding: {
       name: 'Lumina Law',
@@ -259,7 +261,8 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
       avatarStyle: 'default',
     },
     statsLabel: {
-      casesRead: 'Reports Reviewed',
+      fourthStat: 'Quizzes Passed',
+      fourthStatDescription: 'Assessment success',
     },
     luminaBranding: {
       name: 'Lumina Business',
@@ -383,7 +386,8 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
       avatarStyle: 'clinical',
     },
     statsLabel: {
-      casesRead: 'Cases Studied',
+      fourthStat: 'Sessions Done',
+      fourthStatDescription: 'Study sessions completed',
     },
     luminaBranding: {
       name: 'Lumina Health',
