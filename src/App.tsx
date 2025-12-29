@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { SchoolProvider } from "@/contexts/SchoolContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { TutorProtectedRoute } from "@/components/auth/TutorProtectedRoute";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
@@ -72,7 +73,8 @@ const App = () => {
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
-        <TooltipProvider>
+        <SchoolProvider>
+          <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -135,7 +137,8 @@ const App = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
-        </TooltipProvider>
+          </TooltipProvider>
+        </SchoolProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>

@@ -959,16 +959,42 @@ async function getUserContext(supabase: any, userId: string): Promise<string> {
     
     let context = "\n\n## 🎯 CURRENT USER CONTEXT (Use this to personalize responses)\n\n";
     
-    // Profile info
+    // Profile info with school context
+    const userSchool = profile?.school || 'law';
+    const isBusinessStudent = userSchool === 'business';
+    
     if (profile) {
       context += `### Student Profile\n`;
       context += `- Name: ${profile.full_name || 'Student'}\n`;
-      context += `- University: ${profile.university || 'Not set'}\n`;
+      context += `- School: ${isBusinessStudent ? 'LMV Business' : 'LMV Law'}\n`;
+      context += `- Institution: ${profile.university || 'Not set'}\n`;
       context += `- Year of Study: ${profile.year_of_study || 'Not set'}\n`;
       context += `- Study Streak: ${profile.streak_days || 0} days 🔥\n`;
       context += `- Total Study Hours: ${profile.total_study_hours || 0}\n`;
       context += `- Tasks Completed: ${profile.tasks_completed || 0}\n`;
-      context += `- Cases Read: ${profile.cases_read || 0}\n\n`;
+      if (!isBusinessStudent) {
+        context += `- Cases Read: ${profile.cases_read || 0}\n`;
+      }
+      context += `\n`;
+      
+      // Add discipline-specific guidance
+      if (isBusinessStudent) {
+        context += `### DISCIPLINE CONTEXT: BUSINESS\n`;
+        context += `This student is enrolled in LMV Business. Adapt your responses to:\n`;
+        context += `- Focus on practical business application and analytical thinking\n`;
+        context += `- Use business terminology (reports, analysis, frameworks)\n`;
+        context += `- Reference business concepts, financial principles, and management strategies\n`;
+        context += `- Apply frameworks like SWOT, Porter's Five Forces, PESTLE when relevant\n`;
+        context += `- Emphasize data-driven decision making and ethical business practices\n\n`;
+      } else {
+        context += `### DISCIPLINE CONTEXT: LAW\n`;
+        context += `This student is enrolled in LMV Law. Adapt your responses to:\n`;
+        context += `- Focus on legal reasoning and case analysis\n`;
+        context += `- Use legal terminology and IRAC methodology\n`;
+        context += `- Reference statutes, cases, and legal principles\n`;
+        context += `- Cite cases using proper legal citation format when available\n`;
+        context += `- Emphasize precision, structured argumentation, and professional ethics\n\n`;
+      }
     }
     
     // Today's tasks
