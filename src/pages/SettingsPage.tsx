@@ -76,7 +76,7 @@ const SettingsPage: React.FC = () => {
   const offlineSync = useOfflineSync();
   const { resetAllTips, seenTips } = useQuickTips();
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'purchases' | 'notifications' | 'goals' | 'lumina' | 'appearance' | 'offline' | 'security'>('purchases');
+  const [activeTab, setActiveTab] = useState<'purchases' | 'notifications' | 'goals' | 'lumina' | 'appearance' | 'offline' | 'security'>('appearance');
   
   // Email change state
   const [newEmail, setNewEmail] = useState('');
