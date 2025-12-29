@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,6 +6,8 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useNavigate } from 'react-router-dom';
 import { ZambiaLiiIntegration } from '@/components/library/ZambiaLiiIntegration';
 import { CaseSummarizer } from '@/components/library/CaseSummarizer';
+import { useSchool } from '@/hooks/useSchool';
+import { getLibraryTabs } from '@/config/luminaPrompts';
 
 import { 
   Search, 
@@ -51,17 +53,13 @@ const LibraryPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
+  const { school } = useSchool();
 
-  const tabs = [
-    { id: 'all' as ContentType, label: 'All' },
-    { id: 'summarizer' as ContentType, label: 'AI Summarizer', icon: Sparkles },
-    { id: 'zambialii' as ContentType, label: 'ZambiaLII', icon: Scale },
-    { id: 'cases' as ContentType, label: 'Cases' },
-    { id: 'summaries' as ContentType, label: 'Summaries' },
-    { id: 'papers' as ContentType, label: 'Past Papers' },
-    { id: 'videos' as ContentType, label: 'Videos' },
-    { id: 'alerts' as ContentType, label: 'Alerts' },
-  ];
+  // Get school-specific tabs
+  const tabs = useMemo(() => getLibraryTabs(school), [school]);
+
+  // Check if law school for law-specific features
+  const isLawSchool = school === 'law';
 
   useEffect(() => {
     fetchContent();
@@ -168,8 +166,8 @@ const LibraryPage: React.FC = () => {
           </button>
         </div>
 
-        {/* ZambiaLii Quick Link - only show when not on ZambiaLII tab */}
-        {activeTab !== 'zambialii' && (
+        {/* ZambiaLii Quick Link - only show for law school and when not on ZambiaLII tab */}
+        {isLawSchool && activeTab !== 'zambialii' && (
           <button
             onClick={() => setActiveTab('zambialii')}
             className="w-full flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-2xl p-4 mb-6 hover:bg-primary/15 transition-colors"
@@ -202,7 +200,7 @@ const LibraryPage: React.FC = () => {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => setActiveTab(tab.id as ContentType)}
               className={cn(
                 "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
                 activeTab === tab.id
@@ -219,7 +217,7 @@ const LibraryPage: React.FC = () => {
         {/* Tab Content */}
         {activeTab === 'summarizer' ? (
           <CaseSummarizer />
-        ) : activeTab === 'zambialii' ? (
+        ) : activeTab === 'zambialii' && isLawSchool ? (
           <ZambiaLiiIntegration />
         ) : loading ? (
           <div className="flex items-center justify-center py-12">
