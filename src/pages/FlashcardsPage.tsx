@@ -9,7 +9,10 @@ import {
   ChevronRight,
   Sparkles,
   Layers,
-  CheckCircle
+  CheckCircle,
+  Pencil,
+  Trash2,
+  MoreVertical
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -18,6 +21,23 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLuminaTaskNotification } from '@/hooks/useLuminaTaskNotification';
+import { EditFlashcardDeckModal } from '@/components/flashcards/EditFlashcardDeckModal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Card {
   id: number;
@@ -49,6 +69,9 @@ const FlashcardsPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [topic, setTopic] = useState('');
   const [recentDecks, setRecentDecks] = useState<Deck[]>([]);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deckToDelete, setDeckToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (deckId) {
@@ -178,6 +201,45 @@ const FlashcardsPage: React.FC = () => {
     setMasteredCards([]);
   };
 
+  const handleDeleteDeck = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('flashcard_decks')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({ title: "Deleted", description: "Flashcard deck deleted successfully" });
+      
+      // If we're viewing the deleted deck, go back to list
+      if (deck?.id === id) {
+        setDeck(null);
+        navigate('/flashcards');
+      }
+      
+      // Refresh the list
+      loadRecentDecks();
+    } catch (error) {
+      console.error('Error deleting deck:', error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete deck" });
+    } finally {
+      setDeleteDialogOpen(false);
+      setDeckToDelete(null);
+    }
+  };
+
+  const confirmDelete = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setDeckToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeckSave = (updatedDeck: Deck) => {
+    setDeck(updatedDeck);
+    loadRecentDecks();
+  };
+
   // Deck selection screen
   if (!deck) {
     return (
@@ -231,27 +293,68 @@ const FlashcardsPage: React.FC = () => {
               <h2 className="font-semibold text-foreground mb-4">Your Decks</h2>
               <div className="space-y-3">
                 {recentDecks.map((d) => (
-                  <button
+                  <div
                     key={d.id}
-                    onClick={() => navigate(`/flashcards/${d.id}`)}
                     className="w-full bg-card rounded-2xl p-4 border border-border/50 text-left hover:shadow-premium transition-all flex items-center gap-4"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
-                      <Layers className="w-5 h-5 text-warning" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{d.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {d.cards.length} cards • {d.mastered_count || 0} mastered
-                      </p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  </button>
+                    <button
+                      onClick={() => navigate(`/flashcards/${d.id}`)}
+                      className="flex items-center gap-4 flex-1"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
+                        <Layers className="w-5 h-5 text-warning" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-foreground">{d.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {d.cards.length} cards • {d.mastered_count || 0} mastered
+                        </p>
+                      </div>
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/flashcards/${d.id}`)}>
+                          <ChevronRight className="w-4 h-4 mr-2" />
+                          Study
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => confirmDelete(d.id, e)} className="text-destructive">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 ))}
               </div>
             </div>
           )}
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Flashcard Deck?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the flashcard deck and all its cards.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deckToDelete && handleDeleteDeck(deckToDelete)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </MobileLayout>
     );
   }
@@ -306,6 +409,23 @@ const FlashcardsPage: React.FC = () => {
           <span className="text-sm text-muted-foreground">
             {currentCard + 1} / {deck.cards.length}
           </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditModalOpen(true)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit Deck
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => confirmDelete(deck.id)} className="text-destructive">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Deck
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Progress bar */}
@@ -372,6 +492,35 @@ const FlashcardsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      <EditFlashcardDeckModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        deck={deck}
+        onSave={handleDeckSave}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Flashcard Deck?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the flashcard deck and all its cards.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deckToDelete && handleDeleteDeck(deckToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MobileLayout>
   );
 };
