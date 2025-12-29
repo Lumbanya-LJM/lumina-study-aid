@@ -42,7 +42,12 @@ import {
   Sunset,
   Moon,
   Trash2,
-  History
+  History,
+  Scale,
+  TrendingUp,
+  Stethoscope,
+  LineChart,
+  HeartPulse,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -157,14 +162,42 @@ const HomePage: React.FC = () => {
     { icon: BookOpen, label: schoolConfig.statsLabel.fourthStat, value: profile?.cases_read || 0, statType: 'cases' },
   ];
 
-  const quickActions = [
-    { icon: MessageCircle, label: 'Chat with Lumina', description: 'Get instant study help', path: '/chat' },
-    { icon: Users, label: 'Community', description: 'Join study groups', path: '/community' },
-    { icon: GraduationCap, label: 'Lumina Academy', description: 'Tutor updates', path: '/academy' },
-    { icon: Focus, label: 'Deep Focus Mode', description: 'Block distractions', path: '/focus' },
-    { icon: BarChart3, label: 'Analytics', description: 'Track your progress', path: '/analytics' },
-    { icon: Target, label: 'Achievements', description: 'View your badges', path: '/achievements' },
-  ];
+  // School-specific quick actions
+  const getQuickActions = () => {
+    const school = schoolConfig.id;
+    
+    // Common actions for all schools
+    const commonActions = [
+      { icon: MessageCircle, label: 'Chat with Lumina', description: 'Get instant study help', path: '/chat' },
+      { icon: GraduationCap, label: 'Lumina Academy', description: 'Live classes & courses', path: '/academy' },
+    ];
+    
+    // School-specific actions
+    const schoolActions = {
+      law: [
+        { icon: Scale, label: 'Find a Case', description: 'Search ZambiaLII cases', path: '/chat?action=zambialii' },
+        { icon: BookOpen, label: 'Case Library', description: 'Browse legal materials', path: '/library' },
+        { icon: Focus, label: 'Deep Focus', description: 'Block distractions', path: '/focus' },
+        { icon: Target, label: 'Achievements', description: 'View your badges', path: '/achievements' },
+      ],
+      business: [
+        { icon: TrendingUp, label: 'Case Studies', description: 'Analyze business cases', path: '/chat?action=case-study' },
+        { icon: LineChart, label: 'Financial Tools', description: 'Calculators & analysis', path: '/chat?action=finance' },
+        { icon: Focus, label: 'Deep Focus', description: 'Block distractions', path: '/focus' },
+        { icon: Target, label: 'Achievements', description: 'View your badges', path: '/achievements' },
+      ],
+      health: [
+        { icon: Stethoscope, label: 'Clinical Cases', description: 'Practice diagnoses', path: '/chat?action=clinical' },
+        { icon: HeartPulse, label: 'Anatomy Review', description: 'Visual learning aids', path: '/chat?action=anatomy' },
+        { icon: Focus, label: 'Deep Focus', description: 'Block distractions', path: '/focus' },
+        { icon: Target, label: 'Achievements', description: 'View your badges', path: '/achievements' },
+      ],
+    };
+    
+    return [...commonActions, ...(schoolActions[school] || schoolActions.law)];
+  };
+
+  const quickActions = getQuickActions();
 
   const formatTime = (time: string | null) => {
     if (!time) return 'Anytime';
