@@ -135,13 +135,16 @@ const TutorApplicationsAdminPage: React.FC = () => {
   };
 
   // Note: selected_courses stores course names, not UUIDs
+  // Categorize courses by whether they're professional/postgraduate vs university level
   const getCoursesByNames = (courseNames: string[] | null) => {
-    if (!courseNames || courseNames.length === 0) return { undergraduate: [], ziale: [] };
+    if (!courseNames || courseNames.length === 0) return { undergraduate: [], professional: [] };
     
     const selectedCourses = courses.filter(c => courseNames.includes(c.name));
+    // Professional institutions: ZIALE (Law), ZICPA (Business), Medical/Nursing School (Health)
+    const professionalInstitutions = ['ZIALE', 'ZICPA', 'Medical School', 'Nursing School'];
     return {
-      undergraduate: selectedCourses.filter(c => c.institution !== 'ZIALE'),
-      ziale: selectedCourses.filter(c => c.institution === 'ZIALE')
+      undergraduate: selectedCourses.filter(c => !professionalInstitutions.includes(c.institution || '')),
+      professional: selectedCourses.filter(c => professionalInstitutions.includes(c.institution || ''))
     };
   };
 
@@ -548,9 +551,10 @@ const TutorApplicationsAdminPage: React.FC = () => {
   const pendingCount = applications.filter(a => a.status === 'pending').length;
   const approvedCount = applications.filter(a => a.status === 'approved').length;
   
-  // Separate courses by institution
-  const undergraduateCourses = courses.filter(c => c.institution !== 'ZIALE');
-  const zialeCourses = courses.filter(c => c.institution === 'ZIALE');
+  // Separate courses by institution type
+  const professionalInstitutions = ['ZIALE', 'ZICPA', 'Medical School', 'Nursing School'];
+  const undergraduateCourses = courses.filter(c => !professionalInstitutions.includes(c.institution || ''));
+  const professionalCourses = courses.filter(c => professionalInstitutions.includes(c.institution || ''));
 
   return (
     <AdminLayout
@@ -599,7 +603,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
                 </Card>
               ) : (
                 applications.filter(a => a.status === status).map((app) => {
-            const { undergraduate, ziale } = getCoursesByNames(app.selected_courses);
+            const { undergraduate, professional } = getCoursesByNames(app.selected_courses);
             const age = calculateAge(app.date_of_birth);
             const isCoursesExpanded = expandedCourses === app.id;
             
@@ -640,7 +644,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
                   )}
 
                   {/* Selected Courses */}
-                  {(undergraduate.length > 0 || ziale.length > 0) && (
+                  {(undergraduate.length > 0 || professional.length > 0) && (
                     <Collapsible
                       open={isCoursesExpanded}
                       onOpenChange={() => setExpandedCourses(isCoursesExpanded ? null : app.id)}
@@ -650,7 +654,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <GraduationCap className="w-4 h-4 text-primary" />
                             <span className="text-sm font-medium">
-                              Selected Courses ({undergraduate.length + ziale.length})
+                              Selected Courses ({undergraduate.length + professional.length})
                             </span>
                           </div>
                           {isCoursesExpanded ? (
@@ -664,7 +668,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
                         {undergraduate.length > 0 && (
                           <div className="p-3 rounded-lg bg-secondary/30">
                             <p className="text-xs font-medium text-muted-foreground mb-2">
-                              Undergraduate Courses ({undergraduate.length})
+                              University Courses ({undergraduate.length})
                             </p>
                             <div className="flex flex-wrap gap-1">
                               {undergraduate.map((course) => (
@@ -675,13 +679,13 @@ const TutorApplicationsAdminPage: React.FC = () => {
                             </div>
                           </div>
                         )}
-                        {ziale.length > 0 && (
+                        {professional.length > 0 && (
                           <div className="p-3 rounded-lg bg-accent/10 border border-accent/20">
                             <p className="text-xs font-medium text-accent-foreground mb-2">
-                              ZIALE Courses ({ziale.length})
+                              Professional Courses ({professional.length})
                             </p>
                             <div className="flex flex-wrap gap-1">
-                              {ziale.map((course) => (
+                              {professional.map((course) => (
                                 <Badge key={course.id} className="bg-accent/20 text-accent-foreground text-xs">
                                   {course.name}
                                 </Badge>
@@ -863,14 +867,14 @@ const TutorApplicationsAdminPage: React.FC = () => {
                 </div>
               )}
               
-              {zialeCourses.length > 0 && (
+              {professionalCourses.length > 0 && (
                 <div className="space-y-3">
                   <Label className="text-sm font-medium flex items-center gap-2">
-                    ZIALE Courses
-                    <Badge variant="secondary" className="text-xs">Professional</Badge>
+                    Professional Courses
+                    <Badge variant="secondary" className="text-xs">ZIALE/ZICA/Medical</Badge>
                   </Label>
                   <div className="space-y-2">
-                    {zialeCourses.map((course) => (
+                    {professionalCourses.map((course) => (
                       <div
                         key={course.id}
                         className="flex items-center space-x-3 p-3 rounded-lg border border-accent/30 hover:bg-accent/10 transition-colors"
@@ -1018,10 +1022,10 @@ const TutorApplicationsAdminPage: React.FC = () => {
                         </div>
                       )}
                       
-                      {zialeCourses.length > 0 && (
+                      {professionalCourses.length > 0 && (
                         <div className="space-y-2 mt-3">
-                          <p className="text-xs text-muted-foreground font-medium">ZIALE</p>
-                          {zialeCourses.map((course) => (
+                          <p className="text-xs text-muted-foreground font-medium">Professional</p>
+                          {professionalCourses.map((course) => (
                             <div
                               key={course.id}
                               className="flex items-center space-x-3 p-2 rounded-lg border border-accent/30 hover:bg-accent/10 transition-colors"
