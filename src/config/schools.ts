@@ -1,7 +1,14 @@
-// LMV Multi-School Configuration
-// This configuration system allows easy addition of new schools in the future
+import { Scale, Briefcase, Heart } from 'lucide-react';
 
-export type LMVSchool = 'law' | 'business';
+export type LMVSchool = 'law' | 'business' | 'health';
+
+export const DEFAULT_SCHOOL: LMVSchool = 'law';
+
+export interface SchoolInstitution {
+  id: string;
+  name: string;
+  shortName: string;
+}
 
 export interface SchoolConfig {
   id: LMVSchool;
@@ -9,27 +16,21 @@ export interface SchoolConfig {
   fullName: string;
   tagline: string;
   description: string;
-  icon: string; // Lucide icon name
-  accentColor: string; // Tailwind color class
-  institutions: {
-    id: string;
-    name: string;
-    shortName?: string;
-  }[];
+  icon: 'Scale' | 'Briefcase' | 'Heart';
+  accentColor: string;
+  institutions: SchoolInstitution[];
   universities: string[];
   aiPersonality: {
     tone: string;
     focus: string[];
     examples: string[];
-    terminology: Record<string, string>;
   };
-  features: {
-    hasLiveClasses: boolean;
-    hasRecordings: boolean;
-    hasFlashcards: boolean;
-    hasQuizzes: boolean;
-    hasJournal: boolean;
-    hasFocusMode: boolean;
+  statsLabel: {
+    casesRead: string; // Different label per school
+  };
+  luminaBranding: {
+    name: string;
+    tagline: string;
   };
 }
 
@@ -38,7 +39,7 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
     id: 'law',
     name: 'LMV Law',
     fullName: 'Luminary Innovision Academy - School of Law',
-    tagline: 'Excellence in Legal Education',
+    tagline: 'Legal education, redefined.',
     description: 'Preparing future legal professionals with rigorous academic training and practical skills.',
     icon: 'Scale',
     accentColor: 'primary',
@@ -69,39 +70,31 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
         'Professional ethics',
       ],
       examples: [
-        'When analyzing legal issues, apply the IRAC method (Issue, Rule, Application, Conclusion)',
-        'Cite cases using proper legal citation format',
-        'Reference statutes with full names and section numbers',
-        'Use Latin legal maxims where appropriate with translations',
+        'Case analysis using IRAC methodology',
+        'Statutory interpretation techniques',
+        'Legal citation and referencing',
+        'Moot court preparation',
       ],
-      terminology: {
-        assignment: 'legal brief',
-        project: 'case study',
-        topic: 'legal issue',
-        subject: 'area of law',
-        lesson: 'seminar',
-      },
     },
-    features: {
-      hasLiveClasses: true,
-      hasRecordings: true,
-      hasFlashcards: true,
-      hasQuizzes: true,
-      hasJournal: true,
-      hasFocusMode: true,
+    statsLabel: {
+      casesRead: 'Cases Read',
+    },
+    luminaBranding: {
+      name: 'Lumina Law',
+      tagline: 'Smart Legal Learning',
     },
   },
   business: {
     id: 'business',
     name: 'LMV Business',
     fullName: 'Luminary Innovision Academy - School of Business',
-    tagline: 'Building Tomorrow\'s Business Leaders',
-    description: 'Developing analytical thinkers and ethical business professionals for the modern economy.',
+    tagline: 'Shape the future of commerce.',
+    description: 'Developing business leaders with analytical thinking and practical management skills.',
     icon: 'Briefcase',
-    accentColor: 'accent',
+    accentColor: 'primary',
     institutions: [
+      { id: 'ZICPA', name: 'Zambia Institute of Chartered Accountants', shortName: 'ZICA' },
       { id: 'University', name: 'University Business Programmes', shortName: 'University' },
-      { id: 'ZICPA', name: 'Zambia Institute of Certified Public Accountants', shortName: 'ZICPA' },
     ],
     universities: [
       'University of Zambia',
@@ -116,54 +109,94 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
       'Other',
     ],
     aiPersonality: {
-      tone: 'Your communication is professional, practical, and results-oriented. You emphasize real-world application, analytical thinking, and ethical business practices.',
+      tone: 'Your communication is professional, analytical, and results-oriented. You use business terminology and emphasize practical application of concepts.',
       focus: [
         'Practical business application',
         'Analytical and critical thinking',
-        'Financial literacy and numeracy',
-        'Ethical business practices',
-        'Strategic decision-making',
-        'Professional communication',
+        'Data-driven decision making',
+        'Business literacy and financial acumen',
+        'Strategic reasoning',
+        'Ethical business practice',
       ],
       examples: [
-        'Use case studies from real companies to illustrate concepts',
-        'Apply frameworks like SWOT, Porter\'s Five Forces, and PESTLE analysis',
-        'Connect theory to practical business scenarios',
-        'Emphasize data-driven decision making',
+        'SWOT and PESTLE analysis',
+        'Financial statement interpretation',
+        'Case study methodology',
+        'Business plan development',
       ],
-      terminology: {
-        assignment: 'business report',
-        project: 'case analysis',
-        topic: 'business concept',
-        subject: 'business discipline',
-        lesson: 'lecture',
-      },
     },
-    features: {
-      hasLiveClasses: true,
-      hasRecordings: true,
-      hasFlashcards: true,
-      hasQuizzes: true,
-      hasJournal: true,
-      hasFocusMode: true,
+    statsLabel: {
+      casesRead: 'Reports Reviewed',
+    },
+    luminaBranding: {
+      name: 'Lumina Business',
+      tagline: 'Learn. Build. Lead.',
+    },
+  },
+  health: {
+    id: 'health',
+    name: 'LMV Health',
+    fullName: 'Luminary Innovision Academy - School of Health Sciences',
+    tagline: 'Excellence in health sciences education.',
+    description: 'Training healthcare professionals with clinical knowledge and compassionate care.',
+    icon: 'Heart',
+    accentColor: 'primary',
+    institutions: [
+      { id: 'Medical School', name: 'Medical School', shortName: 'Medical' },
+      { id: 'Nursing School', name: 'Nursing School', shortName: 'Nursing' },
+      { id: 'University', name: 'University Health Programmes', shortName: 'University' },
+    ],
+    universities: [
+      'University of Zambia - School of Medicine',
+      'Copperbelt University - School of Medicine',
+      'Levy Mwanawasa Medical University',
+      'Lusaka Apex Medical University',
+      'Cavendish University Zambia',
+      'University of Lusaka',
+      'Zambian Open University',
+      'Northrise University',
+      'Other',
+    ],
+    aiPersonality: {
+      tone: 'Your communication is precise, empathetic, and clinically accurate. You use proper medical terminology while ensuring concepts are accessible to students at various levels.',
+      focus: [
+        'Clinical reasoning and diagnosis',
+        'Evidence-based practice',
+        'Patient-centered care',
+        'Medical ethics and professionalism',
+        'Anatomical and physiological understanding',
+        'Public health awareness',
+      ],
+      examples: [
+        'Clinical case presentations',
+        'Differential diagnosis methodology',
+        'Medical literature review',
+        'Patient care planning',
+      ],
+    },
+    statsLabel: {
+      casesRead: 'Cases Studied',
+    },
+    luminaBranding: {
+      name: 'Lumina Health',
+      tagline: 'Advancing Medical & Health Knowledge',
     },
   },
 };
 
-export const DEFAULT_SCHOOL: LMVSchool = 'law';
+export const getSchoolConfig = (school: LMVSchool): SchoolConfig => {
+  return SCHOOL_CONFIGS[school] || SCHOOL_CONFIGS.law;
+};
 
-export function getSchoolConfig(school: LMVSchool | null | undefined): SchoolConfig {
-  return SCHOOL_CONFIGS[school || DEFAULT_SCHOOL];
-}
+export const getSchoolIcon = (school: LMVSchool) => {
+  const iconMap = {
+    law: Scale,
+    business: Briefcase,
+    health: Heart,
+  };
+  return iconMap[school] || Scale;
+};
 
-export function getSchoolDisplayName(school: LMVSchool | null | undefined): string {
-  return getSchoolConfig(school).name;
-}
-
-export function getSchoolIcon(school: LMVSchool | null | undefined): string {
-  return getSchoolConfig(school).icon;
-}
-
-export function getAllSchools(): SchoolConfig[] {
+export const getAllSchools = (): SchoolConfig[] => {
   return Object.values(SCHOOL_CONFIGS);
-}
+};

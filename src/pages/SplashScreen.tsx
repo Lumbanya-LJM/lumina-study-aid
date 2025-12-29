@@ -64,7 +64,7 @@ const SplashScreen: React.FC = () => {
         <p className={`mt-4 text-sm md:text-base text-muted-foreground tracking-wide transition-all duration-700 ${
           stage === 'logo' ? 'opacity-100' : 'opacity-0'
         }`}>
-          Excellence in Legal Education
+          Empowering Learners Across Disciplines
         </p>
 
         {/* Lumina Avatar reveal */}
@@ -103,7 +103,7 @@ const SplashScreen: React.FC = () => {
         stage === 'complete' ? 'opacity-0' : 'opacity-100'
       }`}>
         <p className="text-xs text-muted-foreground tracking-widest uppercase">
-          🇿🇲 Made for Zambian Law Students
+          Law • Business • Health
         </p>
       </div>
     </div>

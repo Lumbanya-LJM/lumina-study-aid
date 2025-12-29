@@ -51,7 +51,7 @@ const NotFound = () => {
       </div>
       
       <p className="absolute bottom-8 text-xs text-muted-foreground">
-        🇿🇲 LMV Academy - Excellence in Legal Education
+        LMV Academy — Law • Business • Health
       </p>
     </div>
   );

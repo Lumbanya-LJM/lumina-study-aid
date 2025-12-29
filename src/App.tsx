@@ -15,6 +15,7 @@ import { AchievementConfetti } from "@/components/premium/AchievementConfetti";
 import { CelebrationProvider } from "@/components/premium/ProgressCelebration";
 import { GlobalLiveClassBanner } from "@/components/layout/GlobalLiveClassBanner";
 import SplashScreen from "./pages/SplashScreen";
+import WelcomePage from "./pages/WelcomePage";
 import RoleSelectionPage from "./pages/RoleSelectionPage";
 import AuthPage from "./pages/AuthPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -85,7 +86,8 @@ const App = () => {
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<SplashScreen />} />
-              <Route path="/welcome" element={<RoleSelectionPage />} />
+              <Route path="/welcome" element={<WelcomePage />} />
+              <Route path="/role-select" element={<RoleSelectionPage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
