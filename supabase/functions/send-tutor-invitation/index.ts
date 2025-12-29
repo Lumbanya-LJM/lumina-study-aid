@@ -93,7 +93,10 @@ const handler = async (req: Request): Promise<Response> => {
     const invitationLink = `${appUrl}/auth?invitation=${invitationToken}`;
 
     // Get the from email from environment or use default
-    const fromEmail = Deno.env.get("SMTP_FROM") || "LMV Academy <onboarding@resend.dev>";
+    const smtpFrom = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
+    const fromEmail = `LMV Academy <${smtpFrom}>`;
+
+    console.log("Sending invitation email from:", fromEmail, "to:", email);
 
     // Send the invitation email
     const { data: emailData, error: emailError } = await resend.emails.send({
