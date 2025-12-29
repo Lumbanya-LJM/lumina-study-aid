@@ -65,14 +65,15 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
         .eq("status", "approved")
         .single();
 
-      const tutorCourseIds = tutorApp?.selected_courses || [];
+      // Note: selected_courses stores course names, not UUIDs
+      const tutorCourseNames = tutorApp?.selected_courses || [];
 
-      if (tutorCourseIds.length > 0) {
+      if (tutorCourseNames.length > 0) {
         const { data } = await supabase
           .from("academy_courses")
           .select("id, name")
           .eq("is_active", true)
-          .in("id", tutorCourseIds);
+          .in("name", tutorCourseNames);
         setCourses(data || []);
       } else {
         setCourses([]);

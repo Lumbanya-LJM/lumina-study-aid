@@ -62,6 +62,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Find tutors who teach any of the enrolled courses
+    // Note: selected_courses stores course names, not UUIDs
     const assignedTutors: { course: Course; tutor: Tutor | null }[] = [];
     
     for (const course of courses || []) {
@@ -69,7 +70,8 @@ const handler = async (req: Request): Promise<Response> => {
       
       if (tutorApplications) {
         for (const app of tutorApplications) {
-          if (app.selected_courses && app.selected_courses.includes(course.id)) {
+          // Match by course name since selected_courses contains names
+          if (app.selected_courses && app.selected_courses.includes(course.name)) {
             assignedTutor = { full_name: app.full_name, email: app.email };
             break;
           }

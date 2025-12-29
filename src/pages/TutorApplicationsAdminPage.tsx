@@ -134,10 +134,11 @@ const TutorApplicationsAdminPage: React.FC = () => {
     }
   };
 
-  const getCoursesByIds = (courseIds: string[] | null) => {
-    if (!courseIds || courseIds.length === 0) return { undergraduate: [], ziale: [] };
+  // Note: selected_courses stores course names, not UUIDs
+  const getCoursesByNames = (courseNames: string[] | null) => {
+    if (!courseNames || courseNames.length === 0) return { undergraduate: [], ziale: [] };
     
-    const selectedCourses = courses.filter(c => courseIds.includes(c.id));
+    const selectedCourses = courses.filter(c => courseNames.includes(c.name));
     return {
       undergraduate: selectedCourses.filter(c => c.institution !== 'ZIALE'),
       ziale: selectedCourses.filter(c => c.institution === 'ZIALE')
@@ -598,7 +599,7 @@ const TutorApplicationsAdminPage: React.FC = () => {
                 </Card>
               ) : (
                 applications.filter(a => a.status === status).map((app) => {
-            const { undergraduate, ziale } = getCoursesByIds(app.selected_courses);
+            const { undergraduate, ziale } = getCoursesByNames(app.selected_courses);
             const age = calculateAge(app.date_of_birth);
             const isCoursesExpanded = expandedCourses === app.id;
             
