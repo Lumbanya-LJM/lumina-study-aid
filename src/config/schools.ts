@@ -10,6 +10,29 @@ export interface SchoolInstitution {
   shortName: string;
 }
 
+// Discipline-specific tutor application fields
+export interface DisciplineSpecificTutorFields {
+  fields: {
+    id: string;
+    label: string;
+    type: 'text' | 'select' | 'textarea' | 'checkbox' | 'number';
+    placeholder?: string;
+    options?: { value: string; label: string }[];
+    required?: boolean;
+  }[];
+  specialties: string[];
+  documentTypes: { id: string; name: string; required: boolean }[];
+  targetStudentCategories: { id: string; label: string; description: string; requiresCredential?: string }[];
+}
+
+// Discipline-specific student fields
+export interface DisciplineSpecificStudentFields {
+  showAttemptStatus?: boolean;
+  attemptStatusLabel?: string;
+  attemptStatusOptions?: { value: number; label: string }[];
+  yearLabel?: string;
+}
+
 export interface SchoolConfig {
   id: LMVSchool;
   name: string;
@@ -43,6 +66,9 @@ export interface SchoolConfig {
     name: string;
     tagline: string;
   };
+  tutorApplication: DisciplineSpecificTutorFields;
+  studentFields: DisciplineSpecificStudentFields;
+  footerTagline: string;
 }
 
 export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
@@ -106,6 +132,77 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
       name: 'Lumina Law',
       tagline: 'Smart Legal Learning',
     },
+    footerTagline: 'Case law, Statutes, and the Constitution of Zambia',
+    tutorApplication: {
+      fields: [
+        {
+          id: 'calledToBar',
+          label: 'Have you been called to the bar?',
+          type: 'select',
+          options: [
+            { value: 'yes', label: 'Yes' },
+            { value: 'no', label: 'No' },
+          ],
+          required: false,
+        },
+        {
+          id: 'yearsAtBar',
+          label: 'Years at the bar',
+          type: 'number',
+          placeholder: 'Enter number of years',
+          required: false,
+        },
+        {
+          id: 'practiceArea',
+          label: 'Primary practice area',
+          type: 'select',
+          options: [
+            { value: 'litigation', label: 'Litigation' },
+            { value: 'corporate', label: 'Corporate & Commercial' },
+            { value: 'criminal', label: 'Criminal Law' },
+            { value: 'family', label: 'Family Law' },
+            { value: 'property', label: 'Property & Conveyancing' },
+            { value: 'labour', label: 'Labour & Employment' },
+            { value: 'constitutional', label: 'Constitutional Law' },
+            { value: 'academic', label: 'Academic/Teaching Focus' },
+            { value: 'other', label: 'Other' },
+          ],
+          required: false,
+        },
+      ],
+      specialties: [
+        'Constitutional Law',
+        'Criminal Law',
+        'Contract Law',
+        'Property Law',
+        'Administrative Law',
+        'Company Law',
+        'Family Law',
+        'Labour Law',
+        'Tort Law',
+        'Evidence',
+        'Civil Procedure',
+        'Criminal Procedure',
+        'Legal Research & Writing',
+      ],
+      documentTypes: [
+        { id: 'bachelors_degree', name: "Bachelor's Degree (Required)", required: true },
+        { id: 'laz_certificate', name: 'LAZ Practicing Certificate (If applicable)', required: false },
+      ],
+      targetStudentCategories: [
+        { id: 'university', label: 'University Students', description: 'LLB students at universities' },
+        { id: 'ziale', label: 'ZIALE Students', description: 'Bar course students (requires bar admission)', requiresCredential: 'calledToBar' },
+      ],
+    },
+    studentFields: {
+      showAttemptStatus: true,
+      attemptStatusLabel: 'Attempt Status',
+      attemptStatusOptions: [
+        { value: 1, label: 'First Attempt' },
+        { value: 2, label: 'Repeater' },
+      ],
+      yearLabel: 'Year of Study',
+    },
   },
   business: {
     id: 'business',
@@ -167,6 +264,68 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
     luminaBranding: {
       name: 'Lumina Business',
       tagline: 'Learn. Build. Lead.',
+    },
+    footerTagline: 'Finance, Accounting, Marketing, Management & more',
+    tutorApplication: {
+      fields: [
+        {
+          id: 'industryExperience',
+          label: 'Industry experience (years)',
+          type: 'number',
+          placeholder: 'Years of industry experience',
+          required: false,
+        },
+        {
+          id: 'businessSpecialty',
+          label: 'Business specialty',
+          type: 'select',
+          options: [
+            { value: 'accounting', label: 'Accounting & Auditing' },
+            { value: 'finance', label: 'Finance & Banking' },
+            { value: 'economics', label: 'Economics' },
+            { value: 'marketing', label: 'Marketing & Sales' },
+            { value: 'management', label: 'Management & Leadership' },
+            { value: 'entrepreneurship', label: 'Entrepreneurship' },
+            { value: 'hr', label: 'Human Resources' },
+            { value: 'operations', label: 'Operations & Supply Chain' },
+            { value: 'other', label: 'Other' },
+          ],
+          required: false,
+        },
+        {
+          id: 'professionalCertifications',
+          label: 'Professional certifications',
+          type: 'textarea',
+          placeholder: 'E.g., CA, ACCA, CFA, CPA, etc.',
+          required: false,
+        },
+      ],
+      specialties: [
+        'Financial Accounting',
+        'Management Accounting',
+        'Auditing',
+        'Taxation',
+        'Corporate Finance',
+        'Economics',
+        'Marketing',
+        'Strategic Management',
+        'Human Resource Management',
+        'Entrepreneurship',
+        'Business Statistics',
+        'Business Law',
+      ],
+      documentTypes: [
+        { id: 'bachelors_degree', name: "Bachelor's Degree (Required)", required: true },
+        { id: 'professional_cert', name: 'Professional Certification (If applicable)', required: false },
+      ],
+      targetStudentCategories: [
+        { id: 'university', label: 'University Students', description: 'Business/Commerce students at universities' },
+        { id: 'professional', label: 'Professional Students', description: 'ZICA/ACCA certification candidates' },
+      ],
+    },
+    studentFields: {
+      showAttemptStatus: false,
+      yearLabel: 'Year of Study',
     },
   },
   health: {
@@ -230,6 +389,68 @@ export const SCHOOL_CONFIGS: Record<LMVSchool, SchoolConfig> = {
       name: 'Lumina Health',
       tagline: 'Advancing Medical & Health Knowledge',
     },
+    footerTagline: 'Anatomy, Physiology, Clinical Practice & more',
+    tutorApplication: {
+      fields: [
+        {
+          id: 'healthDiscipline',
+          label: 'Health discipline',
+          type: 'select',
+          options: [
+            { value: 'medicine', label: 'Medicine' },
+            { value: 'nursing', label: 'Nursing' },
+            { value: 'pharmacy', label: 'Pharmacy' },
+            { value: 'public_health', label: 'Public Health' },
+            { value: 'biomedical', label: 'Biomedical Sciences' },
+            { value: 'physiotherapy', label: 'Physiotherapy' },
+            { value: 'clinical_officer', label: 'Clinical Medicine' },
+            { value: 'other', label: 'Other' },
+          ],
+          required: false,
+        },
+        {
+          id: 'clinicalExperience',
+          label: 'Clinical experience (years)',
+          type: 'number',
+          placeholder: 'Years of clinical experience',
+          required: false,
+        },
+        {
+          id: 'professionalRegistration',
+          label: 'Professional registration body',
+          type: 'text',
+          placeholder: 'E.g., HPCZ, Nursing Council of Zambia',
+          required: false,
+        },
+      ],
+      specialties: [
+        'Anatomy',
+        'Physiology',
+        'Biochemistry',
+        'Pharmacology',
+        'Pathology',
+        'Microbiology',
+        'Community Health',
+        'Clinical Skills',
+        'Nursing Fundamentals',
+        'Medical-Surgical Nursing',
+        'Pediatrics',
+        'Obstetrics & Gynecology',
+      ],
+      documentTypes: [
+        { id: 'bachelors_degree', name: "Bachelor's Degree / Diploma (Required)", required: true },
+        { id: 'registration_cert', name: 'Professional Registration Certificate (If applicable)', required: false },
+      ],
+      targetStudentCategories: [
+        { id: 'medical', label: 'Medical Students', description: 'MBBS/MD students' },
+        { id: 'nursing', label: 'Nursing Students', description: 'Nursing diploma and degree students' },
+        { id: 'allied', label: 'Allied Health', description: 'Other health science programmes' },
+      ],
+    },
+    studentFields: {
+      showAttemptStatus: false,
+      yearLabel: 'Year of Study',
+    },
   },
 };
 
@@ -257,4 +478,30 @@ export const getSchoolSubtitle = (school: LMVSchool): string => {
     health: 'Clinical Excellence • Compassionate Care',
   };
   return subtitles[school] || subtitles.law;
+};
+
+// Get discipline-neutral placeholder text
+export const getDisciplineText = (school: LMVSchool): {
+  motivationPlaceholder: string;
+  experiencePlaceholder: string;
+  qualificationsPlaceholder: string;
+} => {
+  const texts: Record<LMVSchool, { motivationPlaceholder: string; experiencePlaceholder: string; qualificationsPlaceholder: string }> = {
+    law: {
+      motivationPlaceholder: 'What motivates you to become a tutor? Why do you want to teach law students?',
+      experiencePlaceholder: 'Describe your teaching or legal practice experience...',
+      qualificationsPlaceholder: 'List your educational qualifications, degrees, certifications...',
+    },
+    business: {
+      motivationPlaceholder: 'What motivates you to become a tutor? Why do you want to teach business students?',
+      experiencePlaceholder: 'Describe your teaching or professional business experience...',
+      qualificationsPlaceholder: 'List your educational qualifications, degrees, professional certifications...',
+    },
+    health: {
+      motivationPlaceholder: 'What motivates you to become a tutor? Why do you want to teach health sciences students?',
+      experiencePlaceholder: 'Describe your teaching or clinical experience...',
+      qualificationsPlaceholder: 'List your educational qualifications, degrees, professional registrations...',
+    },
+  };
+  return texts[school] || texts.law;
 };
