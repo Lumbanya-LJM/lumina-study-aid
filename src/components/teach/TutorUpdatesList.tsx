@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { 
   History, 
@@ -12,7 +13,9 @@ import {
   Info,
   Video,
   Calendar,
-  ExternalLink
+  ExternalLink,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -36,6 +39,8 @@ const TutorUpdatesList: React.FC<TutorUpdatesListProps> = ({ courseId, tutorId }
   const { toast } = useToast();
   const [updates, setUpdates] = useState<TutorUpdate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   useEffect(() => {
     if (courseId && tutorId) {
@@ -55,6 +60,7 @@ const TutorUpdatesList: React.FC<TutorUpdatesListProps> = ({ courseId, tutorId }
 
       if (error) throw error;
       setUpdates(data || []);
+      setSelectedIds(new Set());
     } catch (error) {
       console.error('Error loading updates:', error);
     } finally {
@@ -89,6 +95,57 @@ const TutorUpdatesList: React.FC<TutorUpdatesListProps> = ({ courseId, tutorId }
     }
   };
 
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === updates.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(updates.map(u => u.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} update(s)?`)) return;
+
+    setBulkDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('tutor_updates')
+        .delete()
+        .in('id', Array.from(selectedIds));
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `${selectedIds.size} update(s) deleted successfully`,
+      });
+
+      loadUpdates();
+    } catch (error) {
+      console.error('Error bulk deleting updates:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete updates',
+        variant: 'destructive'
+      });
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const getUpdateIcon = (type: string | null) => {
     switch (type) {
       case 'class': return Video;
@@ -111,11 +168,40 @@ const TutorUpdatesList: React.FC<TutorUpdatesListProps> = ({ courseId, tutorId }
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <History className="w-5 h-5" />
           Update History
         </CardTitle>
+        {updates.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleSelectAll}
+              className="gap-2"
+            >
+              {selectedIds.size === updates.length ? (
+                <CheckSquare className="w-4 h-4" />
+              ) : (
+                <Square className="w-4 h-4" />
+              )}
+              {selectedIds.size === updates.length ? 'Deselect All' : 'Select All'}
+            </Button>
+            {selectedIds.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                {bulkDeleting ? 'Deleting...' : `Delete (${selectedIds.size})`}
+              </Button>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -131,14 +217,22 @@ const TutorUpdatesList: React.FC<TutorUpdatesListProps> = ({ courseId, tutorId }
             {updates.map((update) => {
               const Icon = getUpdateIcon(update.update_type);
               const colorClasses = getUpdateColor(update.update_type);
+              const isSelected = selectedIds.has(update.id);
               
               return (
                 <div
                   key={update.id}
-                  className="p-4 border rounded-lg space-y-3"
+                  className={`p-4 border rounded-lg space-y-3 transition-colors ${
+                    isSelected ? 'border-primary bg-primary/5' : ''
+                  }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelection(update.id)}
+                        className="mt-1"
+                      />
                       <div className={`p-2 rounded-full ${colorClasses}`}>
                         <Icon className="w-4 h-4" />
                       </div>
@@ -159,12 +253,12 @@ const TutorUpdatesList: React.FC<TutorUpdatesListProps> = ({ courseId, tutorId }
                     </Button>
                   </div>
                   
-                  <p className="text-sm text-muted-foreground pl-11">
+                  <p className="text-sm text-muted-foreground pl-14">
                     {update.content}
                   </p>
 
                   {update.update_type === 'class' && update.class_time && (
-                    <div className="pl-11 flex items-center gap-4 text-sm">
+                    <div className="pl-14 flex items-center gap-4 text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="w-4 h-4" />
                         {format(new Date(update.class_time), 'PPp')}
