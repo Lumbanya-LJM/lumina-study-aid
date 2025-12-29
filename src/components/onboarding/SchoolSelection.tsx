@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scale, Briefcase, ArrowRight } from 'lucide-react';
+import { Scale, Briefcase, Heart, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LMVSchool, SCHOOL_CONFIGS } from '@/config/schools';
 
@@ -12,6 +12,7 @@ interface SchoolSelectionProps {
 const schoolIcons: Record<LMVSchool, React.ReactNode> = {
   law: <Scale className="w-8 h-8" />,
   business: <Briefcase className="w-8 h-8" />,
+  health: <Heart className="w-8 h-8" />,
 };
 
 export const SchoolSelection: React.FC<SchoolSelectionProps> = ({
@@ -71,8 +72,8 @@ export const SchoolSelection: React.FC<SchoolSelectionProps> = ({
                       </div>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {school.tagline}
+                  <p className="text-sm text-muted-foreground mt-1 italic">
+                    "{school.tagline}"
                   </p>
                   <p className="text-xs text-muted-foreground/80 mt-2">
                     {school.description}

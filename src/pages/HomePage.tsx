@@ -14,6 +14,7 @@ import { ClearStatsDialog } from '@/components/admin/ClearStatsDialog';
 import { StatsHistoryModal } from '@/components/admin/StatsHistoryModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useSchoolContext } from '@/contexts/SchoolContext';
 import { useSoundNotifications } from '@/hooks/useSoundNotifications';
 import { haptics } from '@/lib/haptics';
 import { toast } from 'sonner';
@@ -64,6 +65,7 @@ interface StudyTask {
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { schoolConfig } = useSchoolContext();
   // Initialize sound notifications globally
   useSoundNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -152,7 +154,7 @@ const HomePage: React.FC = () => {
     { icon: Flame, label: 'Day Streak', value: profile?.streak_days || 0, trend: profile?.streak_days && profile.streak_days > 0 ? { value: 8, positive: true } : undefined, statType: 'streak' },
     { icon: Clock, label: 'Study Hours', value: (profile?.total_study_hours || 0).toFixed(1), trend: { value: 15, positive: true }, statType: 'hours' },
     { icon: Target, label: 'Tasks Done', value: profile?.tasks_completed || 0, trend: { value: 12, positive: true }, statType: 'tasks' },
-    { icon: BookOpen, label: 'Cases Read', value: profile?.cases_read || 0, statType: 'cases' },
+    { icon: BookOpen, label: schoolConfig.statsLabel.casesRead, value: profile?.cases_read || 0, statType: 'cases' },
   ];
 
   const quickActions = [

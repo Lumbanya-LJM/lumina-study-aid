@@ -181,7 +181,7 @@ const ProfilePage: React.FC = () => {
               <h2 className="text-xl font-bold text-primary-foreground">{displayName}</h2>
               <p className="text-sm text-primary-foreground/80 flex items-center gap-1">
                 <GraduationCap className="w-4 h-4" />
-                {profile?.university || 'Law Student'} {yearLabel && `· ${yearLabel}`}
+                {profile?.university || 'Student'} {yearLabel && `· ${yearLabel}`}
               </p>
               {isAdmin && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 bg-primary-foreground/20 rounded-full text-xs text-primary-foreground">

@@ -166,7 +166,7 @@ const InstallPage: React.FC = () => {
         {/* Footer */}
         <div className="mt-auto pt-6 text-center">
           <p className="text-xs text-muted-foreground">
-            🇿🇲 Excellence in Legal Education
+            Luminary Innovision Academy — Law • Business • Health
           </p>
         </div>
       </div>

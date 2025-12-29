@@ -67,7 +67,7 @@ export const quickTipsData: Record<string, QuickTip> = {
   community_groups: {
     id: 'community_groups',
     title: 'Study Groups',
-    description: 'Join or create study groups to collaborate with fellow law students.',
+    description: 'Join or create study groups to collaborate with fellow students.',
     feature: 'community',
   },
 };

@@ -37,7 +37,7 @@ export const WeeklyProgressReport: React.FC<WeeklyProgressReportProps> = ({
     { icon: Flame, label: 'Study Streak', value: `${stats.streakDays} days`, color: 'text-orange-500' },
     { icon: Clock, label: 'Study Hours', value: `${stats.studyHours.toFixed(1)} hrs`, color: 'text-blue-500' },
     { icon: Target, label: 'Tasks Completed', value: `${stats.tasksCompleted}/${stats.totalTasks}`, color: 'text-green-500' },
-    { icon: BookOpen, label: 'Cases Read', value: stats.casesRead.toString(), color: 'text-purple-500' },
+    { icon: BookOpen, label: 'Materials Reviewed', value: stats.casesRead.toString(), color: 'text-purple-500' },
     { icon: Award, label: 'Quizzes Done', value: stats.quizzesCompleted.toString(), color: 'text-primary' },
     { icon: TrendingUp, label: 'Cards Reviewed', value: stats.flashcardsReviewed.toString(), color: 'text-cyan-500' },
   ];
@@ -120,7 +120,7 @@ export const WeeklyProgressReport: React.FC<WeeklyProgressReportProps> = ({
       {/* Footer */}
       <div className="px-5 py-3 bg-primary/5 border-t border-border/50 text-center">
         <p className="text-xs text-muted-foreground">
-          🇿🇲 Powered by Luminary Study — Helping Zambian Law Students Excel
+          Powered by Luminary Innovision Academy — Law • Business • Health
         </p>
       </div>
     </div>
