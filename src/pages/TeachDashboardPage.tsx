@@ -247,16 +247,17 @@ const TeachDashboardPage: React.FC = () => {
         .eq('status', 'approved')
         .single();
 
-      const tutorCourseIds = tutorApp?.selected_courses || [];
+      const tutorCourseNames = tutorApp?.selected_courses || [];
 
       // If tutor has assigned courses, filter by them; otherwise show empty
+      // Note: selected_courses stores course names, not UUIDs
       let coursesData: Course[] = [];
-      if (tutorCourseIds.length > 0) {
+      if (tutorCourseNames.length > 0) {
         const { data, error: coursesError } = await supabase
           .from('academy_courses')
           .select('*')
           .eq('is_active', true)
-          .in('id', tutorCourseIds);
+          .in('name', tutorCourseNames);
 
         if (coursesError) throw coursesError;
         coursesData = data || [];
