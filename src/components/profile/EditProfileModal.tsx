@@ -21,23 +21,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
+import { useSchoolContext } from '@/contexts/SchoolContext';
 
 interface EditProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }
-
-const universities = [
-  'University of Zambia',
-  'Copperbelt University',
-  'Mulungushi University',
-  'Cavendish University',
-  'ZCAS University',
-  'University of Lusaka',
-  'Zambian Open University',
-  'Other'
-];
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   open,
@@ -46,12 +36,16 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { schoolConfig } = useSchoolContext();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   
   const [fullName, setFullName] = useState('');
   const [university, setUniversity] = useState('');
   const [yearOfStudy, setYearOfStudy] = useState<string>('');
+
+  // Use universities from the user's school config
+  const universities = schoolConfig.universities;
 
   useEffect(() => {
     if (open && user) {

@@ -318,7 +318,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
               title: '🔴 Live Class Started!',
               body: `${formData.title.trim()} is now live! Join now.`,
               tag: 'live-class',
-              data: { classId: liveClassData.id, url: `/live-class/${liveClassData.id}` }
+              data: { classId: liveClassData.id, url: `/class/${liveClassData.id}` }
             }
           }
         });
@@ -330,7 +330,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
       });
 
       // Redirect to live class room
-      window.location.href = `/live-class/${liveClassData.id}`;
+      window.location.href = `/class/${liveClassData.id}`;
     } catch (error) {
       console.error('Error creating live class:', error);
       toast({

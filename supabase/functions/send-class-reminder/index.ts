@@ -263,7 +263,7 @@ const handler = async (req: Request): Promise<Response> => {
             }
           </p>
           <div style="text-align: center;">
-            <a href="https://app.lmvacademy.com/live-class/${notification.classId}" class="button">Join Class Now</a>
+            <a href="https://app.lmvacademy.com/class/${notification.classId}" class="button">Join Class Now</a>
           </div>
         `;
 

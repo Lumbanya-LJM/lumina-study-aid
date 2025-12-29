@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Download, Trash2, AlertTriangle } from 'lucide-react';
 import { useStatsHistory } from '@/hooks/useStatsHistory';
+import { useToast } from '@/hooks/use-toast';
 
 interface ClearStatsDialogProps {
   open: boolean;
@@ -33,6 +34,7 @@ export const ClearStatsDialog = ({
   onClear,
   clearableItems,
 }: ClearStatsDialogProps) => {
+  const { toast } = useToast();
   const [notes, setNotes] = useState('');
   const [exportBeforeClear, setExportBeforeClear] = useState(true);
   const [isClearing, setIsClearing] = useState(false);
@@ -58,10 +60,20 @@ export const ClearStatsDialog = ({
       // Perform the actual clear
       await onClear();
 
+      toast({
+        title: 'Stats Cleared',
+        description: 'A snapshot was saved to history before clearing.',
+      });
+
       onOpenChange(false);
       setNotes('');
     } catch (error) {
       console.error('Error clearing stats:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to clear stats. Please try again.',
+      });
     } finally {
       setIsClearing(false);
     }
