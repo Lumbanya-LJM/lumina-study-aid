@@ -658,7 +658,7 @@ const TeachDashboardPage: React.FC = () => {
                           size="sm"
                           variant="default"
                           className="gap-1.5 gradient-primary"
-                          onClick={() => navigate(`/live/${cls.id}`)}
+                          onClick={() => navigate(`/class/${cls.id}`)}
                         >
                           <Play className="w-3.5 h-3.5" />
                           Start
@@ -671,7 +671,7 @@ const TeachDashboardPage: React.FC = () => {
                           size="sm"
                           variant="outline"
                           className="gap-1.5"
-                          onClick={() => navigate(`/live/${cls.id}`)}
+                          onClick={() => navigate(`/class/${cls.id}`)}
                         >
                           <Play className="w-3.5 h-3.5" />
                           Join
@@ -918,7 +918,7 @@ const TeachDashboardPage: React.FC = () => {
                         <Button
                           variant="default"
                           className="gap-2 gradient-primary"
-                          onClick={() => navigate(`/live/${cls.id}`)}
+                          onClick={() => navigate(`/class/${cls.id}`)}
                         >
                           <Play className="w-4 h-4" />
                           Start Class
@@ -931,7 +931,7 @@ const TeachDashboardPage: React.FC = () => {
                           <Button
                             variant="outline"
                             className="gap-2"
-                            onClick={() => navigate(`/live/${cls.id}`)}
+                            onClick={() => navigate(`/class/${cls.id}`)}
                           >
                             <Play className="w-4 h-4" />
                             Join

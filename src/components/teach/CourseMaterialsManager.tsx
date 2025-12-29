@@ -173,6 +173,14 @@ const CourseMaterialsManager: React.FC<CourseMaterialsManagerProps> = ({ courseI
     if (!confirm('Are you sure you want to delete this material?')) return;
 
     try {
+      // Extract file path from URL to delete from storage
+      // URL format: https://{project}.supabase.co/storage/v1/object/public/user-uploads/{path}
+      const urlParts = material.file_url.split('/user-uploads/');
+      if (urlParts.length > 1) {
+        const filePath = decodeURIComponent(urlParts[1]);
+        await supabase.storage.from('user-uploads').remove([filePath]);
+      }
+
       const { error } = await supabase
         .from('library_content')
         .delete()
