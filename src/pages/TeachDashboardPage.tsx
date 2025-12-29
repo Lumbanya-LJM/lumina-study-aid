@@ -14,6 +14,7 @@ import { EditClassModal } from '@/components/teach/EditClassModal';
 import { ClearStatsDialog } from '@/components/admin/ClearStatsDialog';
 import { StatsHistoryModal } from '@/components/admin/StatsHistoryModal';
 import { toast as sonnerToast } from 'sonner';
+import { useSchoolTheme } from '@/hooks/useSchoolTheme';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -186,6 +187,10 @@ const TeachDashboardPage: React.FC = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Apply school-specific theme colors
+  useSchoolTheme();
+  
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [activeTab, setActiveTab] = useState('overview');
