@@ -234,6 +234,9 @@ async function sendClassJoinEmail(email: string, classTitle: string, scheduledAt
       })
     : 'TBD';
 
+  const smtpFrom = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
+  const fromEmail = `LMV Academy <${smtpFrom}>`;
+
   try {
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -242,7 +245,7 @@ async function sendClassJoinEmail(email: string, classTitle: string, scheduledAt
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "LMV Academy <notifications@resend.dev>",
+        from: fromEmail,
         to: [email],
         subject: `Your Class Access: ${classTitle}`,
         html: `
@@ -250,14 +253,13 @@ async function sendClassJoinEmail(email: string, classTitle: string, scheduledAt
           <html>
           <head>
             <style>
-              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #e5e5e5; background: #1a1a2e; }
               .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
-              .content { background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; }
-              .class-info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6366f1; }
-              .button { display: inline-block; background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-              .button:hover { background: #4f46e5; }
-              .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+              .header { background: linear-gradient(135deg, #0d9488, #14b8a6); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
+              .content { background: #1a1a2e; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #2d2d44; border-top: none; }
+              .class-info { background: #2d2d44; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #14b8a6; }
+              .button { display: inline-block; background: linear-gradient(135deg, #0d9488, #14b8a6); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+              .footer { text-align: center; margin-top: 20px; color: #a0a0a0; font-size: 14px; }
             </style>
           </head>
           <body>
