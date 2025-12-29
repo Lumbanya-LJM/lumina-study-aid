@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useSchoolContext } from '@/contexts/SchoolContext';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap, Loader2, Check, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   onEnrollmentSuccess
 }) => {
   const { user } = useAuth();
+  const { school } = useSchoolContext();
   const { toast } = useToast();
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
@@ -48,6 +50,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
         .from('academy_courses')
         .select('*')
         .eq('is_active', true)
+        .eq('school', school)
         .order('name');
 
       if (error) throw error;
@@ -67,7 +70,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [enrolledCourseIds, toast]);
+  }, [enrolledCourseIds, school, toast]);
 
   useEffect(() => {
     if (open) {

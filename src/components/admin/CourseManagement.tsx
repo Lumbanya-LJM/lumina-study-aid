@@ -35,6 +35,7 @@ interface Course {
   is_active: boolean | null;
   price: number;
   created_at: string;
+  school: 'law' | 'business' | 'health' | null;
 }
 
 interface ApiError {
@@ -53,7 +54,8 @@ const CourseManagement: React.FC = () => {
     description: '',
     institution: 'ZIALE',
     price: 350,
-    is_active: true
+    is_active: true,
+    school: 'law' as 'law' | 'business' | 'health'
   });
 
   const loadCourses = useCallback(async () => {
@@ -96,7 +98,8 @@ const CourseManagement: React.FC = () => {
             description: formData.description.trim() || null,
             institution: formData.institution,
             price: formData.price,
-            is_active: formData.is_active
+            is_active: formData.is_active,
+            school: formData.school
           })
           .eq('id', editingCourse.id);
 
@@ -110,7 +113,8 @@ const CourseManagement: React.FC = () => {
             description: formData.description.trim() || null,
             institution: formData.institution,
             price: formData.price,
-            is_active: formData.is_active
+            is_active: formData.is_active,
+            school: formData.school
           });
 
         if (error) throw error;
@@ -139,7 +143,8 @@ const CourseManagement: React.FC = () => {
       description: course.description || '',
       institution: course.institution || 'ZIALE',
       price: course.price,
-      is_active: course.is_active ?? true
+      is_active: course.is_active ?? true,
+      school: course.school || 'law'
     });
     setDialogOpen(true);
   };
@@ -199,7 +204,8 @@ const CourseManagement: React.FC = () => {
       description: '',
       institution: 'ZIALE',
       price: 350,
-      is_active: true
+      is_active: true,
+      school: 'law'
     });
   };
 
@@ -254,6 +260,23 @@ const CourseManagement: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="school">School</Label>
+                  <Select
+                    value={formData.school}
+                    onValueChange={(value: 'law' | 'business' | 'health') => setFormData({ ...formData, school: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="law">School of Law</SelectItem>
+                      <SelectItem value="business">School of Business</SelectItem>
+                      <SelectItem value="health">School of Health</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="institution">Institution</Label>
                   <Select
                     value={formData.institution}
@@ -263,12 +286,31 @@ const CourseManagement: React.FC = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ZIALE">ZIALE</SelectItem>
-                      <SelectItem value="University">University</SelectItem>
+                      {formData.school === 'law' && (
+                        <>
+                          <SelectItem value="ZIALE">ZIALE</SelectItem>
+                          <SelectItem value="University">University</SelectItem>
+                        </>
+                      )}
+                      {formData.school === 'business' && (
+                        <>
+                          <SelectItem value="ZICPA">ZICA</SelectItem>
+                          <SelectItem value="University">University</SelectItem>
+                        </>
+                      )}
+                      {formData.school === 'health' && (
+                        <>
+                          <SelectItem value="Medical School">Medical School</SelectItem>
+                          <SelectItem value="Nursing School">Nursing School</SelectItem>
+                          <SelectItem value="University">University</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">Price (ZMW)</Label>
                   <Input
@@ -279,15 +321,15 @@ const CourseManagement: React.FC = () => {
                     min={0}
                   />
                 </div>
-              </div>
 
-              <div className="flex items-center justify-between">
-                <Label htmlFor="is_active">Active Course</Label>
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                />
+                <div className="flex items-center justify-between pt-6">
+                  <Label htmlFor="is_active">Active Course</Label>
+                  <Switch
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  />
+                </div>
               </div>
 
               <div className="flex gap-2 pt-4">
