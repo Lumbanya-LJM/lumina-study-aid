@@ -27,6 +27,7 @@ import TutorApplicationForm from '@/components/auth/TutorApplicationForm';
 import { Button } from '@/components/ui/button';
 import { LMVSchool, SCHOOL_CONFIGS, getSchoolConfig } from '@/config/schools';
 import SchoolSelection from '@/components/onboarding/SchoolSelection';
+import { applySchoolTheme, getStoredSchool } from '@/hooks/useSchoolTheme';
 
 // Dynamic universities based on school
 const getUniversitiesForSchool = (school: LMVSchool) => {
@@ -69,7 +70,7 @@ const AuthPage: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
-  const [selectedSchool, setSelectedSchool] = useState<LMVSchool>('law');
+  const [selectedSchool, setSelectedSchool] = useState<LMVSchool>(() => getStoredSchool());
   const [selectedRole, setSelectedRole] = useState<'student' | 'tutor'>(
     invitationToken ? 'tutor' : (initialRole as 'student' | 'tutor')
   );
@@ -80,6 +81,11 @@ const AuthPage: React.FC = () => {
     selected_courses: string[];
   } | null>(null);
   const [loadingInvitation, setLoadingInvitation] = useState(!!invitationToken);
+
+  // Apply school theme on mount and when selection changes
+  useEffect(() => {
+    applySchoolTheme(selectedSchool);
+  }, [selectedSchool]);
 
   // Load invitation details if token is present
   useEffect(() => {
