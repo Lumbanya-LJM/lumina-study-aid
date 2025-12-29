@@ -23,6 +23,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           price: number
+          school: Database["public"]["Enums"]["lmv_school"] | null
           tutor_id: string | null
         }
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           price?: number
+          school?: Database["public"]["Enums"]["lmv_school"] | null
           tutor_id?: string | null
         }
         Update: {
@@ -43,6 +45,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           price?: number
+          school?: Database["public"]["Enums"]["lmv_school"] | null
           tutor_id?: string | null
         }
         Relationships: []
@@ -776,6 +779,7 @@ export type Database = {
           full_name: string | null
           id: string
           qualifications: string | null
+          school: Database["public"]["Enums"]["lmv_school"] | null
           streak_days: number | null
           subjects: string[] | null
           tasks_completed: number | null
@@ -794,6 +798,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           qualifications?: string | null
+          school?: Database["public"]["Enums"]["lmv_school"] | null
           streak_days?: number | null
           subjects?: string[] | null
           tasks_completed?: number | null
@@ -812,6 +817,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           qualifications?: string | null
+          school?: Database["public"]["Enums"]["lmv_school"] | null
           streak_days?: number | null
           subjects?: string[] | null
           tasks_completed?: number | null
@@ -1560,6 +1566,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      lmv_school: "law" | "business"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1688,6 +1695,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      lmv_school: ["law", "business"],
     },
   },
 } as const

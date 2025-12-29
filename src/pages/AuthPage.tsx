@@ -16,6 +16,8 @@ import {
   ArrowLeft,
   ChevronLeft,
   Award,
+  Scale,
+  Briefcase,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -23,19 +25,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import TutorApplicationForm from '@/components/auth/TutorApplicationForm';
 import { Button } from '@/components/ui/button';
+import { LMVSchool, SCHOOL_CONFIGS, getSchoolConfig } from '@/config/schools';
+import SchoolSelection from '@/components/onboarding/SchoolSelection';
 
-const universities = [
-  'University of Zambia',
-  'Copperbelt University',
-  'Mulungushi University',
-  'Cavendish University Zambia',
-  'University of Lusaka',
-  'Zambian Open University',
-  'ZCAS University',
-  'Northrise University',
-  'Zambia Institute of Advanced Legal Education (ZIALE)',
-  'Other',
-];
+// Dynamic universities based on school
+const getUniversitiesForSchool = (school: LMVSchool) => {
+  return getSchoolConfig(school).universities;
+};
 
 const universityYears = [
   { value: 1, label: 'Year 1' },
@@ -69,10 +65,11 @@ const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(!invitationToken);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'credentials' | 'profile' | 'courses' | 'tutor-application'>('credentials');
+  const [step, setStep] = useState<'credentials' | 'school' | 'profile' | 'courses' | 'tutor-application'>('credentials');
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
+  const [selectedSchool, setSelectedSchool] = useState<LMVSchool>('law');
   const [selectedRole, setSelectedRole] = useState<'student' | 'tutor'>(
     invitationToken ? 'tutor' : (initialRole as 'student' | 'tutor')
   );
@@ -186,24 +183,26 @@ const AuthPage: React.FC = () => {
     return '/home';
   };
 
-  // Load available courses when reaching the courses step (filtered by institution)
+  // Load available courses when reaching the courses step (filtered by school and institution)
   useEffect(() => {
     if (step === 'courses') {
       loadCourses();
     }
-  }, [step, formData.university]);
+  }, [step, formData.university, selectedSchool]);
 
   const loadCourses = async () => {
     setLoadingCourses(true);
     try {
       // Determine which institution to filter by
       const isZiale = formData.university === 'Zambia Institute of Advanced Legal Education (ZIALE)';
-      const institutionFilter = isZiale ? 'ZIALE' : 'University';
+      const isZicpa = formData.university === 'Zambia Centre for Accountancy Studies (ZCAS)';
+      const institutionFilter = isZiale ? 'ZIALE' : isZicpa ? 'ZICPA' : 'University';
       
       const { data, error } = await supabase
         .from('academy_courses')
-        .select('id, name, description, institution')
+        .select('id, name, description, institution, school')
         .eq('is_active', true)
+        .eq('school', selectedSchool)
         .eq('institution', institutionFilter)
         .order('name');
 
@@ -415,7 +414,8 @@ const AuthPage: React.FC = () => {
           setLoading(false);
         }
       } else {
-        setStep('profile');
+        // Go to school selection step for students
+        setStep('school');
       }
     }
   };
@@ -456,12 +456,13 @@ const AuthPage: React.FC = () => {
         if (currentUser) {
           setNewUserId(currentUser.id);
           
-          // Update profile with university and year of study
+          // Update profile with university, year of study, and school
           const { error: profileError } = await supabase
             .from('profiles')
             .update({
               university: formData.university === 'Other' ? formData.customUniversity : formData.university,
               year_of_study: formData.yearOfStudy,
+              school: selectedSchool,
             })
             .eq('user_id', currentUser.id);
 
@@ -641,66 +642,20 @@ const AuthPage: React.FC = () => {
     </form>
   );
 
-  const renderProfileStep = () => (
-    <form onSubmit={handleProfileSubmit} className="space-y-4">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-foreground">Complete Your Profile</h2>
-        <p className="text-sm text-muted-foreground mt-1">Tell us about your studies</p>
-      </div>
-
-      <div>
-        <label className="text-sm font-medium text-foreground mb-2 block">University</label>
-        <div className="relative">
-          <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <select
-            value={formData.university}
-            onChange={(e) => setFormData({ ...formData, university: e.target.value })}
-            className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground appearance-none"
-          >
-            {universities.map((uni) => (
-              <option key={uni} value={uni}>{uni}</option>
-            ))}
-          </select>
-        </div>
-        {formData.university === 'Other' && (
-          <div className="relative mt-2">
-            <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              value={formData.customUniversity}
-              onChange={(e) => setFormData({ ...formData, customUniversity: e.target.value })}
-              placeholder="Enter your university name"
-              required
-              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
-        )}
-      </div>
-
-      <div>
-        <label className="text-sm font-medium text-foreground mb-2 block">
-          {formData.university === 'Zambia Institute of Advanced Legal Education (ZIALE)' ? 'Attempt Status' : 'Year of Study'}
-        </label>
-        <div className="relative">
-          <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <select
-            value={formData.yearOfStudy}
-            onChange={(e) => setFormData({ ...formData, yearOfStudy: parseInt(e.target.value) })}
-            className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground appearance-none"
-          >
-            {(formData.university === 'Zambia Institute of Advanced Legal Education (ZIALE)' ? zialeOptions : universityYears).map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
+  const renderSchoolStep = () => (
+    <div className="space-y-6">
+      <SchoolSelection
+        selectedSchool={selectedSchool}
+        onSelect={setSelectedSchool}
+      />
+      
       <button
-        type="submit"
-        disabled={loading}
+        type="button"
+        onClick={() => setStep('profile')}
+        disabled={!selectedSchool}
         className={cn(
           "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
-          loading ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
+          !selectedSchool ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
         )}
       >
         Continue
@@ -713,8 +668,91 @@ const AuthPage: React.FC = () => {
       >
         Go Back
       </button>
-    </form>
+    </div>
   );
+
+  const renderProfileStep = () => {
+    const universities = getUniversitiesForSchool(selectedSchool);
+    
+    return (
+      <form onSubmit={handleProfileSubmit} className="space-y-4">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
+            {selectedSchool === 'law' ? <Scale className="w-3 h-3" /> : <Briefcase className="w-3 h-3" />}
+            {getSchoolConfig(selectedSchool).name}
+          </div>
+          <h2 className="text-xl font-bold text-foreground">Complete Your Profile</h2>
+          <p className="text-sm text-muted-foreground mt-1">Tell us about your studies</p>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-foreground mb-2 block">Institution</label>
+          <div className="relative">
+            <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <select
+              value={formData.university}
+              onChange={(e) => setFormData({ ...formData, university: e.target.value })}
+              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground appearance-none"
+            >
+              {universities.map((uni) => (
+                <option key={uni} value={uni}>{uni}</option>
+              ))}
+            </select>
+          </div>
+          {formData.university === 'Other' && (
+            <div className="relative mt-2">
+              <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type="text"
+                value={formData.customUniversity}
+                onChange={(e) => setFormData({ ...formData, customUniversity: e.target.value })}
+                placeholder="Enter your institution name"
+                required
+                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-foreground mb-2 block">
+            {formData.university === 'Zambia Institute of Advanced Legal Education (ZIALE)' ? 'Attempt Status' : 'Year of Study'}
+          </label>
+          <div className="relative">
+            <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <select
+              value={formData.yearOfStudy}
+              onChange={(e) => setFormData({ ...formData, yearOfStudy: parseInt(e.target.value) })}
+              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground appearance-none"
+            >
+              {(formData.university === 'Zambia Institute of Advanced Legal Education (ZIALE)' ? zialeOptions : universityYears).map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className={cn(
+            "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
+            loading ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
+          )}
+        >
+          Continue
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStep('school')}
+          className="w-full py-3 text-primary font-medium hover:underline"
+        >
+          Go Back
+        </button>
+      </form>
+    );
+  };
 
   const renderCoursesStep = () => {
     const canSubmit = formData.agreePrivacyPolicy && formData.agreeDataConsent;
@@ -843,6 +881,7 @@ const AuthPage: React.FC = () => {
   };
   const getStepTitle = () => {
     switch (step) {
+      case 'school': return 'Choose Your School';
       case 'profile': return 'Almost There!';
       case 'courses': return 'One Last Step!';
       case 'tutor-application': return 'Tutor Application';
@@ -852,16 +891,17 @@ const AuthPage: React.FC = () => {
 
   const getStepDescription = () => {
     switch (step) {
+      case 'school': return 'Select the academic division that matches your programme';
       case 'profile': return 'Tell us about your studies';
       case 'courses': return selectedRole === 'tutor' 
         ? 'Select the courses you want to teach' 
-        : 'Choose your courses to get started';
+        : `Choose your ${getSchoolConfig(selectedSchool).name} courses`;
       case 'tutor-application': return 'Tell us about your qualifications';
       default: return isLogin 
         ? 'Sign in to access your account' 
         : (selectedRole === 'tutor' 
           ? 'Apply to share your expertise with students' 
-          : 'Start your journey to legal excellence');
+          : 'Start your journey to academic excellence');
     }
   };
 
@@ -945,7 +985,7 @@ const AuthPage: React.FC = () => {
           <div className="flex items-center justify-center gap-2 mt-4">
             {(selectedRole === 'tutor' 
               ? ['credentials', 'tutor-application'] 
-              : ['credentials', 'profile', 'courses']
+              : ['credentials', 'school', 'profile', 'courses']
             ).map((s, idx, arr) => (
               <div
                 key={s}
@@ -986,6 +1026,7 @@ const AuthPage: React.FC = () => {
         ) : (
           <>
             {step === 'credentials' && renderCredentialsStep()}
+            {step === 'school' && renderSchoolStep()}
             {step === 'profile' && renderProfileStep()}
             {step === 'courses' && renderCoursesStep()}
             {step === 'tutor-application' && newUserId && (
@@ -1017,10 +1058,13 @@ const AuthPage: React.FC = () => {
         {/* Tagline */}
         <div className="mt-8 p-4 bg-primary/5 rounded-2xl border border-primary/10">
           <p className="text-xs text-center text-muted-foreground">
-            🇿🇲 An app designed to enhance learning through modern learning methods
+            🇿🇲 Premium academic support designed for Zambian students
           </p>
           <p className="text-[10px] text-center text-muted-foreground/70 mt-1">
-            Covering Zambian case law, statutes, and the Constitution of Zambia
+            {selectedSchool === 'business' 
+              ? 'Finance, Accounting, Marketing, Management & more'
+              : 'Case law, Statutes, and the Constitution of Zambia'
+            }
           </p>
         </div>
 
