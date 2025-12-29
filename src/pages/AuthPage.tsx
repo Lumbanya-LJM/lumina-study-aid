@@ -487,9 +487,9 @@ const AuthPage: React.FC = () => {
             }
           }
 
-          // Send welcome email (fire and forget - don't block signup)
+          // Send welcome email with school-specific branding (fire and forget - don't block signup)
           supabase.functions.invoke('send-welcome-email', {
-            body: { email: formData.email, fullName: formData.fullName }
+            body: { email: formData.email, fullName: formData.fullName, school: selectedSchool }
           }).then(({ error }) => {
             if (error) console.error('Welcome email error:', error);
           });
