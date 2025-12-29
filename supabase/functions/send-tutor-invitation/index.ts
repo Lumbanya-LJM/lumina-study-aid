@@ -92,9 +92,12 @@ const handler = async (req: Request): Promise<Response> => {
     const appUrl = Deno.env.get("APP_URL") || "https://lmv.lovable.app";
     const invitationLink = `${appUrl}/auth?invitation=${invitationToken}`;
 
+    // Get the from email from environment or use default
+    const fromEmail = Deno.env.get("SMTP_FROM") || "LMV Academy <onboarding@resend.dev>";
+
     // Send the invitation email
-    const emailResponse = await resend.emails.send({
-      from: "LMV Academy <onboarding@resend.dev>",
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: fromEmail,
       to: [email],
       subject: "You're Invited to Join LMV Academy as a Tutor!",
       html: `
@@ -106,17 +109,17 @@ const handler = async (req: Request): Promise<Response> => {
           <title>Tutor Invitation</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <div style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
             <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to LMV Academy!</h1>
           </div>
           
-          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <div style="background: #1a1a2e; padding: 30px; border: 1px solid #2d2d44; border-top: none; border-radius: 0 0 12px 12px; color: #e5e5e5;">
             <p style="font-size: 16px; margin-bottom: 20px;">
               ${fullName ? `Dear ${fullName},` : 'Hello,'}
             </p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
-              You have been invited to join <strong>LMV Academy</strong> as a tutor! We're excited to have you share your knowledge and expertise with our students.
+              You have been invited to join <strong style="color: #14b8a6;">LMV Academy</strong> as a tutor! We're excited to have you share your knowledge and expertise with our students.
             </p>
             
             <p style="font-size: 16px; margin-bottom: 30px;">
@@ -124,22 +127,22 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${invitationLink}" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
+              <a href="${invitationLink}" style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
                 Accept Invitation
               </a>
             </div>
             
-            <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            <p style="font-size: 14px; color: #a0a0a0; margin-top: 30px;">
               This invitation link will expire in 7 days. If you have any questions, please contact our support team.
             </p>
             
-            <p style="font-size: 14px; color: #666; margin-top: 20px;">
+            <p style="font-size: 14px; color: #a0a0a0; margin-top: 20px;">
               If you didn't expect this invitation, you can safely ignore this email.
             </p>
             
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            <hr style="border: none; border-top: 1px solid #2d2d44; margin: 30px 0;">
             
-            <p style="font-size: 12px; color: #999; text-align: center;">
+            <p style="font-size: 12px; color: #666; text-align: center;">
               © ${new Date().getFullYear()} LMV Academy. All rights reserved.
             </p>
           </div>
@@ -148,7 +151,24 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Invitation email sent successfully:", emailResponse);
+    if (emailError) {
+      console.error("Failed to send invitation email:", emailError);
+      // Still return success for the invitation record, but warn about email
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          invitation: invitation,
+          message: "Invitation created but email delivery failed",
+          emailError: emailError.message
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("Invitation email sent successfully:", emailData);
 
     return new Response(
       JSON.stringify({ 
