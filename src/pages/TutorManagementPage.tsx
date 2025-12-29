@@ -60,6 +60,7 @@ interface Course {
   id: string;
   name: string;
   institution: string;
+  tutor_id: string | null;
 }
 
 const UNDERGRADUATE_COURSES = [
@@ -153,10 +154,10 @@ export default function TutorManagementPage() {
       if (invitationsError) throw invitationsError;
       setInvitations(invitationsData || []);
 
-      // Load courses
+      // Load courses with assigned tutors
       const { data: coursesData, error: coursesError } = await supabase
         .from("academy_courses")
-        .select("id, name, institution")
+        .select("id, name, institution, tutor_id")
         .eq("is_active", true);
 
       if (coursesError) throw coursesError;
@@ -271,12 +272,42 @@ export default function TutorManagementPage() {
 
     setSavingCourses(true);
     try {
+      // Update tutor_applications with selected courses
       const { error } = await supabase
         .from("tutor_applications")
         .update({ selected_courses: editSelectedCourses })
         .eq("id", selectedTutor.id);
 
       if (error) throw error;
+
+      // Also update academy_courses to assign this tutor
+      // First, remove this tutor from courses they're no longer assigned to
+      const previousCourses = selectedTutor.selected_courses || [];
+      const removedCourses = previousCourses.filter(c => !editSelectedCourses.includes(c));
+      
+      for (const courseName of removedCourses) {
+        const course = courses.find(c => c.name === courseName);
+        if (course && course.tutor_id === selectedTutor.user_id) {
+          await supabase
+            .from("academy_courses")
+            .update({ tutor_id: null })
+            .eq("id", course.id);
+        }
+      }
+
+      // Assign tutor to new courses
+      for (const courseName of editSelectedCourses) {
+        const course = courses.find(c => c.name === courseName);
+        if (course && !course.tutor_id) {
+          await supabase
+            .from("academy_courses")
+            .update({ tutor_id: selectedTutor.user_id })
+            .eq("id", course.id);
+          
+          // Notify enrolled students
+          await notifyStudentsOfTutorChange(course.id, selectedTutor.user_id, selectedTutor.full_name, course.name);
+        }
+      }
 
       toast.success("Courses updated successfully!");
       setEditCoursesDialogOpen(false);
@@ -286,6 +317,56 @@ export default function TutorManagementPage() {
       toast.error("Failed to update courses");
     } finally {
       setSavingCourses(false);
+    }
+  };
+
+  const notifyStudentsOfTutorChange = async (courseId: string, tutorId: string, tutorName: string, courseName: string) => {
+    try {
+      // Get enrolled students
+      const { data: enrollments } = await supabase
+        .from("academy_enrollments")
+        .select("user_id")
+        .eq("course_id", courseId)
+        .eq("status", "active");
+
+      if (!enrollments || enrollments.length === 0) return;
+
+      const userIds = enrollments.map(e => e.user_id);
+
+      // Send push notifications
+      await supabase.functions.invoke("send-push-notification", {
+        body: {
+          userIds,
+          payload: {
+            title: "New Tutor Assigned",
+            body: `${tutorName} has been assigned as your tutor for ${courseName}`,
+            icon: "/pwa-192x192.png",
+            data: {
+              type: "tutor_assigned",
+              courseId,
+              tutorId,
+              url: `/tutor/${tutorId}`,
+            },
+          },
+        },
+      });
+
+      // Send email notifications
+      await supabase.functions.invoke("send-student-notification", {
+        body: {
+          type: "tutor_assigned",
+          courseId,
+          data: {
+            tutorName,
+            courseName,
+            tutorId,
+          },
+        },
+      });
+
+      console.log(`Notified ${userIds.length} students about tutor assignment`);
+    } catch (error) {
+      console.error("Error notifying students:", error);
     }
   };
 
