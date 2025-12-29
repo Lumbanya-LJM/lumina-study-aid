@@ -14,19 +14,22 @@ type NotificationType =
   | 'class_scheduled'
   | 'new_material'
   | 'tutor_update'
-  | 'recurring_class_created';
+  | 'recurring_class_created'
+  | 'tutor_assigned';
 
 interface NotificationRequest {
   type: NotificationType;
   courseId: string;
   data: {
-    title: string;
+    title?: string;
     description?: string;
     classId?: string;
     scheduledAt?: string;
     tutorName?: string;
+    tutorId?: string;
     materialTitle?: string;
     updateType?: string;
+    courseName?: string;
   };
 }
 
@@ -200,6 +203,8 @@ function getEmailTitle(type: NotificationType): string {
       return '📢 Tutor Update';
     case 'recurring_class_created':
       return '🔄 Next Recurring Class Scheduled';
+    case 'tutor_assigned':
+      return '👨‍🏫 New Tutor Assigned';
     default:
       return '🔔 Course Notification';
   }
@@ -312,6 +317,23 @@ function generateEmailContent(
           <p style="text-align: center;">
             <a href="{APP_URL}/academy" class="button">View Class Schedule</a>
           </p>
+        `,
+      };
+
+    case 'tutor_assigned':
+      return {
+        subject: `👨‍🏫 New Tutor Assigned: ${data.tutorName}`,
+        emailContent: `
+          <p>Great news! A tutor has been assigned to your course.</p>
+          <div class="info-box">
+            <p><strong>Tutor:</strong> ${data.tutorName}</p>
+            <p><strong>Course:</strong> ${courseName}</p>
+          </div>
+          <p>Your new tutor will be teaching your classes and providing course materials. You can view their profile and qualifications in the app.</p>
+          <p style="text-align: center;">
+            <a href="{APP_URL}/tutor/${data.tutorId}" class="button">View Tutor Profile</a>
+          </p>
+          <p>Feel free to attend their live classes and reach out with any questions about the course.</p>
         `,
       };
 

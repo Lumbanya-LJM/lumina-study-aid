@@ -301,24 +301,52 @@ const LuminaAcademyPage: React.FC = () => {
 
       setUpdates(updatesData || []);
 
-      // Load tutors for this course (from live_classes hosts)
-      const { data: classHosts } = await supabase
-        .from('live_classes')
-        .select('host_id')
-        .eq('course_id', courseId);
+      // Load assigned tutor for this course (from academy_courses.tutor_id)
+      const { data: courseData } = await supabase
+        .from('academy_courses')
+        .select('tutor_id')
+        .eq('id', courseId)
+        .single();
 
-      const uniqueHostIds = [...new Set(classHosts?.map(c => c.host_id) || [])];
-      
-      if (uniqueHostIds.length > 0) {
-        const { data: tutorProfiles } = await supabase
+      if (courseData?.tutor_id) {
+        // Get tutor details from tutor_applications
+        const { data: tutorProfile } = await supabase
           .from('tutor_applications')
           .select('user_id, full_name')
-          .in('user_id', uniqueHostIds)
+          .eq('user_id', courseData.tutor_id)
+          .eq('status', 'approved')
+          .single();
+        
+        if (tutorProfile) {
+          setCourseTutors([tutorProfile]);
+        } else {
+          // Fallback to profiles table
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_id, full_name')
+            .eq('user_id', courseData.tutor_id)
+            .single();
+          
+          setCourseTutors(profile ? [profile] : []);
+        }
+      } else {
+        // No assigned tutor, check if any tutor has this course in their selected_courses
+        const { data: tutorApps } = await supabase
+          .from('tutor_applications')
+          .select('user_id, full_name, selected_courses')
           .eq('status', 'approved');
         
-        setCourseTutors(tutorProfiles || []);
-      } else {
-        setCourseTutors([]);
+        const selectedCourseData = enrolledCourses.find(c => c.id === courseId);
+        const courseName = selectedCourseData?.name;
+        
+        if (courseName && tutorApps) {
+          const matchingTutors = tutorApps.filter(t => 
+            t.selected_courses?.includes(courseName)
+          );
+          setCourseTutors(matchingTutors.map(t => ({ user_id: t.user_id, full_name: t.full_name })));
+        } else {
+          setCourseTutors([]);
+        }
       }
 
     } catch (error) {
