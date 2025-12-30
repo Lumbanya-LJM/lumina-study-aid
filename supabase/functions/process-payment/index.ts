@@ -23,18 +23,19 @@ async function processLencoMobileMoneyPayment(
   try {
     console.log("Initiating Lenco mobile money payment:", { amount, provider, reference });
     
-    const response = await fetch("https://api.lenco.co/access/v1/transactions/momo/collect", {
+    // Lenco Collections API (v2)
+    const response = await fetch("https://api.lenco.co/v2/collections/mobile-money", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LENCO_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: amount,
+        amount,
         currency: "ZMW",
         phone: phoneNumber,
         network: provider.toUpperCase(),
-        reference: reference,
+        reference,
         narration: "LMV Academy Payment",
       }),
     });
@@ -79,21 +80,21 @@ async function processLencoBankTransferPayment(
 
   try {
     console.log("Initiating Lenco bank transfer payment:", { amount, bankCode, reference });
-    
-    // For bank transfers, we use Lenco's bank collection endpoint
-    const response = await fetch("https://api.lenco.co/access/v1/transactions/bank/collect", {
+
+    // Lenco Collections API (v2)
+    const response = await fetch("https://api.lenco.co/v2/collections/bank-transfer", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LENCO_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: amount,
+        amount,
         currency: "ZMW",
-        accountNumber: accountNumber,
-        bankCode: bankCode,
-        accountName: accountName,
-        reference: reference,
+        accountNumber,
+        bankCode,
+        accountName,
+        reference,
         narration: "LMV Academy Payment",
       }),
     });

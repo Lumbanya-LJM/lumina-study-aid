@@ -229,37 +229,32 @@ const SubscriptionPage: React.FC = () => {
         return;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-payment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          amount,
-          paymentMethod,
-          // Mobile money fields
-          phoneNumber: paymentMethod === 'mobile_money' ? phoneNumber : undefined,
-          provider: paymentMethod === 'mobile_money' ? provider : undefined,
-          // Bank transfer fields
-          accountNumber: paymentMethod === 'bank_transfer' ? accountNumber : undefined,
-          bankCode: paymentMethod === 'bank_transfer' ? bankCode : undefined,
-          accountName: paymentMethod === 'bank_transfer' ? accountName : undefined,
-          // Product info
-          productType: selectedPlan === 'pro' ? 'subscription' : selectedPlan === 'class' ? 'class' : 'academy',
-          selectedCourses: selectedPlan === 'academy' ? selectedCourses : undefined,
-          classId: selectedPlan === 'class' ? classPurchase?.classId : undefined,
-          classPurchaseType: selectedPlan === 'class' ? classPurchase?.type : undefined,
-          purchaserEmail: selectedPlan === 'class' ? classPurchase?.email : undefined,
-        }),
-      });
+       const { data, error } = await supabase.functions.invoke('process-payment', {
+         body: {
+           amount,
+           paymentMethod,
+           // Mobile money fields
+           phoneNumber: paymentMethod === 'mobile_money' ? phoneNumber : undefined,
+           provider: paymentMethod === 'mobile_money' ? provider : undefined,
+           // Bank transfer fields
+           accountNumber: paymentMethod === 'bank_transfer' ? accountNumber : undefined,
+           bankCode: paymentMethod === 'bank_transfer' ? bankCode : undefined,
+           accountName: paymentMethod === 'bank_transfer' ? accountName : undefined,
+           // Product info
+           productType: selectedPlan === 'pro' ? 'subscription' : selectedPlan === 'class' ? 'class' : 'academy',
+           selectedCourses: selectedPlan === 'academy' ? selectedCourses : undefined,
+           classId: selectedPlan === 'class' ? classPurchase?.classId : undefined,
+           classPurchaseType: selectedPlan === 'class' ? classPurchase?.type : undefined,
+           purchaserEmail: selectedPlan === 'class' ? classPurchase?.email : undefined,
+         },
+       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Payment failed');
-      }
+       if (error) {
+         throw new Error((error as any)?.message || 'Payment failed');
+       }
 
-      const result = await response.json();
+       const result = data as any;
+
       
       let successMessage = '';
       if (selectedPlan === 'pro') {
