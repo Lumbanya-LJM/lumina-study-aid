@@ -6,6 +6,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Normalize Zambian phone numbers to E.164 format (260XXXXXXXXX)
+function normalizeZambianPhone(phone: string): string {
+  // Remove all non-digit characters
+  let digits = phone.replace(/\D/g, '');
+  
+  // Handle different formats
+  if (digits.startsWith('260')) {
+    // Already has country code
+    return digits;
+  } else if (digits.startsWith('0')) {
+    // Local format: 0977123456 -> 260977123456
+    return '260' + digits.substring(1);
+  } else if (digits.length === 9) {
+    // Just the subscriber number: 977123456 -> 260977123456
+    return '260' + digits;
+  }
+  
+  return digits;
+}
+
 // Process mobile money payment with Lenco API
 async function processLencoMobileMoneyPayment(
   amount: number,
@@ -14,39 +34,59 @@ async function processLencoMobileMoneyPayment(
   reference: string
 ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
   const LENCO_API_KEY = Deno.env.get("LENCO_API_KEY");
+  const LENCO_BASE_URL = Deno.env.get("LENCO_BASE_URL") || "https://api.lenco.co";
   
   if (!LENCO_API_KEY) {
     console.error("Lenco API key not configured");
     return { success: false, error: "Payment gateway not configured" };
   }
 
+  // Normalize phone number
+  const normalizedPhone = normalizeZambianPhone(phoneNumber);
+  console.log("Normalized phone:", { original: phoneNumber, normalized: normalizedPhone });
+
   try {
-    console.log("Initiating Lenco mobile money payment:", { amount, provider, reference });
+    console.log("Initiating Lenco mobile money payment:", { amount, provider, reference, phone: normalizedPhone });
     
-    // Lenco Collections API (v2)
-    const response = await fetch("https://api.lenco.co/v2/collections/mobile-money", {
+    const endpoint = `${LENCO_BASE_URL}/access/v1/transactions/momo/collect`;
+    console.log("Lenco endpoint:", endpoint);
+    
+    const requestBody = {
+      amount,
+      currency: "ZMW",
+      phone: normalizedPhone,
+      network: provider.toUpperCase(),
+      reference,
+      narration: "LMV Academy Payment",
+    };
+    console.log("Lenco request body:", JSON.stringify(requestBody));
+    
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LENCO_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        amount,
-        currency: "ZMW",
-        phone: phoneNumber,
-        network: provider.toUpperCase(),
-        reference,
-        narration: "LMV Academy Payment",
-      }),
+      body: JSON.stringify(requestBody),
     });
 
+    const responseText = await response.text();
+    console.log("Lenco raw response:", response.status, responseText);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Lenco API error:", response.status, errorText);
-      return { success: false, error: "Payment request failed. Please try again." };
+      // Try to parse error details
+      let errorMessage = `Lenco API error (${response.status})`;
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMessage = errorData.message || errorData.error || errorMessage;
+        console.error("Lenco API error details:", errorData);
+      } catch {
+        console.error("Lenco API raw error:", responseText);
+      }
+      return { success: false, error: errorMessage };
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     console.log("Lenco mobile money response:", data);
 
     if (data.status === "success" || data.status === "pending") {
@@ -59,7 +99,7 @@ async function processLencoMobileMoneyPayment(
     return { success: false, error: data.message || "Payment failed" };
   } catch (error) {
     console.error("Lenco mobile money payment error:", error);
-    return { success: false, error: "Payment gateway error. Please try again." };
+    return { success: false, error: `Payment gateway error: ${error instanceof Error ? error.message : 'Unknown error'}` };
   }
 }
 
@@ -72,6 +112,7 @@ async function processLencoBankTransferPayment(
   reference: string
 ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
   const LENCO_API_KEY = Deno.env.get("LENCO_API_KEY");
+  const LENCO_BASE_URL = Deno.env.get("LENCO_BASE_URL") || "https://api.lenco.co";
   
   if (!LENCO_API_KEY) {
     console.error("Lenco API key not configured");
@@ -81,31 +122,45 @@ async function processLencoBankTransferPayment(
   try {
     console.log("Initiating Lenco bank transfer payment:", { amount, bankCode, reference });
 
-    // Lenco Collections API (v2)
-    const response = await fetch("https://api.lenco.co/v2/collections/bank-transfer", {
+    const endpoint = `${LENCO_BASE_URL}/access/v1/transactions/bank/collect`;
+    console.log("Lenco bank transfer endpoint:", endpoint);
+    
+    const requestBody = {
+      amount,
+      currency: "ZMW",
+      accountNumber,
+      bankCode,
+      accountName,
+      reference,
+      narration: "LMV Academy Payment",
+    };
+    console.log("Lenco bank transfer request:", JSON.stringify(requestBody));
+    
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LENCO_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        amount,
-        currency: "ZMW",
-        accountNumber,
-        bankCode,
-        accountName,
-        reference,
-        narration: "LMV Academy Payment",
-      }),
+      body: JSON.stringify(requestBody),
     });
 
+    const responseText = await response.text();
+    console.log("Lenco bank transfer raw response:", response.status, responseText);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Lenco bank transfer API error:", response.status, errorText);
-      return { success: false, error: "Bank transfer request failed. Please try again." };
+      let errorMessage = `Lenco API error (${response.status})`;
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMessage = errorData.message || errorData.error || errorMessage;
+        console.error("Lenco bank transfer API error details:", errorData);
+      } catch {
+        console.error("Lenco bank transfer API raw error:", responseText);
+      }
+      return { success: false, error: errorMessage };
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     console.log("Lenco bank transfer response:", data);
 
     if (data.status === "success" || data.status === "pending") {
@@ -118,7 +173,7 @@ async function processLencoBankTransferPayment(
     return { success: false, error: data.message || "Bank transfer failed" };
   } catch (error) {
     console.error("Lenco bank transfer payment error:", error);
-    return { success: false, error: "Payment gateway error. Please try again." };
+    return { success: false, error: `Payment gateway error: ${error instanceof Error ? error.message : 'Unknown error'}` };
   }
 }
 
