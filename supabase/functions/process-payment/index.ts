@@ -9,21 +9,28 @@ const corsHeaders = {
 // Normalize Zambian phone numbers to E.164 format (260XXXXXXXXX)
 function normalizeZambianPhone(phone: string): string {
   // Remove all non-digit characters
-  let digits = phone.replace(/\D/g, '');
-  
+  let digits = phone.replace(/\D/g, "");
+
   // Handle different formats
-  if (digits.startsWith('260')) {
+  if (digits.startsWith("260")) {
     // Already has country code
     return digits;
-  } else if (digits.startsWith('0')) {
+  } else if (digits.startsWith("0")) {
     // Local format: 0977123456 -> 260977123456
-    return '260' + digits.substring(1);
+    return "260" + digits.substring(1);
   } else if (digits.length === 9) {
     // Just the subscriber number: 977123456 -> 260977123456
-    return '260' + digits;
+    return "260" + digits;
   }
-  
+
   return digits;
+}
+
+function normalizeLencoBaseUrl(rawBaseUrl: string): string {
+  const trimmed = rawBaseUrl.replace(/\/+$/, "");
+
+  // Users sometimes paste full versioned paths (e.g. .../access/v2). We want a stable base.
+  return trimmed.replace(/\/access\/v\d+$/i, "");
 }
 
 // Process mobile money payment with Lenco API
@@ -34,8 +41,9 @@ async function processLencoMobileMoneyPayment(
   reference: string
 ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
   const LENCO_API_KEY = Deno.env.get("LENCO_API_KEY");
-  const LENCO_BASE_URL = Deno.env.get("LENCO_BASE_URL") || "https://api.lenco.co";
-  
+  const LENCO_BASE_URL_RAW = Deno.env.get("LENCO_BASE_URL") || "https://api.lenco.co";
+  const LENCO_BASE_URL = normalizeLencoBaseUrl(LENCO_BASE_URL_RAW);
+  console.log("Lenco base URL:", { raw: LENCO_BASE_URL_RAW, normalized: LENCO_BASE_URL });
   if (!LENCO_API_KEY) {
     console.error("Lenco API key not configured");
     return { success: false, error: "Payment gateway not configured" };
@@ -112,8 +120,10 @@ async function processLencoBankTransferPayment(
   reference: string
 ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
   const LENCO_API_KEY = Deno.env.get("LENCO_API_KEY");
-  const LENCO_BASE_URL = Deno.env.get("LENCO_BASE_URL") || "https://api.lenco.co";
-  
+  const LENCO_BASE_URL_RAW = Deno.env.get("LENCO_BASE_URL") || "https://api.lenco.co";
+  const LENCO_BASE_URL = normalizeLencoBaseUrl(LENCO_BASE_URL_RAW);
+  console.log("Lenco base URL:", { raw: LENCO_BASE_URL_RAW, normalized: LENCO_BASE_URL });
+
   if (!LENCO_API_KEY) {
     console.error("Lenco API key not configured");
     return { success: false, error: "Payment gateway not configured" };
