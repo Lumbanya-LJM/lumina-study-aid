@@ -10,8 +10,9 @@ const corsHeaders = {
 // Verify Lenco webhook signature
 function verifyLencoSignature(payload: string, signature: string, secret: string): boolean {
   if (!secret) {
-    console.log("No webhook secret configured, skipping signature verification");
-    return true; // Allow in development
+    // CRITICAL: Fail open is dangerous. If no secret, verification must fail.
+    console.error("CRITICAL: LENCO_WEBHOOK_SECRET is not configured. Signature verification failed.");
+    return false;
   }
   
   try {
@@ -152,8 +153,8 @@ serve(async (req) => {
 
     console.log("Lenco webhook received");
 
-    // Verify signature if secret is configured
-    if (webhookSecret && !verifyLencoSignature(rawBody, signature, webhookSecret)) {
+    // Always verify the signature. The function will fail safely if the secret is missing.
+    if (!verifyLencoSignature(rawBody, signature, webhookSecret)) {
       console.error("Invalid webhook signature");
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
