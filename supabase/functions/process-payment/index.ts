@@ -9,21 +9,39 @@ const corsHeaders = {
 // Normalize Zambian phone numbers to E.164 format (260XXXXXXXXX)
 function normalizeZambianPhone(phone: string): string {
   // Remove all non-digit characters
-  let digits = phone.replace(/\D/g, "");
+  const digits = phone.replace(/\D/g, "");
 
   // Handle different formats
   if (digits.startsWith("260")) {
-    // Already has country code
     return digits;
-  } else if (digits.startsWith("0")) {
+  }
+  if (digits.startsWith("0")) {
     // Local format: 0977123456 -> 260977123456
     return "260" + digits.substring(1);
-  } else if (digits.length === 9) {
+  }
+  if (digits.length === 9) {
     // Just the subscriber number: 977123456 -> 260977123456
     return "260" + digits;
   }
 
   return digits;
+}
+
+function resolveZambiaNetwork(normalizedPhone: string, provider: string): "AIRTEL" | "MTN" | "ZAMTEL" {
+  const p = (provider || "").toLowerCase();
+  if (p === "airtel") return "AIRTEL";
+  if (p === "mtn") return "MTN";
+  if (p === "zamtel") return "ZAMTEL";
+
+  // Fallback: infer from Zambian prefix (best-effort)
+  const local = normalizedPhone.startsWith("260") ? normalizedPhone.slice(3) : normalizedPhone;
+  const prefix2 = local.slice(0, 2);
+  if (["97", "77"].includes(prefix2)) return "AIRTEL";
+  if (["96", "76"].includes(prefix2)) return "MTN";
+  if (["95", "75"].includes(prefix2)) return "ZAMTEL";
+
+  // Default to MTN if unknown (won't break validation in UI, but may fail at gateway)
+  return "MTN";
 }
 
 function normalizeLencoBaseUrl(rawBaseUrl: string): string {
@@ -58,6 +76,7 @@ async function processLencoMobileMoneyPayment(
     console.log("Initiating Lenco mobile money payment:", {
       amount,
       provider,
+      resolvedNetwork: resolveZambiaNetwork(normalizedPhone, provider),
       reference,
       phone: normalizedPhone,
     });
@@ -65,11 +84,16 @@ async function processLencoMobileMoneyPayment(
     const endpoint = `${LENCO_BASE_URL}/access/v2/collections/mobile-money`;
     console.log("Lenco endpoint:", endpoint);
 
+    const network = resolveZambiaNetwork(normalizedPhone, provider);
+
     const requestBody = {
       amount,
       currency: "ZMW",
+      country: "ZM",
       phone: normalizedPhone,
-      network: provider.toUpperCase(),
+      network,
+      // Some Lenco environments expect `operator` instead of `network`.
+      operator: network,
       reference,
     };
     console.log("Lenco request body:", JSON.stringify(requestBody));
