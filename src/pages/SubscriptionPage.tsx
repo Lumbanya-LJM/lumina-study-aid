@@ -249,9 +249,15 @@ const SubscriptionPage: React.FC = () => {
          },
        });
 
-       if (error) {
-         throw new Error((error as any)?.message || 'Payment failed');
-       }
+        if (error) {
+          const errAny = error as any;
+          const backendMessage =
+            errAny?.context?.body?.error ||
+            errAny?.context?.body?.message ||
+            errAny?.message ||
+            "Payment failed";
+          throw new Error(backendMessage);
+        }
 
        const result = data as any;
 
