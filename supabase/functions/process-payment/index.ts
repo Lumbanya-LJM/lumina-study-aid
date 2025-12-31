@@ -29,8 +29,9 @@ function normalizeZambianPhone(phone: string): string {
 function normalizeLencoBaseUrl(rawBaseUrl: string): string {
   const trimmed = rawBaseUrl.replace(/\/+$/, "");
 
-  // Users sometimes paste full versioned paths (e.g. .../access/v2). We want a stable base.
-  return trimmed.replace(/\/access\/v\d+$/i, "");
+  // Users sometimes paste full paths (e.g. .../access/v2 or .../access/v2/collections/...).
+  // We normalize to the stable host base and then append the required path ourselves.
+  return trimmed.replace(/\/access\/v\d+(\/.*)?$/i, "");
 }
 
 // Process mobile money payment with Lenco API
@@ -54,25 +55,29 @@ async function processLencoMobileMoneyPayment(
   console.log("Normalized phone:", { original: phoneNumber, normalized: normalizedPhone });
 
   try {
-    console.log("Initiating Lenco mobile money payment:", { amount, provider, reference, phone: normalizedPhone });
-    
-    const endpoint = `${LENCO_BASE_URL}/access/v1/transactions/momo/collect`;
+    console.log("Initiating Lenco mobile money payment:", {
+      amount,
+      provider,
+      reference,
+      phone: normalizedPhone,
+    });
+
+    const endpoint = `${LENCO_BASE_URL}/access/v2/collections/mobile-money`;
     console.log("Lenco endpoint:", endpoint);
-    
+
     const requestBody = {
       amount,
       currency: "ZMW",
       phone: normalizedPhone,
       network: provider.toUpperCase(),
       reference,
-      narration: "LMV Academy Payment",
     };
     console.log("Lenco request body:", JSON.stringify(requestBody));
-    
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LENCO_API_KEY}`,
+        Authorization: `Bearer ${LENCO_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(requestBody),
@@ -81,33 +86,46 @@ async function processLencoMobileMoneyPayment(
     const responseText = await response.text();
     console.log("Lenco raw response:", response.status, responseText);
 
-    if (!response.ok) {
-      // Try to parse error details
-      let errorMessage = `Lenco API error (${response.status})`;
-      try {
-        const errorData = JSON.parse(responseText);
-        errorMessage = errorData.message || errorData.error || errorMessage;
-        console.error("Lenco API error details:", errorData);
-      } catch {
-        console.error("Lenco API raw error:", responseText);
-      }
-      return { success: false, error: errorMessage };
+    let payload: any = null;
+    try {
+      payload = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      payload = null;
     }
 
-    const data = JSON.parse(responseText);
-    console.log("Lenco mobile money response:", data);
+    if (!response.ok) {
+      const msg = payload?.message || payload?.error || `Lenco API error (${response.status})`;
+      console.error("Lenco API error details:", payload ?? responseText);
+      return { success: false, error: msg };
+    }
 
-    if (data.status === "success" || data.status === "pending") {
-      return { 
-        success: true, 
-        transactionId: data.data?.reference || data.data?.transactionId || reference 
+    // Lenco v2 response format: { status: boolean, message: string, data: {...} }
+    if (!payload?.status) {
+      return { success: false, error: payload?.message || "Payment failed" };
+    }
+
+    const collectionStatus: string | undefined = payload?.data?.status;
+    console.log("Lenco mobile money response:", payload);
+
+    // Treat these as a successfully initiated collection.
+    const okStatuses = new Set(["pending", "pay-offline", "otp-required", "successful"]);
+    if (!collectionStatus || okStatuses.has(collectionStatus)) {
+      return {
+        success: true,
+        transactionId: payload?.data?.lencoReference || payload?.data?.reference || reference,
       };
     }
 
-    return { success: false, error: data.message || "Payment failed" };
+    return {
+      success: false,
+      error: payload?.data?.reasonForFailure || payload?.message || "Payment failed",
+    };
   } catch (error) {
     console.error("Lenco mobile money payment error:", error);
-    return { success: false, error: `Payment gateway error: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    return {
+      success: false,
+      error: `Payment gateway error: ${error instanceof Error ? error.message : "Unknown error"}`,
+    };
   }
 }
 
@@ -132,9 +150,9 @@ async function processLencoBankTransferPayment(
   try {
     console.log("Initiating Lenco bank transfer payment:", { amount, bankCode, reference });
 
-    const endpoint = `${LENCO_BASE_URL}/access/v1/transactions/bank/collect`;
+    const endpoint = `${LENCO_BASE_URL}/access/v2/collections/bank-transfer`;
     console.log("Lenco bank transfer endpoint:", endpoint);
-    
+
     const requestBody = {
       amount,
       currency: "ZMW",
@@ -142,14 +160,13 @@ async function processLencoBankTransferPayment(
       bankCode,
       accountName,
       reference,
-      narration: "LMV Academy Payment",
     };
     console.log("Lenco bank transfer request:", JSON.stringify(requestBody));
-    
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LENCO_API_KEY}`,
+        Authorization: `Bearer ${LENCO_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(requestBody),
@@ -158,32 +175,44 @@ async function processLencoBankTransferPayment(
     const responseText = await response.text();
     console.log("Lenco bank transfer raw response:", response.status, responseText);
 
-    if (!response.ok) {
-      let errorMessage = `Lenco API error (${response.status})`;
-      try {
-        const errorData = JSON.parse(responseText);
-        errorMessage = errorData.message || errorData.error || errorMessage;
-        console.error("Lenco bank transfer API error details:", errorData);
-      } catch {
-        console.error("Lenco bank transfer API raw error:", responseText);
-      }
-      return { success: false, error: errorMessage };
+    let payload: any = null;
+    try {
+      payload = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      payload = null;
     }
 
-    const data = JSON.parse(responseText);
-    console.log("Lenco bank transfer response:", data);
+    if (!response.ok) {
+      const msg = payload?.message || payload?.error || `Lenco API error (${response.status})`;
+      console.error("Lenco bank transfer API error details:", payload ?? responseText);
+      return { success: false, error: msg };
+    }
 
-    if (data.status === "success" || data.status === "pending") {
-      return { 
-        success: true, 
-        transactionId: data.data?.reference || data.data?.transactionId || reference 
+    if (!payload?.status) {
+      return { success: false, error: payload?.message || "Bank transfer failed" };
+    }
+
+    const collectionStatus: string | undefined = payload?.data?.status;
+    console.log("Lenco bank transfer response:", payload);
+
+    const okStatuses = new Set(["pending", "pay-offline", "otp-required", "successful"]);
+    if (!collectionStatus || okStatuses.has(collectionStatus)) {
+      return {
+        success: true,
+        transactionId: payload?.data?.lencoReference || payload?.data?.reference || reference,
       };
     }
 
-    return { success: false, error: data.message || "Bank transfer failed" };
+    return {
+      success: false,
+      error: payload?.data?.reasonForFailure || payload?.message || "Bank transfer failed",
+    };
   } catch (error) {
     console.error("Lenco bank transfer payment error:", error);
-    return { success: false, error: `Payment gateway error: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    return {
+      success: false,
+      error: `Payment gateway error: ${error instanceof Error ? error.message : "Unknown error"}`,
+    };
   }
 }
 
