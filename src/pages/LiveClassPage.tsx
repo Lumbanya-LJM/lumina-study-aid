@@ -134,6 +134,17 @@ const LiveClassPage: React.FC = () => {
                   }
                 });
 
+                // Send email notifications for students who may not have push enabled
+                await supabase.functions.invoke('send-student-notification', {
+                  body: {
+                    classId: data.id,
+                    courseId: data.course_id,
+                    classTitle: data.title,
+                    scheduledAt: new Date().toISOString(),
+                    type: 'class_live'
+                  }
+                });
+
                 // Create tutor update for visibility on student portal
                 await supabase
                   .from('tutor_updates')
@@ -334,9 +345,8 @@ const LiveClassPage: React.FC = () => {
       if (isHost && liveClass.daily_room_name) {
         console.log("[LiveClass] Host detected - will auto-start recording in 3 seconds...");
         
-        // Small delay to ensure the host has joined the meeting
-        setTimeout(async () => {
-          console.log("[LiveClass] Triggering auto-start recording now...");
+        const attemptRecording = async (attempt: number = 1) => {
+          console.log(`[LiveClass] Attempting to start recording (attempt ${attempt})...`);
           try {
             const { data: recData, error: recError } = await supabase.functions.invoke("daily-room", {
               body: {
@@ -348,12 +358,22 @@ const LiveClassPage: React.FC = () => {
             console.log("[LiveClass] Recording API response:", { recData, recError });
 
             if (recError || !recData?.success) {
-              console.error("[LiveClass] Auto-start recording FAILED:", recData?.error || recError);
-              toast({
-                title: "Recording Notice",
-                description: recData?.error || "Auto-recording failed. You can start manually.",
-                variant: "destructive",
-              });
+              console.error("[LiveClass] Recording attempt failed:", recData?.error || recError);
+              
+              // If retryable and not too many attempts, try again
+              if (recData?.retryable && attempt < 3) {
+                console.log(`[LiveClass] Retrying in 3 seconds (attempt ${attempt + 1})...`);
+                setTimeout(() => attemptRecording(attempt + 1), 3000);
+                return;
+              }
+              
+              // Only show error toast if all retries exhausted
+              if (attempt >= 3 || !recData?.retryable) {
+                toast({
+                  title: "Recording Notice",
+                  description: recData?.error || "Auto-recording failed. You can start manually from the controls.",
+                });
+              }
             } else {
               console.log("[LiveClass] Recording auto-started SUCCESSFULLY:", recData);
               setIsRecording(true);
@@ -363,9 +383,15 @@ const LiveClassPage: React.FC = () => {
               });
             }
           } catch (err) {
-            console.error("[LiveClass] Exception during auto-start recording:", err);
+            console.error("[LiveClass] Exception during recording attempt:", err);
+            if (attempt < 3) {
+              setTimeout(() => attemptRecording(attempt + 1), 3000);
+            }
           }
-        }, 3000); // Wait 3 seconds for the meeting to fully initialize
+        };
+        
+        // Small delay to ensure the host has joined the meeting
+        setTimeout(() => attemptRecording(1), 3000);
       } else {
         console.log("[LiveClass] Not auto-starting recording:", { isHost, hasRoomName: !!liveClass.daily_room_name });
       }

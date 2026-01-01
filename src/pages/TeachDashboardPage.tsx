@@ -48,6 +48,7 @@ import {
   Loader2,
   Trash2,
   History,
+  Send,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PostUpdateForm from '@/components/teach/PostUpdateForm';
@@ -220,6 +221,7 @@ const TeachDashboardPage: React.FC = () => {
   const [classToEnd, setClassToEnd] = useState<{ id: string; title: string; dailyRoomName: string | null } | null>(null);
   const [clearStatsOpen, setClearStatsOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [notifyingClassId, setNotifyingClassId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -486,6 +488,72 @@ const TeachDashboardPage: React.FC = () => {
     }
   };
 
+  const handleNotifyStudents = async (cls: ScheduledClass) => {
+    if (notifyingClassId) return;
+    
+    setNotifyingClassId(cls.id);
+    
+    try {
+      // Get enrolled students for the course
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('academy_enrollments')
+        .select('user_id')
+        .eq('course_id', cls.course_id)
+        .eq('status', 'active');
+
+      if (enrollError) throw enrollError;
+
+      if (!enrollments || enrollments.length === 0) {
+        toast({
+          title: "No Students",
+          description: "There are no students enrolled in this course yet.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const userIds = enrollments.map(e => e.user_id);
+
+      // Send push notifications
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          userIds,
+          payload: {
+            title: '📚 Class Reminder',
+            body: `${cls.title} is scheduled soon. Don't forget to join!`,
+            tag: 'class-reminder',
+            data: { classId: cls.id, url: `/class/${cls.id}` }
+          }
+        }
+      });
+
+      // Send email notifications
+      await supabase.functions.invoke('send-student-notification', {
+        body: {
+          classId: cls.id,
+          courseId: cls.course_id,
+          classTitle: cls.title,
+          scheduledAt: cls.scheduled_at,
+          type: 'manual_reminder'
+        }
+      });
+
+      toast({
+        title: "Notifications Sent",
+        description: `Reminder sent to ${userIds.length} enrolled student${userIds.length !== 1 ? 's' : ''}.`,
+      });
+    } catch (error) {
+      console.error('Error notifying students:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send notifications. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setNotifyingClassId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -717,6 +785,25 @@ const TeachDashboardPage: React.FC = () => {
                             <PhoneOff className="w-3.5 h-3.5" />
                           )}
                           End
+                        </Button>
+                      )}
+                      
+                      {/* Notify Students Button for scheduled (non-live) classes */}
+                      {!isLive && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          disabled={notifyingClassId === cls.id}
+                          onClick={() => handleNotifyStudents(cls)}
+                          title="Send reminder to enrolled students"
+                        >
+                          {notifyingClassId === cls.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Send className="w-3.5 h-3.5" />
+                          )}
+                          Notify
                         </Button>
                       )}
                       
