@@ -96,75 +96,6 @@ const LiveClassPage: React.FC = () => {
 
         setLiveClass(data);
 
-        // Update class status to live if it was scheduled and user is host
-        if (data.status === "scheduled" && data.host_id === user?.id) {
-          await supabase
-            .from("live_classes")
-            .update({
-              status: "live",
-              started_at: new Date().toISOString(),
-            })
-            .eq("id", classId);
-          
-          setLiveClass(prev => prev ? { ...prev, status: "live", started_at: new Date().toISOString() } : null);
-
-          // Notify enrolled students that class is now live
-          if (data.course_id) {
-            try {
-              const { data: enrollments } = await supabase
-                .from('academy_enrollments')
-                .select('user_id')
-                .eq('course_id', data.course_id)
-                .eq('status', 'active');
-
-              if (enrollments && enrollments.length > 0) {
-                const userIds = enrollments.map(e => e.user_id);
-                console.log(`Notifying ${userIds.length} students that class is live`);
-                
-                // Send push notifications
-                await supabase.functions.invoke('send-push-notification', {
-                  body: {
-                    userIds,
-                    payload: {
-                      title: '🔴 Class is Live!',
-                      body: `${data.title} has started. Join now!`,
-                      tag: 'live-class',
-                      data: { classId: data.id, url: `/class/${data.id}` }
-                    }
-                  }
-                });
-
-                // Send email notifications for students who may not have push enabled
-                await supabase.functions.invoke('send-student-notification', {
-                  body: {
-                    classId: data.id,
-                    courseId: data.course_id,
-                    classTitle: data.title,
-                    scheduledAt: new Date().toISOString(),
-                    type: 'class_live'
-                  }
-                });
-
-                // Create tutor update for visibility on student portal
-                await supabase
-                  .from('tutor_updates')
-                  .insert({
-                    course_id: data.course_id,
-                    tutor_id: data.host_id,
-                    title: `🔴 Live Now: ${data.title}`,
-                    content: data.description || 'The tutor is now live! Join the class.',
-                    update_type: 'class',
-                    class_time: new Date().toISOString(),
-                    class_link: data.daily_room_url || null,
-                    is_published: true
-                  });
-              }
-            } catch (notifyError) {
-              console.error('Error notifying students about live class:', notifyError);
-            }
-          }
-        }
-
         // Load participant count from database
         const { count } = await supabase
           .from("class_participants")
@@ -322,6 +253,75 @@ const LiveClassPage: React.FC = () => {
 
       console.log("Meeting token obtained, joining room...");
       setMeetingToken(tokenData.token);
+
+      // Update class status to live if it was scheduled and user is host
+      if (liveClass.status === "scheduled" && isHost) {
+        await supabase
+          .from("live_classes")
+          .update({
+            status: "live",
+            started_at: new Date().toISOString(),
+          })
+          .eq("id", liveClass.id);
+
+        setLiveClass(prev => prev ? { ...prev, status: "live", started_at: new Date().toISOString() } : null);
+
+        // Notify enrolled students that class is now live
+        if (liveClass.course_id) {
+          try {
+            const { data: enrollments } = await supabase
+              .from('academy_enrollments')
+              .select('user_id')
+              .eq('course_id', liveClass.course_id)
+              .eq('status', 'active');
+
+            if (enrollments && enrollments.length > 0) {
+              const userIds = enrollments.map(e => e.user_id);
+              console.log(`Notifying ${userIds.length} students that class is live`);
+
+              // Send push notifications
+              await supabase.functions.invoke('send-push-notification', {
+                body: {
+                  userIds,
+                  payload: {
+                    title: '🔴 Class is Live!',
+                    body: `${liveClass.title} has started. Join now!`,
+                    tag: 'live-class',
+                    data: { classId: liveClass.id, url: `/class/${liveClass.id}` }
+                  }
+                }
+              });
+
+              // Send email notifications
+              await supabase.functions.invoke('send-student-notification', {
+                body: {
+                  classId: liveClass.id,
+                  courseId: liveClass.course_id,
+                  classTitle: liveClass.title,
+                  scheduledAt: new Date().toISOString(),
+                  type: 'class_live'
+                }
+              });
+
+              // Create tutor update for visibility on student portal
+              await supabase
+                .from('tutor_updates')
+                .insert({
+                  course_id: liveClass.course_id,
+                  tutor_id: liveClass.host_id,
+                  title: `🔴 Live Now: ${liveClass.title}`,
+                  content: liveClass.description || 'The tutor is now live! Join the class.',
+                  update_type: 'class',
+                  class_time: new Date().toISOString(),
+                  class_link: liveClass.daily_room_url || null,
+                  is_published: true
+                });
+            }
+          } catch (notifyError) {
+            console.error('Error notifying students about live class:', notifyError);
+          }
+        }
+      }
 
       // Record participation
       await supabase.from("class_participants").upsert({
