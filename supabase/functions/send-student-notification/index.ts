@@ -15,12 +15,17 @@ type NotificationType =
   | 'new_material'
   | 'tutor_update'
   | 'recurring_class_created'
-  | 'tutor_assigned';
+  | 'tutor_assigned'
+  | 'class_live'
+  | 'manual_reminder';
 
 interface NotificationRequest {
   type: NotificationType;
   courseId: string;
-  data: {
+  classId?: string;
+  classTitle?: string;
+  scheduledAt?: string;
+  data?: {
     title?: string;
     description?: string;
     classId?: string;
@@ -41,7 +46,16 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { type, courseId, data }: NotificationRequest = await req.json();
+    const requestData: NotificationRequest = await req.json();
+    const { type, courseId, classId, classTitle, scheduledAt, data } = requestData;
+    
+    // Merge top-level params into data for backwards compatibility
+    const mergedData = {
+      ...data,
+      classId: classId || data?.classId,
+      title: classTitle || data?.title,
+      scheduledAt: scheduledAt || data?.scheduledAt,
+    };
     
     console.log(`Processing ${type} notification for course ${courseId}`);
 
@@ -124,7 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Generate email content based on notification type
-    const { subject, emailContent } = generateEmailContent(type, data, course.name);
+    const { subject, emailContent } = generateEmailContent(type, mergedData, course.name);
     
     const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
     const appUrl = Deno.env.get("APP_URL") || "https://lmvacademy.app";
@@ -205,16 +219,34 @@ function getEmailTitle(type: NotificationType): string {
       return '🔄 Next Recurring Class Scheduled';
     case 'tutor_assigned':
       return '👨‍🏫 New Tutor Assigned';
+    case 'class_live':
+      return '🔴 Class is Live!';
+    case 'manual_reminder':
+      return '📚 Class Reminder';
     default:
       return '🔔 Course Notification';
   }
 }
 
+interface EmailData {
+  title?: string;
+  description?: string;
+  classId?: string;
+  scheduledAt?: string;
+  tutorName?: string;
+  tutorId?: string;
+  materialTitle?: string;
+  updateType?: string;
+  courseName?: string;
+}
+
 function generateEmailContent(
   type: NotificationType, 
-  data: NotificationRequest['data'],
+  data: EmailData,
   courseName: string
 ): { subject: string; emailContent: string } {
+  const d = data || {};
+  
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'TBA';
     const date = new Date(dateStr);
@@ -225,19 +257,20 @@ function generateEmailContent(
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Africa/Lusaka',
     });
   };
 
   switch (type) {
     case 'recording_ready':
       return {
-        subject: `📹 Recording Available: ${data.title}`,
+        subject: `📹 Recording Available: ${d.title || 'Class Recording'}`,
         emailContent: `
           <p>Great news! The recording for your class is now available to watch.</p>
           <div class="info-box">
-            <p><strong>Class:</strong> ${data.title}</p>
+            <p><strong>Class:</strong> ${d.title || 'Class Recording'}</p>
             <p><strong>Course:</strong> ${courseName}</p>
-            ${data.tutorName ? `<p><strong>Tutor:</strong> ${data.tutorName}</p>` : ''}
+            ${d.tutorName ? `<p><strong>Tutor:</strong> ${d.tutorName}</p>` : ''}
           </div>
           <p>You can watch the recording at your convenience and review the key concepts covered.</p>
           <p style="text-align: center;">
@@ -249,16 +282,16 @@ function generateEmailContent(
 
     case 'class_scheduled':
       return {
-        subject: `📅 New Class: ${data.title}`,
+        subject: `📅 New Class: ${d.title || 'Upcoming Class'}`,
         emailContent: `
           <p>A new class has been scheduled for your course!</p>
           <div class="info-box">
-            <p><strong>Class:</strong> ${data.title}</p>
+            <p><strong>Class:</strong> ${d.title || 'Upcoming Class'}</p>
             <p><strong>Course:</strong> ${courseName}</p>
-            <p><strong>When:</strong> ${formatDate(data.scheduledAt)}</p>
-            ${data.tutorName ? `<p><strong>Tutor:</strong> ${data.tutorName}</p>` : ''}
+            <p><strong>When:</strong> ${formatDate(d.scheduledAt)}</p>
+            ${d.tutorName ? `<p><strong>Tutor:</strong> ${d.tutorName}</p>` : ''}
           </div>
-          ${data.description ? `<p>${data.description}</p>` : ''}
+          ${d.description ? `<p>${d.description}</p>` : ''}
           <p style="text-align: center;">
             <a href="{APP_URL}/liveclass" class="button">View Class Details</a>
           </p>
@@ -268,15 +301,15 @@ function generateEmailContent(
 
     case 'new_material':
       return {
-        subject: `📚 New Material: ${data.materialTitle || data.title}`,
+        subject: `📚 New Material: ${d.materialTitle || d.title || 'New Material'}`,
         emailContent: `
           <p>Your tutor has uploaded new learning material for your course.</p>
           <div class="info-box">
-            <p><strong>Material:</strong> ${data.materialTitle || data.title}</p>
+            <p><strong>Material:</strong> ${d.materialTitle || d.title || 'New Material'}</p>
             <p><strong>Course:</strong> ${courseName}</p>
-            ${data.tutorName ? `<p><strong>Uploaded by:</strong> ${data.tutorName}</p>` : ''}
+            ${d.tutorName ? `<p><strong>Uploaded by:</strong> ${d.tutorName}</p>` : ''}
           </div>
-          ${data.description ? `<p>${data.description}</p>` : ''}
+          ${d.description ? `<p>${d.description}</p>` : ''}
           <p style="text-align: center;">
             <a href="{APP_URL}/academy" class="button">View Course Materials</a>
           </p>
@@ -286,16 +319,16 @@ function generateEmailContent(
 
     case 'tutor_update':
       return {
-        subject: `📢 Update from your tutor: ${data.title}`,
+        subject: `📢 Update from your tutor: ${d.title || 'Important Update'}`,
         emailContent: `
           <p>Your tutor has shared an important update.</p>
           <div class="info-box">
-            <p><strong>Subject:</strong> ${data.title}</p>
+            <p><strong>Subject:</strong> ${d.title || 'Update'}</p>
             <p><strong>Course:</strong> ${courseName}</p>
-            ${data.updateType ? `<p><strong>Type:</strong> ${data.updateType}</p>` : ''}
-            ${data.tutorName ? `<p><strong>From:</strong> ${data.tutorName}</p>` : ''}
+            ${d.updateType ? `<p><strong>Type:</strong> ${d.updateType}</p>` : ''}
+            ${d.tutorName ? `<p><strong>From:</strong> ${d.tutorName}</p>` : ''}
           </div>
-          ${data.description ? `<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;"><p style="margin: 0;">${data.description}</p></div>` : ''}
+          ${d.description ? `<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;"><p style="margin: 0;">${d.description}</p></div>` : ''}
           <p style="text-align: center;">
             <a href="{APP_URL}/academy" class="button">View Full Update</a>
           </p>
@@ -304,14 +337,14 @@ function generateEmailContent(
 
     case 'recurring_class_created':
       return {
-        subject: `🔄 Next ${data.title} class scheduled`,
+        subject: `🔄 Next ${d.title || 'Recurring'} class scheduled`,
         emailContent: `
           <p>Your next recurring class has been automatically scheduled!</p>
           <div class="info-box">
-            <p><strong>Class:</strong> ${data.title}</p>
+            <p><strong>Class:</strong> ${d.title || 'Recurring Class'}</p>
             <p><strong>Course:</strong> ${courseName}</p>
-            <p><strong>When:</strong> ${formatDate(data.scheduledAt)}</p>
-            ${data.tutorName ? `<p><strong>Tutor:</strong> ${data.tutorName}</p>` : ''}
+            <p><strong>When:</strong> ${formatDate(d.scheduledAt)}</p>
+            ${d.tutorName ? `<p><strong>Tutor:</strong> ${d.tutorName}</p>` : ''}
           </div>
           <p>This is a recurring class that meets at the same time each week. Mark your calendar!</p>
           <p style="text-align: center;">
@@ -322,18 +355,52 @@ function generateEmailContent(
 
     case 'tutor_assigned':
       return {
-        subject: `👨‍🏫 New Tutor Assigned: ${data.tutorName}`,
+        subject: `👨‍🏫 New Tutor Assigned: ${d.tutorName || 'Your Tutor'}`,
         emailContent: `
           <p>Great news! A tutor has been assigned to your course.</p>
           <div class="info-box">
-            <p><strong>Tutor:</strong> ${data.tutorName}</p>
+            <p><strong>Tutor:</strong> ${d.tutorName || 'Your Tutor'}</p>
             <p><strong>Course:</strong> ${courseName}</p>
           </div>
           <p>Your new tutor will be teaching your classes and providing course materials. You can view their profile and qualifications in the app.</p>
           <p style="text-align: center;">
-            <a href="{APP_URL}/tutor/${data.tutorId}" class="button">View Tutor Profile</a>
+            <a href="{APP_URL}/tutor/${d.tutorId || ''}" class="button">View Tutor Profile</a>
           </p>
           <p>Feel free to attend their live classes and reach out with any questions about the course.</p>
+        `,
+      };
+
+    case 'class_live':
+      return {
+        subject: `🔴 LIVE NOW: ${d.title || 'Class'} has started!`,
+        emailContent: `
+          <p><strong>Your class is happening right now!</strong></p>
+          <div class="info-box" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 20px; border-radius: 12px;">
+            <p style="color: white;"><strong>Class:</strong> ${d.title || 'Live Class'}</p>
+            <p style="color: white;"><strong>Course:</strong> ${courseName}</p>
+            <p style="color: white; font-size: 18px; margin-top: 10px;">🔴 The tutor is live - join now!</p>
+          </div>
+          <p style="text-align: center; margin-top: 20px;">
+            <a href="{APP_URL}/class/${d.classId || ''}" class="button" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">Join Class Now</a>
+          </p>
+          <p style="color: #666; font-size: 14px;">Don't miss out on the live session. The recording will be available later if you can't make it.</p>
+        `,
+      };
+
+    case 'manual_reminder':
+      return {
+        subject: `📚 Reminder: ${d.title || 'Upcoming Class'}`,
+        emailContent: `
+          <p>Your tutor sent you a reminder about an upcoming class.</p>
+          <div class="info-box">
+            <p><strong>Class:</strong> ${d.title || 'Scheduled Class'}</p>
+            <p><strong>Course:</strong> ${courseName}</p>
+            ${d.scheduledAt ? `<p><strong>When:</strong> ${formatDate(d.scheduledAt)}</p>` : ''}
+          </div>
+          <p>Make sure to prepare and join on time!</p>
+          <p style="text-align: center;">
+            <a href="{APP_URL}/class/${d.classId || ''}" class="button">View Class Details</a>
+          </p>
         `,
       };
 

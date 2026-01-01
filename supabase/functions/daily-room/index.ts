@@ -204,7 +204,9 @@ serve(async (req) => {
         if (response.status === 403) {
           userError = "Recording is not enabled for this Daily.co plan. Please upgrade your plan.";
         } else if (response.status === 404) {
-          userError = "No active meeting session found. Ensure participants have joined.";
+          // This typically means no one is in the room yet - but we'll retry after a moment
+          console.log("No active session yet - host may still be connecting");
+          userError = "Recording will start once the video connection is fully established. Please wait a moment and try again, or the recording will start automatically.";
         } else if (response.status === 400 && errorText.includes("already")) {
           // Recording already in progress
           console.log("Recording appears to already be in progress");
@@ -217,7 +219,7 @@ serve(async (req) => {
         }
         
         return new Response(
-          JSON.stringify({ success: false, error: userError }),
+          JSON.stringify({ success: false, error: userError, retryable: response.status === 404 }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
