@@ -107,6 +107,51 @@ const LiveClassPage: React.FC = () => {
             .eq("id", classId);
           
           setLiveClass(prev => prev ? { ...prev, status: "live", started_at: new Date().toISOString() } : null);
+
+          // Notify enrolled students that class is now live
+          if (data.course_id) {
+            try {
+              const { data: enrollments } = await supabase
+                .from('academy_enrollments')
+                .select('user_id')
+                .eq('course_id', data.course_id)
+                .eq('status', 'active');
+
+              if (enrollments && enrollments.length > 0) {
+                const userIds = enrollments.map(e => e.user_id);
+                console.log(`Notifying ${userIds.length} students that class is live`);
+                
+                // Send push notifications
+                await supabase.functions.invoke('send-push-notification', {
+                  body: {
+                    userIds,
+                    payload: {
+                      title: '🔴 Class is Live!',
+                      body: `${data.title} has started. Join now!`,
+                      tag: 'live-class',
+                      data: { classId: data.id, url: `/class/${data.id}` }
+                    }
+                  }
+                });
+
+                // Create tutor update for visibility on student portal
+                await supabase
+                  .from('tutor_updates')
+                  .insert({
+                    course_id: data.course_id,
+                    tutor_id: data.host_id,
+                    title: `🔴 Live Now: ${data.title}`,
+                    content: data.description || 'The tutor is now live! Join the class.',
+                    update_type: 'class',
+                    class_time: new Date().toISOString(),
+                    class_link: data.daily_room_url || null,
+                    is_published: true
+                  });
+              }
+            } catch (notifyError) {
+              console.error('Error notifying students about live class:', notifyError);
+            }
+          }
         }
 
         // Load participant count from database
@@ -871,7 +916,10 @@ const LiveClassPage: React.FC = () => {
                           ) : (
                             <>
                               {isHost ? <Crown className="h-5 w-5 mr-2" /> : <Video className="h-5 w-5 mr-2" />}
-                              {isHost ? "Start Class" : "Join Class"}
+                              {isHost 
+                                ? (liveClass.status === 'live' ? "Re-join Class" : "Start Class")
+                                : "Join Class"
+                              }
                             </>
                           )}
                         </Button>
