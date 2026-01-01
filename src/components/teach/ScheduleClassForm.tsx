@@ -322,6 +322,7 @@ const ScheduleClassForm: React.FC<ScheduleClassFormProps> = ({ courseId, tutorId
             }
           }
         });
+
       }
 
       toast({

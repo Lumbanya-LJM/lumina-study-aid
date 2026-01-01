@@ -31,6 +31,7 @@ serve(async (req) => {
         properties: {
           enable_chat: true,
           enable_screenshare: true,
+          enable_recording: "cloud",
           // Recording is plan-dependent in Daily; we don't request it at room-creation time.
           enable_transcription_storage: true, // Store transcriptions (if supported by plan)
           start_video_off: false,

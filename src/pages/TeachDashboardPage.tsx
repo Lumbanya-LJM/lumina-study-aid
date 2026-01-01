@@ -239,6 +239,25 @@ const TeachDashboardPage: React.FC = () => {
     if (selectedCourse) {
       loadEnrolledStudents();
     }
+    const channel = supabase
+      .channel(`students-count-channel-${selectedCourse}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'academy_enrollments',
+          filter: `course_id=eq.${selectedCourse}`,
+        },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCourse]);
 
