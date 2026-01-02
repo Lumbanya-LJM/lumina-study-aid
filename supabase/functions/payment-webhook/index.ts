@@ -9,9 +9,13 @@ const corsHeaders = {
 
 // Verify Lenco webhook signature
 function verifyLencoSignature(payload: string, signature: string, secret: string): boolean {
+  // 🛡️ Sentinel: CRITICAL - Fail-secure design.
+  // If the secret is missing, ALWAYS fail verification. Allowing webhooks
+  // without a secret is a major security risk, as it allows attackers to spoof
+  // payment events.
   if (!secret) {
-    console.log("No webhook secret configured, skipping signature verification");
-    return true; // Allow in development
+    console.error("CRITICAL: LENCO_WEBHOOK_SECRET is not configured. Rejecting webhook.");
+    return false;
   }
   
   try {
