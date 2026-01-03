@@ -341,57 +341,55 @@ const LiveClassPage: React.FC = () => {
         userId: user?.id,
       });
 
-      // Auto-start recording for hosts after joining
+      // Auto-start recording for hosts after joining (no manual steps)
       if (isHost && liveClass.daily_room_name) {
-        console.log("[LiveClass] Host detected - will auto-start recording in 3 seconds...");
-        
-        const attemptRecording = async (attempt: number = 1) => {
-          console.log(`[LiveClass] Attempting to start recording (attempt ${attempt})...`);
-          try {
-            const { data: recData, error: recError } = await supabase.functions.invoke("daily-room", {
-              body: {
-                action: "start-recording",
-                roomName: liveClass.daily_room_name,
-              },
+        console.log("[LiveClass] Host detected - auto-starting recording...");
+        setRecordingStarting(true);
+
+        const MAX_ATTEMPTS = 20; // ~60s (20 * 3s)
+        const ATTEMPT_DELAY_MS = 3000;
+
+        const startRecordingWithRetries = async (attempt: number) => {
+          console.log(`[LiveClass] Auto-recording attempt ${attempt}/${MAX_ATTEMPTS}`);
+
+          const { data: recData, error: recError } = await supabase.functions.invoke("daily-room", {
+            body: {
+              action: "start-recording",
+              roomName: liveClass.daily_room_name,
+            },
+          });
+
+          if (recError || !recData?.success) {
+            const retryable = Boolean(recData?.retryable);
+            console.warn("[LiveClass] Auto-recording failed", {
+              attempt,
+              retryable,
+              error: recError?.message,
+              details: recData,
             });
 
-            console.log("[LiveClass] Recording API response:", { recData, recError });
+            if (retryable && attempt < MAX_ATTEMPTS) {
+              setTimeout(() => startRecordingWithRetries(attempt + 1), ATTEMPT_DELAY_MS);
+              return;
+            }
 
-            if (recError || !recData?.success) {
-              console.error("[LiveClass] Recording attempt failed:", recData?.error || recError);
-              
-              // If retryable and not too many attempts, try again
-              if (recData?.retryable && attempt < 3) {
-                console.log(`[LiveClass] Retrying in 3 seconds (attempt ${attempt + 1})...`);
-                setTimeout(() => attemptRecording(attempt + 1), 3000);
-                return;
-              }
-              
-              // Only show error toast if all retries exhausted
-              if (attempt >= 3 || !recData?.retryable) {
-                toast({
-                  title: "Recording Notice",
-                  description: recData?.error || "Auto-recording failed. You can start manually from the controls.",
-                });
-              }
-            } else {
-              console.log("[LiveClass] Recording auto-started SUCCESSFULLY:", recData);
-              setIsRecording(true);
-              toast({
-                title: "Recording Started",
-                description: "Class recording has begun automatically.",
-              });
-            }
-          } catch (err) {
-            console.error("[LiveClass] Exception during recording attempt:", err);
-            if (attempt < 3) {
-              setTimeout(() => attemptRecording(attempt + 1), 3000);
-            }
+            setRecordingStarting(false);
+            toast({
+              title: "Recording",
+              description:
+                recData?.error ||
+                "Recording could not be started automatically. Please try again in a moment.",
+            });
+            return;
           }
+
+          console.log("[LiveClass] Recording started", recData);
+          setIsRecording(true);
+          setRecordingStarting(false);
         };
-        
-        // Small delay to ensure the host has joined the meeting
-        setTimeout(() => attemptRecording(1), 3000);
+
+        // Small delay so the host fully connects before we start recording
+        setTimeout(() => startRecordingWithRetries(1), 1000);
       } else {
         console.log("[LiveClass] Not auto-starting recording:", { isHost, hasRoomName: !!liveClass.daily_room_name });
       }
@@ -435,38 +433,6 @@ const LiveClassPage: React.FC = () => {
     });
   };
 
-  const handleStartRecording = async () => {
-    if (!liveClass?.daily_room_name) return;
-    
-    setRecordingStarting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("daily-room", {
-        body: {
-          action: "start-recording",
-          roomName: liveClass.daily_room_name,
-        },
-      });
-
-      if (error || !data?.success) {
-        throw new Error(data?.error || "Failed to start recording");
-      }
-
-      setIsRecording(true);
-      toast({
-        title: "Recording Started",
-        description: "The class is now being recorded.",
-      });
-    } catch (error) {
-      console.error("Error starting recording:", error);
-      toast({
-        title: "Recording Failed",
-        description: error instanceof Error ? error.message : "Could not start recording.",
-        variant: "destructive",
-      });
-    } finally {
-      setRecordingStarting(false);
-    }
-  };
 
   const handleStopRecording = async () => {
     if (!liveClass?.daily_room_name) return;
@@ -821,22 +787,12 @@ const LiveClassPage: React.FC = () => {
                         <Circle className="h-4 w-4 fill-red-500" />
                         Stop Recording
                       </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={handleStartRecording}
-                        disabled={recordingStarting}
-                        className="gap-2"
-                      >
-                        {recordingStarting ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Circle className="h-4 w-4 text-red-500" />
-                        )}
-                        Start Recording
+                    ) : recordingStarting ? (
+                      <Button variant="outline" size="lg" disabled className="gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Starting Recording…
                       </Button>
-                    )}
+                    ) : null}
                   </>
                 )}
 
