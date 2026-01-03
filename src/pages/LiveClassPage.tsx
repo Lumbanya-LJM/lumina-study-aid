@@ -434,16 +434,82 @@ const LiveClassPage: React.FC = () => {
   };
 
 
+  const handleStartRecording = async () => {
+    if (!liveClass?.daily_room_name) return;
+
+    try {
+      setRecordingStarting(true);
+
+      const MAX_ATTEMPTS = 10; // manual retry window (~30s)
+      const ATTEMPT_DELAY_MS = 3000;
+
+      const attemptStart = async (attempt: number): Promise<void> => {
+        console.log(`[LiveClass] Manual start recording attempt ${attempt}/${MAX_ATTEMPTS}`);
+
+        const { data, error } = await supabase.functions.invoke("daily-room", {
+          body: {
+            action: "start-recording",
+            roomName: liveClass.daily_room_name,
+          },
+        });
+
+        if (error || !data?.success) {
+          const retryable = Boolean(data?.retryable);
+          if (retryable && attempt < MAX_ATTEMPTS) {
+            setTimeout(() => void attemptStart(attempt + 1), ATTEMPT_DELAY_MS);
+            return;
+          }
+
+          setRecordingStarting(false);
+          toast({
+            title: "Recording",
+            description: data?.error || error?.message || "Failed to start recording.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setIsRecording(true);
+        setRecordingStarting(false);
+        toast({
+          title: "Recording Started",
+          description: data?.alreadyRecording
+            ? "A recording was already running."
+            : "Recording has started.",
+        });
+      };
+
+      void attemptStart(1);
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      setRecordingStarting(false);
+      toast({
+        title: "Recording",
+        description: "Failed to start recording.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleStopRecording = async () => {
     if (!liveClass?.daily_room_name) return;
-    
+
     try {
-      await supabase.functions.invoke("daily-room", {
+      const { data, error } = await supabase.functions.invoke("daily-room", {
         body: {
           action: "stop-recording",
           roomName: liveClass.daily_room_name,
         },
       });
+
+      if (error || data?.success === false) {
+        toast({
+          title: "Recording",
+          description: data?.error || error?.message || "Failed to stop recording.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       setIsRecording(false);
       toast({
@@ -452,6 +518,11 @@ const LiveClassPage: React.FC = () => {
       });
     } catch (error) {
       console.error("Error stopping recording:", error);
+      toast({
+        title: "Recording",
+        description: "Failed to stop recording.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -787,12 +858,27 @@ const LiveClassPage: React.FC = () => {
                         <Circle className="h-4 w-4 fill-red-500" />
                         Stop Recording
                       </Button>
-                    ) : recordingStarting ? (
-                      <Button variant="outline" size="lg" disabled className="gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Starting Recording…
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={handleStartRecording}
+                        disabled={recordingStarting}
+                        className="gap-2"
+                      >
+                        {recordingStarting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Starting Recording…
+                          </>
+                        ) : (
+                          <>
+                            <Circle className="h-4 w-4" />
+                            Start Recording
+                          </>
+                        )}
                       </Button>
-                    ) : null}
+                    )}
                   </>
                 )}
 
