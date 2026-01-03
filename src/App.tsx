@@ -44,6 +44,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import AchievementsPage from "./pages/AchievementsPage";
 import CommunityPage from "./pages/CommunityPage";
 import LuminaAcademyPage from "./pages/LuminaAcademyPage";
+import AcademySelectionPage from "./pages/AcademySelectionPage";
 import TeachDashboardPage from "./pages/TeachDashboardPage";
 import LiveClassPage from "./pages/LiveClassPage";
 import ClassRecordingsPage from "./pages/ClassRecordingsPage";
@@ -116,7 +117,8 @@ const App = () => {
               <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
               <Route path="/achievements" element={<ProtectedRoute studentOnly><AchievementsPage /></ProtectedRoute>} />
               <Route path="/community" element={<ProtectedRoute studentOnly><CommunityPage /></ProtectedRoute>} />
-              <Route path="/academy" element={<ProtectedRoute studentOnly><LuminaAcademyPage /></ProtectedRoute>} />
+              <Route path="/academy" element={<ProtectedRoute studentOnly><AcademySelectionPage /></ProtectedRoute>} />
+              <Route path="/academy/dashboard" element={<ProtectedRoute studentOnly><LuminaAcademyPage /></ProtectedRoute>} />
               <Route path="/marketplace" element={<ProtectedRoute studentOnly><MarketplacePage /></ProtectedRoute>} />
               <Route path="/saved-research" element={<ProtectedRoute studentOnly><SavedResearchPage /></ProtectedRoute>} />
               
