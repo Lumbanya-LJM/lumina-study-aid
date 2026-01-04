@@ -49,6 +49,8 @@ import {
   Trash2,
   History,
   Send,
+  Phone,
+  MessageCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PostUpdateForm from '@/components/teach/PostUpdateForm';
@@ -84,9 +86,11 @@ interface EnrolledStudent {
   user_id: string;
   enrolled_at: string;
   status: string;
+  email?: string;
   profile?: {
     full_name: string | null;
     university: string | null;
+    phone_number: string | null;
   };
 }
 
@@ -409,19 +413,47 @@ const TeachDashboardPage: React.FC = () => {
 
       if (enrollments && enrollments.length > 0) {
         const userIds = enrollments.map(e => e.user_id);
+        
+        // Fetch profiles with phone numbers
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, full_name, university')
+          .select('user_id, full_name, university, phone_number')
           .in('user_id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
         
+        // Fetch emails from auth.users via a simple query approach
+        // Since we can't directly query auth.users, we'll use the user_id to get email 
+        // from the session or store it in profiles during signup
+        // For now, we'll try to get it from the admin API if available
+        
         const studentsWithProfiles = enrollments.map(e => ({
           ...e,
-          profile: profileMap.get(e.user_id) || null
+          profile: profileMap.get(e.user_id) || null,
+          email: undefined as string | undefined // Will be populated if available
         }));
 
         setEnrolledStudents(studentsWithProfiles);
+        
+        // Try to fetch emails for students (via edge function for admin access)
+        try {
+          const { data: emailData } = await supabase.functions.invoke('get-user-emails', {
+            body: { userIds }
+          });
+          
+          if (emailData?.emails) {
+            const emailMap = new Map<string, string>(
+              emailData.emails.map((e: { user_id: string; email: string }) => [e.user_id, e.email])
+            );
+            
+            setEnrolledStudents(prev => prev.map(s => ({
+              ...s,
+              email: emailMap.get(s.user_id)
+            })));
+          }
+        } catch (emailError) {
+          console.log('Could not fetch student emails:', emailError);
+        }
       } else {
         setEnrolledStudents([]);
       }
@@ -1174,30 +1206,73 @@ const TeachDashboardPage: React.FC = () => {
               {enrolledStudents.map((student) => (
                 <div
                   key={student.id}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  className="flex items-center justify-between p-4 bg-muted/50 rounded-xl hover:bg-muted/70 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary font-semibold">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary font-semibold text-lg">
                         {student.profile?.full_name?.charAt(0) || '?'}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-sm">
+                      <p className="font-medium">
                         {student.profile?.full_name || 'Unknown Student'}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {student.profile?.university || 'No university'}
                       </p>
+                      {student.email && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {student.email}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <Badge variant="secondary" className="text-xs">
-                      Active
-                    </Badge>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(student.enrolled_at), 'MMM d, yyyy')}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    {/* Quick Contact Actions */}
+                    <div className="flex items-center gap-1">
+                      {student.email && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                          onClick={() => window.location.href = `mailto:${student.email}`}
+                          title={`Email ${student.profile?.full_name || 'student'}`}
+                        >
+                          <Mail className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {student.profile?.phone_number && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                            onClick={() => window.location.href = `tel:${student.profile?.phone_number}`}
+                            title={`Call ${student.profile?.full_name || 'student'}`}
+                          >
+                            <Phone className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10"
+                            onClick={() => window.open(`https://wa.me/${student.profile?.phone_number?.replace(/[^0-9]/g, '')}`, '_blank')}
+                            title={`WhatsApp ${student.profile?.full_name || 'student'}`}
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    <div className="text-right ml-2">
+                      <Badge variant="secondary" className="text-xs">
+                        Active
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {format(new Date(student.enrolled_at), 'MMM d, yyyy')}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}

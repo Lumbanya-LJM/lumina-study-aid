@@ -515,6 +515,16 @@ const AuthPage: React.FC = () => {
 
             if (enrollmentError) {
               console.error('Enrollment error:', enrollmentError);
+            } else {
+              // Notify tutors of new enrollment (fire and forget)
+              supabase.functions.invoke('notify-tutor-enrollment', {
+                body: {
+                  studentUserId: currentUser.id,
+                  studentName: formData.fullName,
+                  studentEmail: formData.email,
+                  courseIds: formData.selectedCourses
+                }
+              }).catch(err => console.error('Tutor notification error:', err));
             }
           }
 
