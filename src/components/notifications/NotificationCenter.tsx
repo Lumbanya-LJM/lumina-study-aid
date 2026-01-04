@@ -34,16 +34,18 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
 }) => {
   const [translateX, setTranslateX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDismissing, setIsDismissing] = useState(false);
   const startXRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (isDismissing) return;
     startXRef.current = e.touches[0].clientX;
     setIsDragging(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || isDismissing) return;
     const currentX = e.touches[0].clientX;
     const diff = currentX - startXRef.current;
     // Only allow swiping right (positive values)
@@ -53,16 +55,30 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
   };
 
   const handleTouchEnd = () => {
+    if (isDismissing) return;
     setIsDragging(false);
     if (translateX > 100) {
-      // Swipe threshold reached - dismiss
+      // Swipe threshold reached - dismiss with animation
       haptics.light();
-      setTranslateX(400);
-      setTimeout(() => onDismiss(notification.id), 200);
+      setIsDismissing(true);
+      setTimeout(() => onDismiss(notification.id), 300);
     } else {
       setTranslateX(0);
     }
   };
+
+  const handleXButtonClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    haptics.light();
+    setIsDismissing(true);
+    setTimeout(() => onDismiss(notification.id), 300);
+  };
+
+  // Don't render if dismissing animation is complete
+  if (isDismissing && translateX === 0) {
+    // For X button dismissal - slide out then hide
+  }
 
   const scheduledTime = notification.scheduledAt ? new Date(notification.scheduledAt) : null;
   const minutesUntil = scheduledTime ? differenceInMinutes(scheduledTime, new Date()) : 0;
@@ -132,24 +148,16 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden"
+      className={cn(
+        "relative overflow-hidden transition-all duration-300 ease-out",
+        isDismissing && "opacity-0 max-h-0 mb-0 scale-95"
+      )}
       style={{
         animationDelay: `${index * 50}ms`,
+        maxHeight: isDismissing ? 0 : 100,
+        marginBottom: isDismissing ? 0 : undefined,
       }}
     >
-      {/* Swipe indicator background - only show when actively swiping */}
-      {translateX > 0 && (
-        <div 
-          className="absolute inset-0 rounded-xl flex items-center pl-4 transition-opacity"
-          style={{ 
-            backgroundColor: 'hsl(var(--emerald-500) / 0.2)',
-            opacity: Math.min(translateX / 100, 1)
-          }}
-        >
-          <span className="text-emerald-500 text-sm font-medium">Dismiss</span>
-        </div>
-      )}
-
       {/* Main notification card - compact design */}
       <div
         className={cn(
@@ -157,8 +165,8 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
           `bg-gradient-to-r ${styles.gradient} ${styles.border}`
         )}
         style={{
-          transform: `translateX(${translateX}px)`,
-          transition: isDragging ? 'none' : 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          transform: `translateX(${isDismissing ? 400 : translateX}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           willChange: 'transform',
         }}
         onTouchStart={handleTouchStart}
@@ -199,12 +207,7 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
 
           <div className="flex items-center gap-1 shrink-0">
             <Button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                haptics.light();
-                onDismiss(notification.id);
-              }}
+              onClick={handleXButtonClick}
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-destructive/10"
