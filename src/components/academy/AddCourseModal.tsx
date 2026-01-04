@@ -111,12 +111,22 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
         .eq('user_id', user.id)
         .single();
 
-      // Send confirmation email
+      // Send confirmation email to student
       await supabase.functions.invoke('send-enrollment-confirmation', {
         body: {
           userId: user.id,
           studentEmail: user.email,
           studentName: profile?.full_name || 'Student',
+          courseIds: selectedCourses
+        }
+      });
+
+      // Notify tutors of the new enrollment
+      await supabase.functions.invoke('notify-tutor-enrollment', {
+        body: {
+          studentUserId: user.id,
+          studentName: profile?.full_name || 'Student',
+          studentEmail: user.email,
           courseIds: selectedCourses
         }
       });

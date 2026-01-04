@@ -778,6 +778,7 @@ export type Database = {
           experience: string | null
           full_name: string | null
           id: string
+          phone_number: string | null
           qualifications: string | null
           school: Database["public"]["Enums"]["lmv_school"] | null
           streak_days: number | null
@@ -797,6 +798,7 @@ export type Database = {
           experience?: string | null
           full_name?: string | null
           id?: string
+          phone_number?: string | null
           qualifications?: string | null
           school?: Database["public"]["Enums"]["lmv_school"] | null
           streak_days?: number | null
@@ -816,6 +818,7 @@ export type Database = {
           experience?: string | null
           full_name?: string | null
           id?: string
+          phone_number?: string | null
           qualifications?: string | null
           school?: Database["public"]["Enums"]["lmv_school"] | null
           streak_days?: number | null

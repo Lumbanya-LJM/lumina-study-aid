@@ -390,6 +390,34 @@ serve(async (req) => {
 
       if (enrollError) {
         console.error("Error creating enrollments:", enrollError);
+      } else {
+        // Notify tutors of new enrollment
+        try {
+          const { data: profile } = await supabaseClient
+            .from('profiles')
+            .select('full_name')
+            .eq('user_id', user.id)
+            .single();
+
+          // Call notify-tutor-enrollment edge function
+          const notifyUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-tutor-enrollment`;
+          await fetch(notifyUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+            },
+            body: JSON.stringify({
+              studentUserId: user.id,
+              studentName: profile?.full_name || 'Student',
+              studentEmail: user.email,
+              courseIds: selectedCourses
+            })
+          });
+          console.log("Tutor notification sent for new enrollment");
+        } catch (notifyError) {
+          console.error("Failed to notify tutors:", notifyError);
+        }
       }
     } else if (productType === "class" && classId) {
       const { data: classData } = await supabaseClient
