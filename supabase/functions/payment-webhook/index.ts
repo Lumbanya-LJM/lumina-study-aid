@@ -9,11 +9,13 @@ const corsHeaders = {
 
 // Verify Lenco webhook signature
 function verifyLencoSignature(payload: string, signature: string, secret: string): boolean {
+  // CRITICAL: A secret must always be configured for webhook verification.
+  // Bypassing this check creates a severe security vulnerability.
   if (!secret) {
-    console.log("No webhook secret configured, skipping signature verification");
-    return true; // Allow in development
+    console.error("CRITICAL: No webhook secret configured. Rejecting webhook as insecure.");
+    return false;
   }
-  
+
   try {
     const hmac = createHmac("sha256", secret);
     hmac.update(payload);
