@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { haptics } from '@/lib/haptics';
-import { sounds, isSoundEnabledState } from '@/lib/sounds';
 import { differenceInMinutes } from 'date-fns';
 import { NotificationCenter, NotificationItem } from '@/components/notifications/NotificationCenter';
 
@@ -134,10 +133,9 @@ export const GlobalLiveClassBanner: React.FC = () => {
       setLiveClasses(live);
       setStartingSoonClasses(startingSoon);
 
-      // Play sound for new live classes
+      // Haptic only for new live classes (no sound)
       live.forEach(c => {
-        if (!hasPlayedSound.has(c.id) && isSoundEnabledState()) {
-          sounds.classStart();
+        if (!hasPlayedSound.has(c.id)) {
           setHasPlayedSound(prev => new Set([...prev, c.id]));
           haptics.heavy();
         }

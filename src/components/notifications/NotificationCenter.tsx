@@ -35,6 +35,7 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
   const [translateX, setTranslateX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
+  const [hasReachedThreshold, setHasReachedThreshold] = useState(false);
   const startXRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -42,6 +43,9 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
     if (isDismissing) return;
     startXRef.current = e.touches[0].clientX;
     setIsDragging(true);
+    setHasReachedThreshold(false);
+    // Light haptic on swipe start
+    haptics.selection();
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -50,16 +54,27 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
     const diff = currentX - startXRef.current;
     // Only allow swiping right (positive values)
     if (diff > 0) {
-      setTranslateX(Math.min(diff, 200));
+      const newTranslateX = Math.min(diff, 200);
+      setTranslateX(newTranslateX);
+      
+      // Haptic when crossing threshold
+      if (newTranslateX > 100 && !hasReachedThreshold) {
+        setHasReachedThreshold(true);
+        haptics.medium();
+      } else if (newTranslateX <= 100 && hasReachedThreshold) {
+        setHasReachedThreshold(false);
+        haptics.light();
+      }
     }
   };
 
   const handleTouchEnd = () => {
     if (isDismissing) return;
     setIsDragging(false);
+    setHasReachedThreshold(false);
     if (translateX > 100) {
       // Swipe threshold reached - dismiss with animation
-      haptics.light();
+      haptics.success();
       setIsDismissing(true);
       setTimeout(() => onDismiss(notification.id), 300);
     } else {
@@ -70,7 +85,7 @@ const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
   const handleXButtonClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    haptics.light();
+    haptics.success();
     setIsDismissing(true);
     setTimeout(() => onDismiss(notification.id), 300);
   };
