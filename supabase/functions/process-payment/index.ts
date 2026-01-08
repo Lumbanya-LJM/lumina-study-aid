@@ -384,6 +384,43 @@ serve(async (req) => {
 
     console.log("Payment initiated:", payment.id);
 
+    // Send push notification to remind user to approve the payment
+    try {
+      const notificationMessage = paymentMethodType === 'mobile_money'
+        ? `Please approve the K${amount.toFixed(2)} payment on your phone to complete your purchase.`
+        : `Please complete your K${amount.toFixed(2)} bank transfer to finish your purchase.`;
+
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      
+      if (supabaseUrl && supabaseServiceKey) {
+        await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            payload: {
+              title: "Payment Awaiting Approval",
+              body: notificationMessage,
+              tag: "payment-pending",
+              data: {
+                type: "payment_initiated",
+                paymentId: payment.id,
+                amount: amount,
+              },
+            },
+          }),
+        });
+        console.log("Push notification sent for payment approval");
+      }
+    } catch (notifError) {
+      // Don't fail the payment if notification fails
+      console.error("Failed to send payment notification:", notifError);
+    }
+
     return new Response(JSON.stringify({ 
       success: true, 
       paymentId: payment.id,
