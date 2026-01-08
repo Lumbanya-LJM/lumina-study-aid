@@ -3,8 +3,6 @@ import { useNavigate, useSearchParams, Link, useLocation } from 'react-router-do
 import { useAuth } from '@/hooks/useAuth';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import {
-  Eye,
-  EyeOff,
   Mail,
   Lock,
   User,
@@ -26,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import TutorApplicationForm from '@/components/auth/TutorApplicationForm';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { LMVSchool, SCHOOL_CONFIGS, getSchoolConfig } from '@/config/schools';
 import SchoolSelection from '@/components/onboarding/SchoolSelection';
 import { applySchoolTheme, getStoredSchool } from '@/hooks/useSchoolTheme';
@@ -66,7 +65,6 @@ const AuthPage: React.FC = () => {
   const { toast } = useToast();
 
   const [isLogin, setIsLogin] = useState(!invitationToken);
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'credentials' | 'school' | 'profile' | 'courses' | 'tutor-application'>('credentials');
   const [courses, setCourses] = useState<Course[]>([]);
@@ -642,8 +640,8 @@ const AuthPage: React.FC = () => {
         <label className="text-sm font-medium text-foreground mb-2 block">Password</label>
         <div className="relative">
           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type={showPassword ? 'text' : 'password'}
+          <Input
+            type="password"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             placeholder={isLogin ? 'Enter your password' : 'Create a password (min. 6 chars)'}
@@ -651,13 +649,6 @@ const AuthPage: React.FC = () => {
             minLength={6}
             className="w-full pl-12 pr-12 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground"
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
         </div>
       </div>
 
