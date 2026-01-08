@@ -140,6 +140,88 @@ async function sendPaymentConfirmationEmail(
   }
 }
 
+// Send class join email with link
+async function sendClassJoinEmail(
+  email: string,
+  classTitle: string,
+  scheduledAt: string,
+  classId: string,
+  dailyRoomUrl: string | null
+) {
+  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendApiKey) {
+    console.log("RESEND_API_KEY not configured, skipping class join email");
+    return;
+  }
+
+  const smtpFrom = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
+  const fromEmail = `LMV Academy <${smtpFrom}>`;
+  const appUrl = Deno.env.get("APP_URL") || "https://app.lmvacademy.com";
+  
+  const formattedDate = new Date(scheduledAt).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const joinLink = dailyRoomUrl || `${appUrl}/live-class?classId=${classId}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; }
+        .btn { display: inline-block; background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; color: #6c757d; font-size: 14px; background: #f8f9fa; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">🎓 You're Registered!</h1>
+        </div>
+        <div class="content">
+          <h2>${classTitle}</h2>
+          <p><strong>📅 Date:</strong> ${formattedDate}</p>
+          <p>You've successfully purchased access to this live class. Click the button below to join when the class starts:</p>
+          <a href="${joinLink}" class="btn">Join Class</a>
+          <p style="color: #6c757d; font-size: 14px;">Save this email - you'll need the link above to join the class.</p>
+        </div>
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} LMV Academy - Excellence in Education</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [email],
+        subject: `You're Registered: ${classTitle}`,
+        html,
+      }),
+    });
+    console.log("Class join email sent to:", email);
+  } catch (error) {
+    console.error("Error sending class join email:", error);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -254,13 +336,20 @@ serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.admin.getUserById(paymentRecord.user_id);
     const userEmail = user?.email;
 
-    // Handle successful payment - activate products
+    // Handle successful payment - NOW activate products
     if (newStatus === 'completed') {
       const expiresAt = new Date();
       expiresAt.setMonth(expiresAt.getMonth() + 1);
 
+      // Parse metadata from payment record
+      const metadata = paymentRecord.metadata || {};
+      const selectedCourses = metadata.selectedCourses || [];
+      const classId = metadata.classId;
+      const classPurchaseType = metadata.classPurchaseType;
+      const purchaserEmail = metadata.purchaserEmail;
+
       if (paymentRecord.product_type === 'subscription') {
-        // Activate Pro subscription
+        // NOW activate Pro subscription
         const { error: subError } = await supabaseClient
           .from("subscriptions")
           .upsert({
@@ -276,44 +365,83 @@ serve(async (req) => {
         } else {
           console.log("Subscription activated for user:", paymentRecord.user_id);
         }
-      } else if (paymentRecord.product_type === 'academy') {
-        // Academy enrollments should already be created in process-payment
-        // Just ensure they're marked as active
+      } else if (paymentRecord.product_type === 'academy' && selectedCourses.length > 0) {
+        // NOW create academy enrollments
+        const enrollments = selectedCourses.map((courseId: string) => ({
+          user_id: paymentRecord.user_id,
+          course_id: courseId,
+          status: "active",
+          expires_at: expiresAt.toISOString(),
+        }));
+
         const { error: enrollError } = await supabaseClient
           .from("academy_enrollments")
-          .update({ status: "active" })
-          .eq("user_id", paymentRecord.user_id)
-          .is("status", null);
+          .upsert(enrollments, { onConflict: "user_id,course_id" });
 
         if (enrollError) {
-          console.error("Error activating enrollments:", enrollError);
+          console.error("Error creating enrollments:", enrollError);
         } else {
-          console.log("Academy enrollments activated for user:", paymentRecord.user_id);
+          console.log("Academy enrollments created for user:", paymentRecord.user_id);
+          
+          // Notify tutors of new enrollment
+          try {
+            const { data: profile } = await supabaseClient
+              .from('profiles')
+              .select('full_name')
+              .eq('user_id', paymentRecord.user_id)
+              .single();
+
+            const notifyUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-tutor-enrollment`;
+            await fetch(notifyUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+              },
+              body: JSON.stringify({
+                studentUserId: paymentRecord.user_id,
+                studentName: profile?.full_name || 'Student',
+                studentEmail: userEmail,
+                courseIds: selectedCourses
+              })
+            });
+            console.log("Tutor notification sent for new enrollment");
+          } catch (notifyError) {
+            console.error("Failed to notify tutors:", notifyError);
+          }
         }
-      } else if (paymentRecord.product_type === 'class') {
-        // Class purchase should already be created in process-payment
-        console.log("Class purchase confirmed for user:", paymentRecord.user_id);
-      }
-    } else if (newStatus === 'failed') {
-      // Handle failed payment - clean up pending records
-      if (paymentRecord.product_type === 'subscription') {
-        // Don't activate or remove existing active subscription
-        console.log("Payment failed, subscription not activated");
-      } else if (paymentRecord.product_type === 'academy') {
-        // Remove pending enrollments if payment failed
-        await supabaseClient
-          .from("academy_enrollments")
-          .delete()
-          .eq("user_id", paymentRecord.user_id)
-          .eq("status", "pending");
-      } else if (paymentRecord.product_type === 'class') {
-        // Remove pending class purchase
-        await supabaseClient
+      } else if (paymentRecord.product_type === 'class' && classId) {
+        // NOW create class purchase
+        const { data: classData } = await supabaseClient
+          .from("live_classes")
+          .select("title, scheduled_at, daily_room_url")
+          .eq("id", classId)
+          .single();
+
+        const { error: purchaseError } = await supabaseClient
           .from("class_purchases")
-          .delete()
-          .eq("payment_id", paymentRecord.id);
+          .insert({
+            user_id: paymentRecord.user_id,
+            class_id: classId,
+            purchase_type: classPurchaseType || 'recording',
+            amount: paymentRecord.amount,
+            payment_id: paymentRecord.id,
+            purchaser_email: purchaserEmail || userEmail,
+          });
+
+        if (purchaseError) {
+          console.error("Error creating class purchase:", purchaseError);
+        } else {
+          console.log("Class purchase created for user:", paymentRecord.user_id);
+
+          // Send class join email if live class
+          if (classPurchaseType === 'live' && purchaserEmail && classData) {
+            await sendClassJoinEmail(purchaserEmail, classData.title, classData.scheduled_at, classId, classData.daily_room_url);
+          }
+        }
       }
     }
+    // Failed payments - no cleanup needed since nothing was created
 
     // Send email notification
     if (userEmail && (newStatus === 'completed' || newStatus === 'failed')) {
