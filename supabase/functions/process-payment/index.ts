@@ -338,8 +338,6 @@ serve(async (req) => {
       paymentResult = await processLencoBankTransferPayment(amount, accountNumber, bankCode, accountName, payment.id);
     }
 
-    let classTitle = '';
-    let classScheduledAt = '';
 
     if (!paymentResult.success) {
       // Update payment status to failed
@@ -363,96 +361,26 @@ serve(async (req) => {
       })
       .eq("id", payment.id);
 
-    const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + 1);
+    // Store metadata for webhook to use when payment is confirmed
+    // DO NOT activate products here - wait for webhook confirmation
+    const metadata = {
+      selectedCourses,
+      classId,
+      classPurchaseType,
+      purchaserEmail,
+    };
 
-    // Handle subscription types - create records as pending until webhook confirms
-    if (productType === "subscription") {
-      await supabaseClient
-        .from("subscriptions")
-        .upsert({
-          user_id: user.id,
-          plan: "pro",
-          status: "active",
-          expires_at: expiresAt.toISOString(),
-        });
-    } else if (productType === "academy" && selectedCourses && selectedCourses.length > 0) {
-      const enrollments = selectedCourses.map((courseId: string) => ({
-        user_id: user.id,
-        course_id: courseId,
-        status: "active",
-        expires_at: expiresAt.toISOString(),
-      }));
+    // Store metadata in payment record for webhook processing
+    await supabaseClient
+      .from("payments")
+      .update({ 
+        metadata: metadata
+      })
+      .eq("id", payment.id);
 
-      const { error: enrollError } = await supabaseClient
-        .from("academy_enrollments")
-        .upsert(enrollments, { onConflict: "user_id,course_id" });
-
-      if (enrollError) {
-        console.error("Error creating enrollments:", enrollError);
-      } else {
-        // Notify tutors of new enrollment
-        try {
-          const { data: profile } = await supabaseClient
-            .from('profiles')
-            .select('full_name')
-            .eq('user_id', user.id)
-            .single();
-
-          // Call notify-tutor-enrollment edge function
-          const notifyUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-tutor-enrollment`;
-          await fetch(notifyUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-            },
-            body: JSON.stringify({
-              studentUserId: user.id,
-              studentName: profile?.full_name || 'Student',
-              studentEmail: user.email,
-              courseIds: selectedCourses
-            })
-          });
-          console.log("Tutor notification sent for new enrollment");
-        } catch (notifyError) {
-          console.error("Failed to notify tutors:", notifyError);
-        }
-      }
-    } else if (productType === "class" && classId) {
-      const { data: classData } = await supabaseClient
-        .from("live_classes")
-        .select("title, scheduled_at, daily_room_url")
-        .eq("id", classId)
-        .single();
-      
-      if (classData) {
-        classTitle = classData.title;
-        classScheduledAt = classData.scheduled_at;
-      }
-
-      const { error: purchaseError } = await supabaseClient
-        .from("class_purchases")
-        .insert({
-          user_id: user.id,
-          class_id: classId,
-          purchase_type: classPurchaseType || 'recording',
-          amount: amount,
-          payment_id: payment.id,
-          purchaser_email: purchaserEmail || user.email,
-        });
-
-      if (purchaseError) {
-        console.error("Error creating class purchase:", purchaseError);
-      }
-
-      if (classPurchaseType === 'live' && purchaserEmail && classData) {
-        await sendClassJoinEmail(purchaserEmail, classTitle, classScheduledAt, classId, classData.daily_room_url);
-      }
-    }
-
-    // Send receipt email
-    await sendReceiptEmail(user.email!, amount, productType, payment.id, paymentMethodType);
+    // NO subscriptions, enrollments, or purchases are created here
+    // They will be created by the payment-webhook ONLY after Lenco confirms payment
+    // NO receipt email is sent here - it will be sent by the webhook after confirmation
 
     console.log("Payment initiated:", payment.id);
 
