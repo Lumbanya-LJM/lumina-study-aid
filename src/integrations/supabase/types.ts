@@ -727,6 +727,7 @@ export type Database = {
           created_at: string
           currency: string
           id: string
+          metadata: Json | null
           payment_method: string
           phone_number: string | null
           product_id: string | null
@@ -742,6 +743,7 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          metadata?: Json | null
           payment_method?: string
           phone_number?: string | null
           product_id?: string | null
@@ -757,6 +759,7 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          metadata?: Json | null
           payment_method?: string
           phone_number?: string | null
           product_id?: string | null
