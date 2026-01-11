@@ -13,50 +13,53 @@ import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 import { CommandPalette } from "@/components/premium/CommandPalette";
 import { AchievementConfetti } from "@/components/premium/AchievementConfetti";
 import { CelebrationProvider } from "@/components/premium/ProgressCelebration";
+import { Suspense, lazy } from "react";
 import { GlobalLiveClassBanner } from "@/components/layout/GlobalLiveClassBanner";
-import SplashScreen from "./pages/SplashScreen";
-import WelcomePage from "./pages/WelcomePage";
-import RoleSelectionPage from "./pages/RoleSelectionPage";
-import AuthPage from "./pages/AuthPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import HomePage from "./pages/HomePage";
-import ChatPage from "./pages/ChatPage";
-import PlannerPage from "./pages/PlannerPage";
-import LibraryPage from "./pages/LibraryPage";
-import FocusView from "@/features/focus/FocusView";
-import JournalPage from "./pages/JournalPage";
-import ProfilePage from "./pages/ProfilePage";
-import SettingsPage from "./pages/SettingsPage";
-import AnalyticsDashboardPage from "./pages/AnalyticsDashboardPage";
-import StudyAnalyticsPage from "./pages/StudyAnalyticsPage";
-
-import PartnerPage from "./pages/PartnerPage";
-import UploadPage from "./pages/UploadPage";
-import LuminaVaultPage from "./pages/StudyLockerPage";
-import AdminContentPage from "./pages/AdminContentPage";
-import QuizPage from "./pages/QuizPage";
-import FlashcardsPage from "./pages/FlashcardsPage";
-import SubscriptionPage from "./pages/SubscriptionPage";
-import InstallPage from "./pages/InstallPage";
-import SupportPage from "./pages/SupportPage";
-import NotificationsPage from "./pages/NotificationsPage";
-import AchievementsPage from "./pages/AchievementsPage";
-import CommunityPage from "./pages/CommunityPage";
-import LuminaAcademyPage from "./pages/LuminaAcademyPage";
-import AcademySelectionPage from "./pages/AcademySelectionPage";
-import TeachDashboardPage from "./pages/TeachDashboardPage";
-import LiveClassPage from "./pages/LiveClassPage";
-import ClassRecordingsPage from "./pages/ClassRecordingsPage";
-import TutorApplicationsAdminPage from "./pages/TutorApplicationsAdminPage";
-import TutorProfilePage from "./pages/TutorProfilePage";
-import AdminDashboardPage from "./pages/AdminDashboardPage";
-import AdminAuthPage from "./pages/AdminAuthPage";
-import MarketplacePage from "./pages/MarketplacePage";
-import TutorManagementPage from "./pages/TutorManagementPage";
-import SavedResearchPage from "./pages/SavedResearchPage";
-import NotFound from "./pages/NotFound";
 import { supabase } from "@/integrations/supabase/client";
+import { Spinner } from "@/components/ui/spinner";
+
+// Lazily load page components for better performance
+const SplashScreen = lazy(() => import("./pages/SplashScreen"));
+const WelcomePage = lazy(() => import("./pages/WelcomePage"));
+const RoleSelectionPage = lazy(() => import("./pages/RoleSelectionPage"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const HomePage = lazy(() => import("./pages/HomePage"));
+const ChatPage = lazy(() => import("./pages/ChatPage"));
+const PlannerPage = lazy(() => import("./pages/PlannerPage"));
+const LibraryPage = lazy(() => import("./pages/LibraryPage"));
+const FocusView = lazy(() => import("@/features/focus/FocusView"));
+const JournalPage = lazy(() => import("./pages/JournalPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const AnalyticsDashboardPage = lazy(() => import("./pages/AnalyticsDashboardPage"));
+const StudyAnalyticsPage = lazy(() => import("./pages/StudyAnalyticsPage"));
+const PartnerPage = lazy(() => import("./pages/PartnerPage"));
+const UploadPage = lazy(() => import("./pages/UploadPage"));
+const LuminaVaultPage = lazy(() => import("./pages/StudyLockerPage"));
+const AdminContentPage = lazy(() => import("./pages/AdminContentPage"));
+const QuizPage = lazy(() => import("./pages/QuizPage"));
+const FlashcardsPage = lazy(() => import("./pages/FlashcardsPage"));
+const SubscriptionPage = lazy(() => import("./pages/SubscriptionPage"));
+const InstallPage = lazy(() => import("./pages/InstallPage"));
+const SupportPage = lazy(() => import("./pages/SupportPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
+const CommunityPage = lazy(() => import("./pages/CommunityPage"));
+const LuminaAcademyPage = lazy(() => import("./pages/LuminaAcademyPage"));
+const AcademySelectionPage = lazy(() => import("./pages/AcademySelectionPage"));
+const TeachDashboardPage = lazy(() => import("./pages/TeachDashboardPage"));
+const LiveClassPage = lazy(() => import("./pages/LiveClassPage"));
+const ClassRecordingsPage = lazy(() => import("./pages/ClassRecordingsPage"));
+const TutorApplicationsAdminPage = lazy(() => import("./pages/TutorApplicationsAdminPage"));
+const TutorProfilePage = lazy(() => import("./pages/TutorProfilePage"));
+const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage"));
+const AdminAuthPage = lazy(() => import("./pages/AdminAuthPage"));
+const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
+const TutorManagementPage = lazy(() => import("./pages/TutorManagementPage"));
+const SavedResearchPage = lazy(() => import("./pages/SavedResearchPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
@@ -84,10 +87,15 @@ const App = () => {
             <AchievementConfetti />
             <CelebrationProvider />
             <GlobalLiveClassBanner />
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<SplashScreen />} />
-              <Route path="/welcome" element={<WelcomePage />} />
+            <Suspense fallback={
+              <div className="h-screen w-full flex items-center justify-center">
+                <Spinner size="lg" />
+              </div>
+            }>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<SplashScreen />} />
+                <Route path="/welcome" element={<WelcomePage />} />
               <Route path="/role-select" element={<RoleSelectionPage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -140,6 +148,7 @@ const App = () => {
               
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
           </TooltipProvider>
         </SchoolProvider>
