@@ -109,6 +109,9 @@ const SubscriptionPage: React.FC = () => {
   const [accountNumber, setAccountNumber] = useState('');
   const [bankCode, setBankCode] = useState('');
   const [accountName, setAccountName] = useState('');
+  const [branchCode, setBranchCode] = useState('');
+  const [accountType, setAccountType] = useState<'savings' | 'current' | 'cheque'>('savings');
+  const [bankPhoneNumber, setBankPhoneNumber] = useState('');
 
   useEffect(() => {
     loadSubscription();
@@ -204,16 +207,24 @@ const SubscriptionPage: React.FC = () => {
         return;
       }
     } else {
-      if (!accountNumber.trim()) {
-        toast({ variant: "destructive", title: "Error", description: "Please enter your account number" });
-        return;
-      }
       if (!bankCode) {
         toast({ variant: "destructive", title: "Error", description: "Please select your bank" });
         return;
       }
-      if (!accountName.trim()) {
-        toast({ variant: "destructive", title: "Error", description: "Please enter the account holder name" });
+      if (!accountNumber.trim() || accountNumber.length < 8) {
+        toast({ variant: "destructive", title: "Error", description: "Please enter a valid account number (min 8 digits)" });
+        return;
+      }
+      if (!accountName.trim() || accountName.length < 3) {
+        toast({ variant: "destructive", title: "Error", description: "Please enter the full account holder name" });
+        return;
+      }
+      if (!branchCode.trim()) {
+        toast({ variant: "destructive", title: "Error", description: "Please enter your branch code" });
+        return;
+      }
+      if (!bankPhoneNumber.trim() || bankPhoneNumber.replace(/\D/g, '').length < 9) {
+        toast({ variant: "destructive", title: "Error", description: "Please enter a valid phone number for verification" });
         return;
       }
     }
@@ -236,10 +247,13 @@ const SubscriptionPage: React.FC = () => {
            // Mobile money fields
            phoneNumber: paymentMethod === 'mobile_money' ? phoneNumber : undefined,
            provider: paymentMethod === 'mobile_money' ? provider : undefined,
-           // Bank transfer fields
-           accountNumber: paymentMethod === 'bank_transfer' ? accountNumber : undefined,
-           bankCode: paymentMethod === 'bank_transfer' ? bankCode : undefined,
-           accountName: paymentMethod === 'bank_transfer' ? accountName : undefined,
+            // Bank transfer fields
+            accountNumber: paymentMethod === 'bank_transfer' ? accountNumber : undefined,
+            bankCode: paymentMethod === 'bank_transfer' ? bankCode : undefined,
+            accountName: paymentMethod === 'bank_transfer' ? accountName : undefined,
+            branchCode: paymentMethod === 'bank_transfer' ? branchCode : undefined,
+            accountType: paymentMethod === 'bank_transfer' ? accountType : undefined,
+            bankPhoneNumber: paymentMethod === 'bank_transfer' ? bankPhoneNumber : undefined,
            // Product info
            productType: selectedPlan === 'pro' ? 'subscription' : selectedPlan === 'class' ? 'class' : 'academy',
            selectedCourses: selectedPlan === 'academy' ? selectedCourses : undefined,
@@ -387,54 +401,112 @@ const SubscriptionPage: React.FC = () => {
 
                 {/* Bank Transfer Fields */}
                 {paymentMethod === 'bank_transfer' && (
-                  <>
+                  <div className="space-y-4">
+                    <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                      <p className="text-xs text-muted-foreground flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-primary" />
+                        Your bank details are encrypted and secure
+                      </p>
+                    </div>
+
                     <div>
                       <label className="text-sm font-medium text-foreground mb-2 block">
-                        Select Bank
+                        Select Bank *
                       </label>
                       <Select value={bankCode} onValueChange={setBankCode}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select your bank" />
+                          <SelectValue placeholder="Choose your bank" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="ZANACO">Zanaco</SelectItem>
-                          <SelectItem value="STANBIC">Stanbic Bank</SelectItem>
-                          <SelectItem value="FNB">First National Bank</SelectItem>
-                          <SelectItem value="ABSA">ABSA Bank</SelectItem>
-                          <SelectItem value="STANDARD">Standard Chartered</SelectItem>
-                          <SelectItem value="ATLAS">Atlas Mara</SelectItem>
+                          <SelectItem value="ZANACO">Zanaco Bank</SelectItem>
+                          <SelectItem value="STANBIC">Stanbic Bank Zambia</SelectItem>
+                          <SelectItem value="FNB">First National Bank (FNB)</SelectItem>
+                          <SelectItem value="ABSA">ABSA Bank Zambia</SelectItem>
+                          <SelectItem value="STANDARD">Standard Chartered Bank</SelectItem>
+                          <SelectItem value="ATLAS">Atlas Mara Bank</SelectItem>
                           <SelectItem value="INDO">Indo Zambia Bank</SelectItem>
-                          <SelectItem value="ACCESS">Access Bank</SelectItem>
-                          <SelectItem value="UBA">United Bank for Africa</SelectItem>
-                          <SelectItem value="NATSAVE">National Savings</SelectItem>
+                          <SelectItem value="ACCESS">Access Bank Zambia</SelectItem>
+                          <SelectItem value="UBA">United Bank for Africa (UBA)</SelectItem>
+                          <SelectItem value="NATSAVE">National Savings & Credit Bank</SelectItem>
+                          <SelectItem value="INVESTRUST">Investrust Bank</SelectItem>
+                          <SelectItem value="ECOBANK">Ecobank Zambia</SelectItem>
+                          <SelectItem value="CITIBANK">Citibank Zambia</SelectItem>
+                          <SelectItem value="BOZ">Bank of Zambia</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-2 block">
-                        Account Number
-                      </label>
-                      <Input
-                        value={accountNumber}
-                        onChange={(e) => setAccountNumber(e.target.value)}
-                        placeholder="Enter your account number"
-                        type="text"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-2 block">
+                          Branch Code *
+                        </label>
+                        <Input
+                          value={branchCode}
+                          onChange={(e) => setBranchCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                          placeholder="e.g., 001234"
+                          type="text"
+                          maxLength={6}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-2 block">
+                          Account Type *
+                        </label>
+                        <Select value={accountType} onValueChange={(v) => setAccountType(v as 'savings' | 'current' | 'cheque')}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="savings">Savings Account</SelectItem>
+                            <SelectItem value="current">Current Account</SelectItem>
+                            <SelectItem value="cheque">Cheque Account</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     <div>
                       <label className="text-sm font-medium text-foreground mb-2 block">
-                        Account Holder Name
+                        Account Number *
+                      </label>
+                      <Input
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value.replace(/[^0-9]/g, '').slice(0, 16))}
+                        placeholder="Enter your account number"
+                        type="text"
+                        maxLength={16}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">8-16 digit account number</p>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Account Holder Name *
                       </label>
                       <Input
                         value={accountName}
                         onChange={(e) => setAccountName(e.target.value)}
-                        placeholder="Name as it appears on account"
+                        placeholder="Full name as registered with bank"
                         type="text"
+                        maxLength={100}
                       />
+                      <p className="text-xs text-muted-foreground mt-1">Must match your bank records exactly</p>
                     </div>
-                  </>
+
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Phone Number (for verification) *
+                      </label>
+                      <Input
+                        value={bankPhoneNumber}
+                        onChange={(e) => setBankPhoneNumber(e.target.value)}
+                        placeholder="e.g., 0971234567"
+                        type="tel"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Linked to your bank account</p>
+                    </div>
+                  </div>
                 )}
 
                 <div className="bg-secondary rounded-2xl p-4">
