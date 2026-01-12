@@ -1527,8 +1527,29 @@ serve(async (req) => {
       researchSection = '\n## ⚠️ NO VERIFIED RESEARCH AVAILABLE\nNo external research was performed for this query. You MUST:\n- Base your response on general principles ONLY\n- NOT cite specific case names or citations unless from verified research\n- Provide search links for the student to find authoritative sources themselves\n- Clearly indicate when information should be verified';
     }
 
-    // Build system prompt using string concatenation to avoid Deno template literal parsing issues
-    // This is a discipline-adaptive prompt that adjusts based on the student's school
+    // Get user's school for personalization
+    const userSchoolFromContext = userContext.includes('School: LMV Law') ? 'law' : 
+                                   userContext.includes('School: LMV Business') ? 'business' : 
+                                   userContext.includes('School: LMV Health') ? 'health' : 'law';
+
+    // Condensed prompt for simple queries (faster processing)
+    const buildSimplePrompt = () => {
+      let prompt = 'You are Lumina, an AI study companion at LMV Academy. ';
+      prompt += 'Be professional, encouraging, and helpful. ';
+      if (userSchoolFromContext === 'law') {
+        prompt += 'Focus on legal reasoning and case law. ';
+      } else if (userSchoolFromContext === 'business') {
+        prompt += 'Focus on business concepts and practical applications. ';
+      } else if (userSchoolFromContext === 'health') {
+        prompt += 'Focus on clinical reasoning and evidence-based practice. ';
+      }
+      prompt += 'Use Markdown for formatting. Be concise but thorough. ';
+      prompt += 'DO NOT write assignments or provide professional advice. ';
+      prompt += 'Cite sources when available.';
+      return prompt;
+    };
+
+    // Build full system prompt for complex queries
     let systemPrompt = 'You are Lumina, an elite AI study companion for students at Luminary Innovision Academy (LMV). ';
     systemPrompt += 'LMV has three schools: Law, Business, and Health Sciences. ';
     systemPrompt += 'Your persona adapts to each discipline while maintaining core qualities: professional, encouraging, and highly knowledgeable.\n\n';
@@ -1688,10 +1709,11 @@ The student is sharing their thoughts or feelings. Respond with empathy and vali
 If they want to save their reflection, USE THE create_journal_entry tool to save it.`;
     }
 
-    // Determine model based on query complexity
-    // Use faster gemini-2.5-flash-lite for simple queries, gemini-2.5-flash for complex tasks
-    const isComplexQuery = needsResearch || hasImages || hasPdfContent || action === 'zambialii' || action === 'summarise';
-    const model = isComplexQuery ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash-lite";
+    // Determine model based on query complexity - prioritize speed
+    // Use faster gemini-3-flash-preview for most queries (best speed/quality balance)
+    // Only use heavier model for research synthesis and complex document analysis
+    const isHeavyTask = (needsResearch && researchContext) || (hasPdfContent && extractedPdfText.length > 5000);
+    const model = isHeavyTask ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview";
     
     console.log("Sending request to AI Gateway with action:", action || "general chat", "| Research mode:", needsResearch, "| Has images:", hasImages, "| Model:", model, "| Tools enabled: true");
     
@@ -1729,7 +1751,71 @@ ${extractedPdfText.length > 15000 ? '\n\n[Document truncated - showing first 150
 Please analyze this document content and help the student with their query about it.`;
     }
 
-    // Initial AI request with tools
+    // Check if this is likely a simple conversational query (no tools needed)
+    const isSimpleQuery = !action && 
+      !needsResearch && 
+      !hasImages && 
+      !hasPdfContent &&
+      lastUserMessage.length < 200 &&
+      !lastUserMessage.toLowerCase().includes('add') &&
+      !lastUserMessage.toLowerCase().includes('schedule') &&
+      !lastUserMessage.toLowerCase().includes('task') &&
+      !lastUserMessage.toLowerCase().includes('flashcard') &&
+      !lastUserMessage.toLowerCase().includes('quiz') &&
+      !lastUserMessage.toLowerCase().includes('journal');
+
+    // For simple queries, stream directly without tool handling for maximum speed
+    if (isSimpleQuery) {
+      const simplePrompt = buildSimplePrompt();
+      console.log("Fast path: Simple query, streaming directly | Model:", model, "| Prompt length:", simplePrompt.length);
+      
+      const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: simplePrompt },
+            ...messages,
+          ],
+          stream: true,
+        }),
+      });
+
+      if (!streamResponse.ok) {
+        const errorText = await streamResponse.text();
+        console.error("AI gateway error:", streamResponse.status, errorText);
+        
+        if (streamResponse.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (streamResponse.status === 402) {
+          return new Response(JSON.stringify({ error: "AI usage limit reached. Please contact support." }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        return new Response(JSON.stringify({ error: "AI service temporarily unavailable" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(streamResponse.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // For complex queries with potential tool usage, use non-streaming first
+    console.log("Tool path: Complex query | Model:", model, "| Action:", action || "general", "| Research:", needsResearch, "| Images:", hasImages);
+    
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -1744,7 +1830,7 @@ Please analyze this document content and help the student with their query about
         ],
         tools: LUMINA_TOOLS,
         tool_choice: "auto",
-        stream: false, // Disable streaming for tool calls
+        stream: false,
       }),
     });
 
