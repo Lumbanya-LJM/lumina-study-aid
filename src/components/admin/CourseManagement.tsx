@@ -36,6 +36,12 @@ interface Course {
   price: number;
   created_at: string;
   school: 'law' | 'business' | 'health' | null;
+  course_tutors: { tutor_id: string, profiles: { full_name: string } }[] | null;
+}
+
+interface Tutor {
+  id: string;
+  full_name: string | null;
 }
 
 interface ApiError {
@@ -45,6 +51,7 @@ interface ApiError {
 const CourseManagement: React.FC = () => {
   const { toast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -55,24 +62,36 @@ const CourseManagement: React.FC = () => {
     institution: 'ZIALE',
     price: 350,
     is_active: true,
-    school: 'law' as 'law' | 'business' | 'health'
+    school: 'law' as 'law' | 'business' | 'health',
+    tutor_id: ''
   });
 
-  const loadCourses = useCallback(async () => {
+  const loadCoursesAndTutors = useCallback(async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('academy_courses')
-        .select('*')
-        .order('institution', { ascending: true })
-        .order('name', { ascending: true });
+      const [coursesResult, tutorsResult] = await Promise.all([
+        supabase
+          .from('academy_courses')
+          .select('*, course_tutors(tutor_id, profiles(full_name))')
+          .order('institution', { ascending: true })
+          .order('name', { ascending: true }),
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('role', 'tutor')
+          .order('full_name', { ascending: true })
+      ]);
 
-      if (error) throw error;
-      setCourses(data || []);
+      if (coursesResult.error) throw coursesResult.error;
+      if (tutorsResult.error) throw tutorsResult.error;
+
+      setCourses(coursesResult.data || []);
+      setTutors(tutorsResult.data || []);
     } catch (error) {
-      console.error('Error loading courses:', error);
+      console.error('Error loading data:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load courses',
+        description: 'Failed to load courses or tutors',
         variant: 'destructive'
       });
     } finally {
@@ -81,8 +100,8 @@ const CourseManagement: React.FC = () => {
   }, [toast]);
 
   useEffect(() => {
-    loadCourses();
-  }, [loadCourses]);
+    loadCoursesAndTutors();
+  }, [loadCoursesAndTutors]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +109,8 @@ const CourseManagement: React.FC = () => {
 
     setSaving(true);
     try {
+      let courseId = editingCourse?.id;
+
       if (editingCourse) {
         const { error } = await supabase
           .from('academy_courses')
@@ -106,7 +127,7 @@ const CourseManagement: React.FC = () => {
         if (error) throw error;
         toast({ title: 'Success', description: 'Course updated successfully' });
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('academy_courses')
           .insert({
             name: formData.name.trim(),
@@ -115,15 +136,33 @@ const CourseManagement: React.FC = () => {
             price: formData.price,
             is_active: formData.is_active,
             school: formData.school
-          });
+          })
+          .select('id')
+          .single();
 
         if (error) throw error;
+        courseId = data.id;
         toast({ title: 'Success', description: 'Course added successfully' });
+      }
+
+      // Handle tutor assignment
+      if (courseId && formData.tutor_id) {
+        const { error: tutorError } = await supabase
+          .from('course_tutors')
+          .upsert(
+            { course_id: courseId, tutor_id: formData.tutor_id },
+            { onConflict: 'course_id' }
+          );
+
+        if (tutorError) throw tutorError;
+      } else if (courseId) {
+        // If no tutor is selected, remove any existing assignment
+        await supabase.from('course_tutors').delete().eq('course_id', courseId);
       }
 
       setDialogOpen(false);
       resetForm();
-      loadCourses();
+      loadCoursesAndTutors();
     } catch (error) {
       console.error('Error saving course:', error);
       toast({
@@ -144,7 +183,8 @@ const CourseManagement: React.FC = () => {
       institution: course.institution || 'ZIALE',
       price: course.price,
       is_active: course.is_active ?? true,
-      school: course.school || 'law'
+      school: course.school || 'law',
+      tutor_id: course.course_tutors?.[0]?.tutor_id || ''
     });
     setDialogOpen(true);
   };
@@ -157,7 +197,7 @@ const CourseManagement: React.FC = () => {
         .eq('id', course.id);
 
       if (error) throw error;
-      loadCourses();
+      loadCoursesAndTutors();
       toast({
         title: 'Success',
         description: `Course ${course.is_active ? 'deactivated' : 'activated'}`
@@ -182,7 +222,7 @@ const CourseManagement: React.FC = () => {
         .eq('id', courseId);
 
       if (error) throw error;
-      loadCourses();
+      loadCoursesAndTutors();
       toast({ title: 'Success', description: 'Course deleted successfully' });
     } catch (error) {
       const apiError = error as ApiError;
@@ -205,7 +245,8 @@ const CourseManagement: React.FC = () => {
       institution: 'ZIALE',
       price: 350,
       is_active: true,
-      school: 'law'
+      school: 'law',
+      tutor_id: ''
     });
   };
 
@@ -310,6 +351,26 @@ const CourseManagement: React.FC = () => {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="tutor">Assign Tutor</Label>
+                <Select
+                  value={formData.tutor_id}
+                  onValueChange={(value) => setFormData({ ...formData, tutor_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a tutor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {tutors.map((tutor) => (
+                      <SelectItem key={tutor.id} value={tutor.id}>
+                        {tutor.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">Price (ZMW)</Label>
@@ -409,29 +470,41 @@ const CourseItem: React.FC<{
   onEdit: (course: Course) => void;
   onToggle: (course: Course) => void;
   onDelete: (id: string) => void;
-}> = ({ course, onEdit, onToggle, onDelete }) => (
-  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-2">
-        <p className="font-medium text-sm truncate">{course.name}</p>
-        <Badge variant={course.is_active ? 'default' : 'secondary'} className="text-xs">
-          {course.is_active ? 'Active' : 'Inactive'}
-        </Badge>
+}> = ({ course, onEdit, onToggle, onDelete }) => {
+  const assignedTutor = course.course_tutors?.[0]?.profiles?.full_name;
+
+  return (
+    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-sm truncate">{course.name}</p>
+          <Badge variant={course.is_active ? 'default' : 'secondary'} className="text-xs">
+            {course.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>K{course.price}</span>
+          {assignedTutor && (
+            <>
+              <span>•</span>
+              <span>{assignedTutor}</span>
+            </>
+          )}
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground">K{course.price}</p>
+      <div className="flex items-center gap-1 ml-2">
+        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onToggle(course)}>
+          {course.is_active ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+        </Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onEdit(course)}>
+          <Edit2 className="w-4 h-4" />
+        </Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => onDelete(course.id)}>
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
-    <div className="flex items-center gap-1 ml-2">
-      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onToggle(course)}>
-        {course.is_active ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-      </Button>
-      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onEdit(course)}>
-        <Edit2 className="w-4 h-4" />
-      </Button>
-      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => onDelete(course.id)}>
-        <Trash2 className="w-4 h-4" />
-      </Button>
-    </div>
-  </div>
-);
+  );
+};
 
 export default CourseManagement;

@@ -658,7 +658,7 @@ const LuminaAcademyPage: React.FC = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => window.open(recording.recording_url!, '_blank')}
+                              onClick={() => navigate(`/recordings?classId=${recording.id}`)}
                             >
                               <Play className="w-4 h-4 mr-1" />
                               Watch
