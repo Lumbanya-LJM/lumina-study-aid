@@ -269,46 +269,15 @@ const TeachDashboardPage: React.FC = () => {
     if (!user) return;
     
     try {
-      // First, get the tutor's approved application to find their assigned courses
-      const { data: tutorApp } = await supabase
-        .from('tutor_applications')
-        .select('selected_courses')
-        .eq('user_id', user.id)
-        .eq('status', 'approved')
-        .single();
+      // Fetch courses assigned to this tutor from the new course_tutors table
+      const { data: assignedCourses, error: assignedError } = await supabase
+        .from('course_tutors')
+        .select('academy_courses(*)')
+        .eq('tutor_id', user.id);
 
-      const tutorCourseValues = tutorApp?.selected_courses || [];
+      if (assignedError) throw assignedError;
 
-      // If tutor has assigned courses, filter by them; otherwise show empty
-      // Note: selected_courses may contain course names OR UUIDs (legacy data)
-      // We need to check both formats for compatibility
-      let coursesData: Course[] = [];
-      if (tutorCourseValues.length > 0) {
-        // Separate potential UUIDs from course names
-        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        const courseIds = tutorCourseValues.filter(v => uuidPattern.test(v));
-        const courseNames = tutorCourseValues.filter(v => !uuidPattern.test(v));
-        
-        // Query by both IDs and names
-        let query = supabase
-          .from('academy_courses')
-          .select('*')
-          .eq('is_active', true);
-        
-        if (courseIds.length > 0 && courseNames.length > 0) {
-          // Has both UUIDs and names - use OR filter
-          query = query.or(`id.in.(${courseIds.join(',')}),name.in.(${courseNames.join(',')})`);
-        } else if (courseIds.length > 0) {
-          query = query.in('id', courseIds);
-        } else {
-          query = query.in('name', courseNames);
-        }
-
-        const { data, error: coursesError } = await query;
-
-        if (coursesError) throw coursesError;
-        coursesData = data || [];
-      }
+      const coursesData = assignedCourses?.map(c => c.academy_courses).filter(Boolean) as Course[] || [];
 
       setCourses(coursesData);
       
