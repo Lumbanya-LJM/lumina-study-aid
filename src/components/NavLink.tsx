@@ -18,6 +18,7 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
           cn(className, isActive && activeClassName, isPending && pendingClassName)
         }
         {...props}
+        aria-current={props["aria-current"] ?? (({ isActive }) => (isActive ? "page" : undefined))}
       />
     );
   },
