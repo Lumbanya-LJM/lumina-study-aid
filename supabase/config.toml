@@ -83,3 +83,12 @@ verify_jwt = false
 
 [functions.sync-recordings]
 verify_jwt = false
+
+[functions.create-daily-meeting]
+verify_jwt = false
+
+[functions.ingest-transcript-line]
+verify_jwt = false
+
+[functions.query-meeting-assistant]
+verify_jwt = false
