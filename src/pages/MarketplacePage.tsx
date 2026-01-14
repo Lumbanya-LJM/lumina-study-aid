@@ -158,15 +158,25 @@ const MarketplacePage: React.FC = () => {
     return false;
   };
 
+  // Track ongoing free access grants to prevent duplicates
+  const grantingAccessRef = React.useRef<Set<string>>(new Set());
+
   const handlePurchase = async (classItem: MarketplaceClass, type: 'live' | 'recording') => {
     if (!user) {
       navigate('/auth');
       return;
     }
 
+    // Prevent duplicate clicks
+    if (processingPurchase === classItem.id || grantingAccessRef.current.has(classItem.id)) {
+      console.log('Purchase already in progress for this class');
+      return;
+    }
+
     // Check if user has free access (subscription or course enrollment)
     if (hasFreeAccess(classItem)) {
       // Grant access without payment - just record as K0 purchase
+      grantingAccessRef.current.add(classItem.id);
       setProcessingPurchase(classItem.id);
       try {
         const { error } = await supabase
@@ -196,6 +206,7 @@ const MarketplacePage: React.FC = () => {
         });
       } finally {
         setProcessingPurchase(null);
+        grantingAccessRef.current.delete(classItem.id);
       }
       return;
     }

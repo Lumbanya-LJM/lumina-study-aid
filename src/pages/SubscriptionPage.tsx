@@ -199,7 +199,16 @@ const SubscriptionPage: React.FC = () => {
     return selectedCourses.length * 350;
   };
 
+  // Use a ref to prevent double submissions
+  const isProcessingRef = React.useRef(false);
+
   const processPayment = async () => {
+    // Prevent double submission
+    if (isLoading || isProcessingRef.current) {
+      console.log('Payment already in progress, ignoring duplicate click');
+      return;
+    }
+
     // Validate based on payment method
     if (paymentMethod === 'mobile_money') {
       if (!phoneNumber.trim()) {
@@ -229,7 +238,10 @@ const SubscriptionPage: React.FC = () => {
       }
     }
 
+    // Set both ref and state to prevent any race conditions
+    isProcessingRef.current = true;
     setIsLoading(true);
+    
     try {
       const amount = calculateTotal();
       
@@ -308,6 +320,7 @@ const SubscriptionPage: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
+      isProcessingRef.current = false;
     }
   };
 
