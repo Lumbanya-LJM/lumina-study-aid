@@ -36,7 +36,8 @@ interface Course {
   price: number;
   created_at: string;
   school: 'law' | 'business' | 'health' | null;
-  course_tutors: { tutor_id: string, profiles: { full_name: string } }[] | null;
+  tutor_id: string | null;
+  tutor_profile?: { full_name: string | null } | null;
 }
 
 interface Tutor {
@@ -69,24 +70,47 @@ const CourseManagement: React.FC = () => {
   const loadCoursesAndTutors = useCallback(async () => {
     setLoading(true);
     try {
-      const [coursesResult, tutorsResult] = await Promise.all([
-        supabase
-          .from('academy_courses')
-          .select('*, course_tutors(tutor_id, profiles(full_name))')
-          .order('institution', { ascending: true })
-          .order('name', { ascending: true }),
-        supabase
+      // Fetch courses - tutor_id is directly on academy_courses
+      const { data: coursesData, error: coursesError } = await supabase
+        .from('academy_courses')
+        .select('*')
+        .order('institution', { ascending: true })
+        .order('name', { ascending: true });
+
+      if (coursesError) throw coursesError;
+
+      // Get tutor profiles for any courses with tutor_id
+      const tutorIds = [...new Set(coursesData?.filter(c => c.tutor_id).map(c => c.tutor_id) || [])];
+      let tutorProfiles: Record<string, string | null> = {};
+      
+      if (tutorIds.length > 0) {
+        const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, full_name')
-          .eq('role', 'tutor')
-          .order('full_name', { ascending: true })
-      ]);
+          .select('user_id, full_name')
+          .in('user_id', tutorIds);
+        
+        tutorProfiles = (profiles || []).reduce((acc, p) => {
+          acc[p.user_id] = p.full_name;
+          return acc;
+        }, {} as Record<string, string | null>);
+      }
 
-      if (coursesResult.error) throw coursesResult.error;
-      if (tutorsResult.error) throw tutorsResult.error;
+      // Merge tutor info into courses
+      const coursesWithTutors: Course[] = (coursesData || []).map(c => ({
+        ...c,
+        tutor_profile: c.tutor_id ? { full_name: tutorProfiles[c.tutor_id] || null } : null
+      }));
 
-      setCourses(coursesResult.data || []);
-      setTutors(tutorsResult.data || []);
+      // Fetch all tutors for the dropdown
+      const { data: allTutors, error: tutorsError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .order('full_name', { ascending: true });
+
+      if (tutorsError) throw tutorsError;
+
+      setCourses(coursesWithTutors);
+      setTutors((allTutors || []).map(t => ({ id: t.user_id, full_name: t.full_name })));
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -145,19 +169,14 @@ const CourseManagement: React.FC = () => {
         toast({ title: 'Success', description: 'Course added successfully' });
       }
 
-      // Handle tutor assignment
-      if (courseId && formData.tutor_id) {
+      // Handle tutor assignment - tutor_id is directly on academy_courses
+      if (courseId) {
         const { error: tutorError } = await supabase
-          .from('course_tutors')
-          .upsert(
-            { course_id: courseId, tutor_id: formData.tutor_id },
-            { onConflict: 'course_id' }
-          );
+          .from('academy_courses')
+          .update({ tutor_id: formData.tutor_id || null })
+          .eq('id', courseId);
 
         if (tutorError) throw tutorError;
-      } else if (courseId) {
-        // If no tutor is selected, remove any existing assignment
-        await supabase.from('course_tutors').delete().eq('course_id', courseId);
       }
 
       setDialogOpen(false);
@@ -184,7 +203,7 @@ const CourseManagement: React.FC = () => {
       price: course.price,
       is_active: course.is_active ?? true,
       school: course.school || 'law',
-      tutor_id: course.course_tutors?.[0]?.tutor_id || ''
+      tutor_id: course.tutor_id || ''
     });
     setDialogOpen(true);
   };
@@ -471,7 +490,7 @@ const CourseItem: React.FC<{
   onToggle: (course: Course) => void;
   onDelete: (id: string) => void;
 }> = ({ course, onEdit, onToggle, onDelete }) => {
-  const assignedTutor = course.course_tutors?.[0]?.profiles?.full_name;
+  const assignedTutor = course.tutor_profile?.full_name;
 
   return (
     <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
