@@ -269,15 +269,15 @@ const TeachDashboardPage: React.FC = () => {
     if (!user) return;
     
     try {
-      // Fetch courses assigned to this tutor from the new course_tutors table
+      // Fetch courses assigned to this tutor - tutor_id is directly on academy_courses
       const { data: assignedCourses, error: assignedError } = await supabase
-        .from('course_tutors')
-        .select('academy_courses(*)')
+        .from('academy_courses')
+        .select('*')
         .eq('tutor_id', user.id);
 
       if (assignedError) throw assignedError;
 
-      const coursesData = assignedCourses?.map(c => c.academy_courses).filter(Boolean) as Course[] || [];
+      const coursesData = (assignedCourses || []) as Course[];
 
       setCourses(coursesData);
       
