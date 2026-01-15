@@ -271,13 +271,14 @@ const LuminaAcademyPage: React.FC = () => {
 
       setScheduledClasses(scheduledData || []);
 
-      // Load recordings (ended classes with recording_url)
+      // Load recordings (ended classes with valid recording_url)
       const { data: recordingsData } = await supabase
         .from('live_classes')
         .select('*')
         .eq('course_id', courseId)
         .eq('status', 'ended')
         .not('recording_url', 'is', null)
+        .neq('recording_url', 'no_recording_available')
         .order('ended_at', { ascending: false });
 
       setRecordings(recordingsData || []);

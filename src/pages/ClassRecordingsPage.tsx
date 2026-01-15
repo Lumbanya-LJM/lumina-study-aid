@@ -140,6 +140,7 @@ const ClassRecordingsPage: React.FC = () => {
         .eq("status", "ended")
         .eq("is_archived", false)
         .not("recording_url", "is", null)
+        .neq("recording_url", "no_recording_available")
         .order("ended_at", { ascending: false });
 
       setRecordings(recordingsData || []);
@@ -151,6 +152,7 @@ const ClassRecordingsPage: React.FC = () => {
         .eq("status", "ended")
         .eq("is_archived", true)
         .not("recording_url", "is", null)
+        .neq("recording_url", "no_recording_available")
         .order("ended_at", { ascending: false });
 
       setArchivedRecordings(archivedData || []);
@@ -266,32 +268,44 @@ const ClassRecordingsPage: React.FC = () => {
     };
   }, [loadClasses]);
 
-  // Poll for pending recordings every 30 seconds
+  // Poll for pending recordings every 10 seconds (more aggressive polling)
   useEffect(() => {
     if (pendingRecordings.length === 0) return;
+
+    // Immediately trigger a sync when pending recordings are detected
+    const triggerSync = async () => {
+      console.log("Triggering sync for pending recordings...");
+      try {
+        const { data } = await supabase.functions.invoke("sync-recordings");
+        console.log("Sync result:", data?.results);
+        if (data?.results?.synced > 0) {
+          loadClasses();
+        }
+      } catch (error) {
+        console.error("Error syncing recordings:", error);
+      }
+    };
+    
+    // Trigger immediately on mount if there are pending recordings
+    triggerSync();
 
     const interval = setInterval(async () => {
       console.log("Checking for pending recordings...");
       
-      for (const pending of pendingRecordings) {
-        try {
-          const { data } = await supabase.functions.invoke("daily-room", {
-            body: {
-              action: "get-recordings",
-              roomName: pending.daily_room_name,
-            },
-          });
-
-          if (data?.recordings?.length > 0) {
-            console.log(`Recording now available for class ${pending.id}`);
-            loadClasses();
-            break;
-          }
-        } catch (error) {
-          console.error("Error checking recording status:", error);
+      // Call sync-recordings instead of individual room checks
+      try {
+        const { data } = await supabase.functions.invoke("sync-recordings");
+        
+        if (data?.results?.synced > 0) {
+          console.log(`${data.results.synced} recordings now available!`);
+          loadClasses();
+        } else if (data?.results?.notReady > 0) {
+          console.log(`${data.results.notReady} recordings still processing...`);
         }
+      } catch (error) {
+        console.error("Error checking recording status:", error);
       }
-    }, 30000);
+    }, 10000); // Poll every 10 seconds instead of 30
 
     return () => clearInterval(interval);
   }, [pendingRecordings, loadClasses]);

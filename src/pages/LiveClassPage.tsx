@@ -623,6 +623,27 @@ const LiveClassPage: React.FC = () => {
         description: "The recording will be processed and available shortly.",
       });
 
+      // Trigger recording sync after a delay to allow Daily.co to process
+      // First sync after 15s, then again after 45s if still not ready
+      setTimeout(async () => {
+        console.log("[LiveClass] Triggering first recording sync (15s after class end)...");
+        try {
+          const { data } = await supabase.functions.invoke("sync-recordings");
+          console.log("[LiveClass] First sync result:", data?.results);
+          
+          // If still not synced, try again in 30 more seconds
+          if (data?.results?.synced === 0 && data?.results?.notReady > 0) {
+            setTimeout(async () => {
+              console.log("[LiveClass] Triggering second recording sync (45s after class end)...");
+              const { data: retryData } = await supabase.functions.invoke("sync-recordings");
+              console.log("[LiveClass] Second sync result:", retryData?.results);
+            }, 30000);
+          }
+        } catch (syncError) {
+          console.error("[LiveClass] Recording sync failed:", syncError);
+        }
+      }, 15000);
+
       navigate("/recordings");
     } catch (error) {
       console.error("Error ending class:", error);
