@@ -25,14 +25,17 @@ serve(async (req) => {
     const eventType = payload.type;
     const roomName = payload.room_name || payload.payload?.room_name;
 
-    // Handle recording.ready-to-download event
-    if (eventType === "recording.ready-to-download") {
-      console.log("Recording ready to download for room:", roomName);
+    console.log("Processing event type:", eventType, "for room:", roomName);
 
-      const recordingData = payload.payload;
+    // Handle recording.ready-to-download OR recording.finished events
+    // Daily.co may send different event types depending on configuration
+    if (eventType === "recording.ready-to-download" || eventType === "recording.finished" || eventType === "recording.completed") {
+      console.log("Recording ready event for room:", roomName);
+
+      const recordingData = payload.payload || payload;
       const recordingUrl = recordingData.download_link;
       const durationSeconds = recordingData.duration || 0;
-      const recordingId = recordingData.recording_id;
+      const recordingId = recordingData.recording_id || recordingData.id;
 
       // Find the live class by room name
       const { data: liveClass, error: findError } = await supabase
