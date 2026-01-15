@@ -273,7 +273,11 @@ const MarketplacePage: React.FC = () => {
   );
 
   const upcomingClasses = filteredClasses.filter(c => c.status === 'scheduled' || c.status === 'live');
-  const recordingsAvailable = filteredClasses.filter(c => c.status === 'ended' && c.recording_url);
+  const recordingsAvailable = filteredClasses.filter(c => 
+    c.status === 'ended' && 
+    c.recording_url && 
+    c.recording_url !== 'no_recording_available'
+  );
 
   const ClassCard: React.FC<{ item: MarketplaceClass; type: 'live' | 'recording' }> = ({ item, type }) => {
     const isPurchased = purchases.has(item.id);
