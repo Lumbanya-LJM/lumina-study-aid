@@ -3,11 +3,9 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { useMeetingAssistant } from "@/hooks/useMeetingAssistant";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MeetingAssistantPanel } from "@/components/liveclass/MeetingAssistantPanel";
-import { Loader2, Video, ArrowLeft, Clock, Mic, Camera, Users, PhoneOff, MonitorUp, ExternalLink, Minimize2, Maximize2, Home, Crown, PictureInPicture2, Circle, Sparkles, Timer, MessageSquare } from "lucide-react";
+import { Loader2, Video, ArrowLeft, Clock, Mic, Camera, Users, PhoneOff, MonitorUp, ExternalLink, Minimize2, Maximize2, Home, Crown, PictureInPicture2, Circle, Timer } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import lmvLogo from "@/assets/lmv-logo.png";
@@ -42,22 +40,9 @@ const LiveClassPage: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingStarting, setRecordingStarting] = useState(false);
   const [classDuration, setClassDuration] = useState(0);
-  const [aiAssistEnabled, setAiAssistEnabled] = useState(false);
-  const [showAssistantPanel, setShowAssistantPanel] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Meeting assistant hook for AI features
-  const {
-    meetingId: aiMeetingId,
-    transcriptLines,
-    isQueryingAssistant,
-    createMeeting: createAiMeeting,
-    ingestTranscript,
-    queryAssistant,
-    endMeeting: endAiMeeting
-  } = useMeetingAssistant();
 
   // Get user display name from profile
   const getUserName = useCallback(() => {
@@ -207,19 +192,11 @@ const LiveClassPage: React.FC = () => {
       if (event.data?.action === "recording-stopped") {
         setIsRecording(false);
       }
-      
-      // Handle transcription events for AI assistant
-      if (event.data?.action === "transcription-message" && aiAssistEnabled && aiMeetingId) {
-        const { text, participantId, userName } = event.data;
-        if (text && text.trim()) {
-          ingestTranscript(userName || participantId || 'Unknown', text);
-        }
-      }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [aiAssistEnabled, aiMeetingId, ingestTranscript]);
+  }, []);
 
   const handleJoinMeeting = async () => {
     if (!liveClass?.daily_room_url) {
@@ -548,24 +525,6 @@ const LiveClassPage: React.FC = () => {
     }
   };
 
-  const toggleAiAssist = async () => {
-    if (!aiAssistEnabled && liveClass && user?.id) {
-      // Create AI meeting session when enabling
-      await createAiMeeting(liveClass.id, liveClass.title, user.id);
-      setShowAssistantPanel(true);
-    } else if (aiAssistEnabled) {
-      await endAiMeeting();
-      setShowAssistantPanel(false);
-    }
-    setAiAssistEnabled(!aiAssistEnabled);
-    toast({
-      title: aiAssistEnabled ? "AI Assist Disabled" : "AI Assist Enabled",
-      description: aiAssistEnabled 
-        ? "AI note-taking has been turned off." 
-        : "AI will take notes and generate a summary. Open the panel to interact.",
-    });
-  };
-
   const handleEndClass = async () => {
     if (!liveClass) return;
 
@@ -883,83 +842,14 @@ const LiveClassPage: React.FC = () => {
             </div>
 
             {/* Bottom controls bar */}
-            <div className="bg-card border-t p-4">
-              <div className="flex items-center justify-center gap-3 max-w-2xl mx-auto flex-wrap">
-                {/* AI Assist Toggle */}
-                <Button
-                  variant={aiAssistEnabled ? "default" : "outline"}
-                  size="lg"
-                  onClick={toggleAiAssist}
-                  className={cn("gap-2", aiAssistEnabled && "bg-primary")}
-                >
-                  <Sparkles className="h-4 w-4" />
-                  AI Assist
-                </Button>
-
-                {/* Show/Hide AI Panel */}
-                {aiAssistEnabled && (
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => setShowAssistantPanel(!showAssistantPanel)}
-                    className="gap-2"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    {showAssistantPanel ? 'Hide Panel' : 'Show Panel'}
-                  </Button>
-                )}
-
-                {/* Recording controls - Host only */}
-                {isHost && (
-                  <>
-                    {isRecording ? (
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={handleStopRecording}
-                        className="gap-2 border-red-500/50 text-red-500 hover:bg-red-500/10"
-                      >
-                        <Circle className="h-4 w-4 fill-red-500" />
-                        Stop Recording
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={handleStartRecording}
-                        disabled={recordingStarting}
-                        className="gap-2"
-                      >
-                        {recordingStarting ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Starting Recording…
-                          </>
-                        ) : (
-                          <>
-                            <Circle className="h-4 w-4" />
-                            Start Recording
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </>
-                )}
-
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleLeaveCall}
-                  className="gap-2"
-                >
-                  <PhoneOff className="h-4 w-4" />
-                  Leave Class
-                </Button>
-
+            {/* Minimal control bar - only essential buttons not in Daily UI */}
+            <div className="bg-card border-t p-3">
+              <div className="flex items-center justify-center gap-3 max-w-xl mx-auto flex-wrap">
+                {/* End Class - Host only (not available in Daily UI) */}
                 {isHost && (
                   <Button
                     variant="destructive"
-                    size="lg"
+                    size="default"
                     onClick={handleEndClass}
                     disabled={ending}
                     className="gap-2"
@@ -978,9 +868,10 @@ const LiveClassPage: React.FC = () => {
                   </Button>
                 )}
 
+                {/* Minimize/PiP - unique to our app */}
                 <Button
                   variant="ghost"
-                  size="lg"
+                  size="default"
                   onClick={() => setIsMinimized(true)}
                   className="gap-2"
                 >
@@ -991,7 +882,7 @@ const LiveClassPage: React.FC = () => {
                 {document.pictureInPictureEnabled && (
                   <Button
                     variant="ghost"
-                    size="lg"
+                    size="default"
                     onClick={togglePiP}
                     className="gap-2"
                   >
@@ -1002,15 +893,6 @@ const LiveClassPage: React.FC = () => {
               </div>
             </div>
 
-            {/* AI Meeting Assistant Panel */}
-            <MeetingAssistantPanel
-              meetingId={aiMeetingId}
-              isOpen={showAssistantPanel && aiAssistEnabled}
-              onClose={() => setShowAssistantPanel(false)}
-              transcriptLines={transcriptLines}
-              onQueryAssistant={queryAssistant}
-              isQueryingAssistant={isQueryingAssistant}
-            />
           </>
         ) : (
           /* Pre-join screen */
