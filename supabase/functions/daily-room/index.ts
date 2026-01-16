@@ -32,11 +32,11 @@ serve(async (req) => {
           enable_chat: true,
           enable_screenshare: true,
           enable_recording: "cloud",
-          // Recording is plan-dependent in Daily; we don't request it at room-creation time.
-          enable_transcription_storage: true, // Store transcriptions (if supported by plan)
+          enable_transcription_storage: true, // Store transcriptions
+          enable_advanced_chat: true, // Enable Daily's AI chat features
+          enable_live_captions_ui: true, // Enable live captions UI
           start_video_off: false,
           start_audio_off: false,
-          // max_participants removed - uses Daily.co plan default
           exp: Math.floor(Date.now() / 1000) + (expiresInMinutes * 60),
           eject_at_room_exp: true,
           enable_prejoin_ui: true,
