@@ -14,48 +14,51 @@ import { CommandPalette } from "@/components/premium/CommandPalette";
 import { AchievementConfetti } from "@/components/premium/AchievementConfetti";
 import { CelebrationProvider } from "@/components/premium/ProgressCelebration";
 import { GlobalLiveClassBanner } from "@/components/layout/GlobalLiveClassBanner";
-import SplashScreen from "./pages/SplashScreen";
-import WelcomePage from "./pages/WelcomePage";
-import RoleSelectionPage from "./pages/RoleSelectionPage";
-import AuthPage from "./pages/AuthPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import HomePage from "./pages/HomePage";
-import ChatPage from "./pages/ChatPage";
-import PlannerPage from "./pages/PlannerPage";
-import LibraryPage from "./pages/LibraryPage";
-import FocusView from "@/features/focus/FocusView";
-import JournalPage from "./pages/JournalPage";
-import ProfilePage from "./pages/ProfilePage";
-import SettingsPage from "./pages/SettingsPage";
-import AnalyticsDashboardPage from "./pages/AnalyticsDashboardPage";
-import StudyAnalyticsPage from "./pages/StudyAnalyticsPage";
+import React, { Suspense } from "react";
+import { Spinner } from "@/components/ui/spinner";
+// ⚡ Bolt: Lazily load pages to improve initial load time.
+const SplashScreen = React.lazy(() => import("./pages/SplashScreen"));
+const WelcomePage = React.lazy(() => import("./pages/WelcomePage"));
+const RoleSelectionPage = React.lazy(() => import("./pages/RoleSelectionPage"));
+const AuthPage = React.lazy(() => import("./pages/AuthPage"));
+const ForgotPasswordPage = React.lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
+const HomePage = React.lazy(() => import("./pages/HomePage"));
+const ChatPage = React.lazy(() => import("./pages/ChatPage"));
+const PlannerPage = React.lazy(() => import("./pages/PlannerPage"));
+const LibraryPage = React.lazy(() => import("./pages/LibraryPage"));
+const FocusView = React.lazy(() => import("@/features/focus/FocusView"));
+const JournalPage = React.lazy(() => import("./pages/JournalPage"));
+const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
+const SettingsPage = React.lazy(() => import("./pages/SettingsPage"));
+const AnalyticsDashboardPage = React.lazy(() => import("./pages/AnalyticsDashboardPage"));
+const StudyAnalyticsPage = React.lazy(() => import("./pages/StudyAnalyticsPage"));
 
-import PartnerPage from "./pages/PartnerPage";
-import UploadPage from "./pages/UploadPage";
-import LuminaVaultPage from "./pages/StudyLockerPage";
-import AdminContentPage from "./pages/AdminContentPage";
-import QuizPage from "./pages/QuizPage";
-import FlashcardsPage from "./pages/FlashcardsPage";
-import SubscriptionPage from "./pages/SubscriptionPage";
-import InstallPage from "./pages/InstallPage";
-import SupportPage from "./pages/SupportPage";
-import NotificationsPage from "./pages/NotificationsPage";
-import AchievementsPage from "./pages/AchievementsPage";
-import CommunityPage from "./pages/CommunityPage";
-import LuminaAcademyPage from "./pages/LuminaAcademyPage";
-import AcademySelectionPage from "./pages/AcademySelectionPage";
-import TeachDashboardPage from "./pages/TeachDashboardPage";
-import LiveClassPage from "./pages/LiveClassPage";
-import ClassRecordingsPage from "./pages/ClassRecordingsPage";
-import TutorApplicationsAdminPage from "./pages/TutorApplicationsAdminPage";
-import TutorProfilePage from "./pages/TutorProfilePage";
-import AdminDashboardPage from "./pages/AdminDashboardPage";
-import AdminAuthPage from "./pages/AdminAuthPage";
-import MarketplacePage from "./pages/MarketplacePage";
-import TutorManagementPage from "./pages/TutorManagementPage";
-import SavedResearchPage from "./pages/SavedResearchPage";
-import NotFound from "./pages/NotFound";
+const PartnerPage = React.lazy(() => import("./pages/PartnerPage"));
+const UploadPage = React.lazy(() => import("./pages/UploadPage"));
+const LuminaVaultPage = React.lazy(() => import("./pages/StudyLockerPage"));
+const AdminContentPage = React.lazy(() => import("./pages/AdminContentPage"));
+const QuizPage = React.lazy(() => import("./pages/QuizPage"));
+const FlashcardsPage = React.lazy(() => import("./pages/FlashcardsPage"));
+const SubscriptionPage = React.lazy(() => import("./pages/SubscriptionPage"));
+const InstallPage = React.lazy(() => import("./pages/InstallPage"));
+const SupportPage = React.lazy(() => import("./pages/SupportPage"));
+const NotificationsPage = React.lazy(() => import("./pages/NotificationsPage"));
+const AchievementsPage = React.lazy(() => import("./pages/AchievementsPage"));
+const CommunityPage = React.lazy(() => import("./pages/CommunityPage"));
+const LuminaAcademyPage = React.lazy(() => import("./pages/LuminaAcademyPage"));
+const AcademySelectionPage = React.lazy(() => import("./pages/AcademySelectionPage"));
+const TeachDashboardPage = React.lazy(() => import("./pages/TeachDashboardPage"));
+const LiveClassPage = React.lazy(() => import("./pages/LiveClassPage"));
+const ClassRecordingsPage = React.lazy(() => import("./pages/ClassRecordingsPage"));
+const TutorApplicationsAdminPage = React.lazy(() => import("./pages/TutorApplicationsAdminPage"));
+const TutorProfilePage = React.lazy(() => import("./pages/TutorProfilePage"));
+const AdminDashboardPage = React.lazy(() => import("./pages/AdminDashboardPage"));
+const AdminAuthPage = React.lazy(() => import("./pages/AdminAuthPage"));
+const MarketplacePage = React.lazy(() => import("./pages/MarketplacePage"));
+const TutorManagementPage = React.lazy(() => import("./pages/TutorManagementPage"));
+const SavedResearchPage = React.lazy(() => import("./pages/SavedResearchPage"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
 import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
@@ -84,9 +87,16 @@ const App = () => {
             <AchievementConfetti />
             <CelebrationProvider />
             <GlobalLiveClassBanner />
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<SplashScreen />} />
+            <Suspense
+              fallback={
+                <div className="h-screen w-full flex items-center justify-center">
+                  <Spinner size="lg" />
+                </div>
+              }
+            >
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<SplashScreen />} />
               <Route path="/welcome" element={<WelcomePage />} />
               <Route path="/role-select" element={<RoleSelectionPage />} />
               <Route path="/auth" element={<AuthPage />} />
@@ -140,6 +150,7 @@ const App = () => {
               
               <Route path="*" element={<NotFound />} />
             </Routes>
+          </Suspense>
           </BrowserRouter>
           </TooltipProvider>
         </SchoolProvider>
