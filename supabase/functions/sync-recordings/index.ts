@@ -26,7 +26,7 @@ serve(async (req) => {
 
     console.log("Starting recording sync...");
 
-    // Get all ended classes without recordings
+    // Get all ended classes without recordings (recording_url is null or empty)
     const { data: pendingClasses, error: fetchError } = await supabase
       .from("live_classes")
       .select("id, title, daily_room_name, course_id, host_id, description")
@@ -80,56 +80,69 @@ serve(async (req) => {
         }
 
         console.log(`Found ${recordings.length} recordings for ${liveClass.daily_room_name}`);
-        console.log(`Recording statuses: ${recordings.map((r: any) => r.status).join(', ')}`);
+        console.log(`Recording statuses: ${recordings.map((r: any) => `${r.id}:${r.status}`).join(', ')}`);
 
-        // Find a completed/finished recording with download link
-        // Daily.co uses "finished" status when processing is complete
-        const completedRecording = recordings.find(
-          (r: any) => (r.status === "finished" || r.status === "completed") && r.download_link
+        // Find a completed/finished recording
+        // Daily.co uses "finished" or "completed" status when processing is complete
+        let targetRecording = recordings.find(
+          (r: any) => (r.status === "finished" || r.status === "completed")
         );
 
-        if (!completedRecording) {
+        if (!targetRecording) {
           // Check if there's a recording still processing
           const processingRecording = recordings.find(
-            (r: any) => r.status === "s3" || r.status === "processing" || r.status === "finished"
+            (r: any) => r.status === "s3" || r.status === "processing"
           );
           
           if (processingRecording) {
-            console.log(`Recording processing for ${liveClass.daily_room_name} - status: ${processingRecording.status}`);
-            
-            // If status is "finished" but no download_link, try to get it directly
-            if (processingRecording.status === "finished" && processingRecording.id) {
-              console.log(`Fetching individual recording details for: ${processingRecording.id}`);
-              
-              const recordingDetailRes = await fetch(
-                `https://api.daily.co/v1/recordings/${processingRecording.id}`,
-                {
-                  headers: { Authorization: `Bearer ${DAILY_API_KEY}` },
-                }
-              );
-              
-              if (recordingDetailRes.ok) {
-                const recordingDetail = await recordingDetailRes.json();
-                console.log(`Recording detail status: ${recordingDetail.status}, has download_link: ${!!recordingDetail.download_link}`);
-                
-                if (recordingDetail.download_link) {
-                  // We got the download link, process this recording
-                  await processRecording(supabase, liveClass, recordingDetail, DAILY_API_KEY, LOVABLE_API_KEY);
-                  results.synced++;
-                  continue;
-                }
-              }
-            }
+            console.log(`Recording still processing for ${liveClass.daily_room_name} - status: ${processingRecording.status}`);
+            results.notReady++;
+            continue;
           }
           
-          console.log(`Recording not ready for ${liveClass.daily_room_name}`);
+          console.log(`No finished recording for ${liveClass.daily_room_name}`);
+          results.noRecording++;
+          continue;
+        }
+
+        console.log(`Found finished recording ${targetRecording.id} for ${liveClass.title}`);
+
+        // Fetch fresh access-link for playback (not download_link which expires quickly)
+        const accessLinkRes = await fetch(
+          `https://api.daily.co/v1/recordings/${targetRecording.id}/access-link`,
+          {
+            headers: { Authorization: `Bearer ${DAILY_API_KEY}` },
+          }
+        );
+
+        let recordingUrl = targetRecording.download_link;
+        
+        if (accessLinkRes.ok) {
+          const accessData = await accessLinkRes.json();
+          if (accessData.download_link) {
+            recordingUrl = accessData.download_link;
+            console.log(`Got fresh access link for ${targetRecording.id}`);
+          }
+        } else {
+          console.log(`Could not get access-link for ${targetRecording.id}, using download_link`);
+        }
+
+        if (!recordingUrl) {
+          console.log(`No download URL available for ${targetRecording.id}`);
           results.notReady++;
           continue;
         }
 
-        console.log(`Found completed recording for ${liveClass.title}: ${completedRecording.id}`);
-
-        await processRecording(supabase, liveClass, completedRecording, DAILY_API_KEY, LOVABLE_API_KEY);
+        await processRecording(
+          supabase, 
+          liveClass, 
+          { 
+            ...targetRecording, 
+            download_link: recordingUrl 
+          }, 
+          DAILY_API_KEY, 
+          LOVABLE_API_KEY
+        );
         results.synced++;
 
       } catch (classError) {
@@ -170,10 +183,12 @@ async function processRecording(
   console.log(`Processing recording ${recording.id} for class ${liveClass.title}`);
 
   // Update the live class with recording info
+  // Store recording_id so we can mint fresh access links when users watch
   const { error: updateError } = await supabase
     .from("live_classes")
     .update({
       recording_url: recording.download_link,
+      recording_id: recording.id,
       recording_duration_seconds: recording.duration || 0,
     })
     .eq("id", liveClass.id);
@@ -217,7 +232,7 @@ async function processRecording(
           }
         }
       } else {
-        console.log(`Transcript not available for recording ${recording.id}`);
+        console.log(`Transcript not available for recording ${recording.id}: ${transcriptResponse.status}`);
       }
     } catch (transcriptError) {
       console.error(`Error fetching transcript for ${liveClass.id}:`, transcriptError);
@@ -323,7 +338,18 @@ async function generateAISummary(
       if (summaryContent) {
         let parsedSummary;
         try {
-          parsedSummary = JSON.parse(summaryContent);
+          // Try to parse as JSON, handling markdown code blocks
+          let jsonStr = summaryContent.trim();
+          if (jsonStr.startsWith("```json")) {
+            jsonStr = jsonStr.slice(7);
+          }
+          if (jsonStr.startsWith("```")) {
+            jsonStr = jsonStr.slice(3);
+          }
+          if (jsonStr.endsWith("```")) {
+            jsonStr = jsonStr.slice(0, -3);
+          }
+          parsedSummary = JSON.parse(jsonStr.trim());
         } catch {
           parsedSummary = {
             summary: summaryContent,

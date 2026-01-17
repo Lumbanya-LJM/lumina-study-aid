@@ -33,8 +33,9 @@ serve(async (req) => {
           enable_screenshare: true,
           enable_recording: "cloud",
           enable_transcription_storage: true, // Store transcriptions
-          enable_advanced_chat: true, // Enable Daily's AI chat features
-          enable_live_captions_ui: true, // Enable live captions UI
+          enable_advanced_chat: true, // Enable Daily's native AI chat features
+          enable_live_captions_ui: true, // Enable live captions UI in Daily
+          enable_transcription: true, // Enable real-time transcription
           start_video_off: false,
           start_audio_off: false,
           exp: Math.floor(Date.now() / 1000) + (expiresInMinutes * 60),
