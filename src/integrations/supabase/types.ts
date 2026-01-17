@@ -700,6 +700,7 @@ export type Database = {
           is_recurring: boolean | null
           live_class_price: number | null
           recording_duration_seconds: number | null
+          recording_id: string | null
           recording_price: number | null
           recording_url: string | null
           recurrence_day: string | null
@@ -725,6 +726,7 @@ export type Database = {
           is_recurring?: boolean | null
           live_class_price?: number | null
           recording_duration_seconds?: number | null
+          recording_id?: string | null
           recording_price?: number | null
           recording_url?: string | null
           recurrence_day?: string | null
@@ -750,6 +752,7 @@ export type Database = {
           is_recurring?: boolean | null
           live_class_price?: number | null
           recording_duration_seconds?: number | null
+          recording_id?: string | null
           recording_price?: number | null
           recording_url?: string | null
           recurrence_day?: string | null
