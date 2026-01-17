@@ -16,6 +16,7 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const DAILY_API_KEY = Deno.env.get("DAILY_API_KEY");
 
     // Get auth token from request
     const authHeader = req.headers.get("authorization");
@@ -57,7 +58,7 @@ serve(async (req) => {
     // Get the live class and verify user has access (enrolled in course or is host)
     const { data: liveClass, error: classError } = await supabaseAdmin
       .from("live_classes")
-      .select("id, recording_url, course_id, host_id, title")
+      .select("id, recording_url, recording_id, course_id, host_id, title")
       .eq("id", classId)
       .maybeSingle();
 
@@ -108,7 +109,7 @@ serve(async (req) => {
       }
     }
 
-    if (!liveClass.recording_url) {
+    if (!liveClass.recording_url || liveClass.recording_url === "no_recording_available") {
       return new Response(JSON.stringify({ error: "Recording not available yet" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -127,12 +128,41 @@ serve(async (req) => {
       });
     }
 
+    // If we have a recording_id and DAILY_API_KEY, get a fresh access link
+    // This ensures the URL doesn't expire during playback
+    let recordingUrl = liveClass.recording_url;
+    
+    if (liveClass.recording_id && DAILY_API_KEY) {
+      console.log(`Fetching fresh access link for recording ${liveClass.recording_id}`);
+      
+      try {
+        const accessLinkRes = await fetch(
+          `https://api.daily.co/v1/recordings/${liveClass.recording_id}/access-link`,
+          {
+            headers: { Authorization: `Bearer ${DAILY_API_KEY}` },
+          }
+        );
+        
+        if (accessLinkRes.ok) {
+          const accessData = await accessLinkRes.json();
+          if (accessData.download_link) {
+            recordingUrl = accessData.download_link;
+            console.log(`Got fresh access link for ${liveClass.recording_id}`);
+          }
+        } else {
+          console.log(`Could not refresh access link: ${accessLinkRes.status}`);
+        }
+      } catch (accessError) {
+        console.error("Error fetching fresh access link:", accessError);
+      }
+    }
+
     // Stream the video - proxy the request to hide the actual URL
     console.log("Streaming recording for class:", classId, "user:", user.id);
 
     const rangeHeader = req.headers.get("range");
     
-    const videoResponse = await fetch(liveClass.recording_url, {
+    const videoResponse = await fetch(recordingUrl, {
       headers: rangeHeader ? { Range: rangeHeader } : {},
     });
 
