@@ -1,7 +1,7 @@
 // Offline storage utilities using IndexedDB
 
 const DB_NAME = 'luminary-study-offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Bump version for new store
 
 interface OfflineFlashcard {
   id: string;
@@ -25,6 +25,14 @@ interface OfflineQuiz {
   subject: string;
   questions: any[];
   lastSynced: number;
+}
+
+export interface OfflineRecording {
+  id: string;
+  title: string;
+  blob: Blob;
+  downloadedAt: number;
+  duration: number;
 }
 
 let db: IDBDatabase | null = null;
@@ -65,6 +73,12 @@ const openDB = (): Promise<IDBDatabase> => {
       // Create pending actions store for sync
       if (!database.objectStoreNames.contains('pending_sync')) {
         database.createObjectStore('pending_sync', { keyPath: 'id', autoIncrement: true });
+      }
+
+      // Create offline recordings store
+      if (!database.objectStoreNames.contains('offline_recordings')) {
+        const recordingsStore = database.createObjectStore('offline_recordings', { keyPath: 'id' });
+        recordingsStore.createIndex('downloadedAt', 'downloadedAt', { unique: false });
       }
     };
   });
@@ -153,6 +167,55 @@ export const getOfflineQuiz = async (id: string): Promise<OfflineQuiz | null> =>
 
     request.onsuccess = () => resolve(request.result || null);
     request.onerror = () => reject(new Error('Failed to get offline quiz'));
+  });
+};
+
+// Offline Recording Operations
+export const saveOfflineRecording = async (recording: OfflineRecording): Promise<void> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(['offline_recordings'], 'readwrite');
+    const store = transaction.objectStore('offline_recordings');
+    const request = store.put(recording);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(new Error('Failed to save recording offline'));
+  });
+};
+
+export const getOfflineRecordings = async (): Promise<OfflineRecording[]> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(['offline_recordings'], 'readonly');
+    const store = transaction.objectStore('offline_recordings');
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(new Error('Failed to get offline recordings'));
+  });
+};
+
+export const getOfflineRecording = async (id: string): Promise<OfflineRecording | null> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(['offline_recordings'], 'readonly');
+    const store = transaction.objectStore('offline_recordings');
+    const request = store.get(id);
+
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(new Error('Failed to get offline recording'));
+  });
+};
+
+export const deleteOfflineRecording = async (id: string): Promise<void> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(['offline_recordings'], 'readwrite');
+    const store = transaction.objectStore('offline_recordings');
+    const request = store.delete(id);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(new Error('Failed to delete offline recording'));
   });
 };
 

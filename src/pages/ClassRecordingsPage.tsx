@@ -27,6 +27,8 @@ import {
   Square,
   Archive,
   ArchiveRestore,
+  Download,
+  HardDrive,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +40,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 import SecureVideoPlayer from "@/components/recordings/SecureVideoPlayer";
+import { getOfflineRecordings, deleteOfflineRecording, isOfflineSupported, OfflineRecording } from "@/lib/offlineStorage";
 import {
   Dialog,
   DialogContent,
@@ -130,6 +133,32 @@ const ClassRecordingsPage: React.FC = () => {
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [archiving, setArchiving] = useState<string | null>(null);
+  const [offlineRecordings, setOfflineRecordings] = useState<OfflineRecording[]>([]);
+  const [selectedOfflineRecording, setSelectedOfflineRecording] = useState<OfflineRecording | null>(null);
+
+  // Load offline recordings
+  useEffect(() => {
+    const loadOffline = async () => {
+      if (!isOfflineSupported()) return;
+      try {
+        const offline = await getOfflineRecordings();
+        setOfflineRecordings(offline);
+      } catch (e) {
+        console.error("Error loading offline recordings:", e);
+      }
+    };
+    loadOffline();
+  }, []);
+
+  const handleDeleteOfflineRecording = async (id: string) => {
+    try {
+      await deleteOfflineRecording(id);
+      setOfflineRecordings(prev => prev.filter(r => r.id !== id));
+      toast({ title: "Deleted", description: "Offline recording removed." });
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to delete.", variant: "destructive" });
+    }
+  };
 
   const loadClasses = useCallback(async () => {
     try {
@@ -712,7 +741,7 @@ const ClassRecordingsPage: React.FC = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="recordings" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="recordings" className="gap-1 text-xs sm:text-sm">
               <Video className="h-4 w-4" />
               <span className="hidden sm:inline">Recordings</span>
@@ -721,6 +750,10 @@ const ClassRecordingsPage: React.FC = () => {
                   {recordings.length}
                 </Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="downloads" className="gap-1 text-xs sm:text-sm">
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Downloads</span>
             </TabsTrigger>
             <TabsTrigger value="archived" className="gap-1 text-xs sm:text-sm">
               <Archive className="h-4 w-4" />
@@ -1103,6 +1136,63 @@ const ClassRecordingsPage: React.FC = () => {
                       </CardContent>
                     </Card>
                   ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="downloads" className="space-y-4">
+            {!isOfflineSupported() ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <HardDrive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-medium mb-2">Not Supported</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Offline downloads are not available on this device.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : offlineRecordings.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Download className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-medium mb-2">No Downloads</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Downloaded recordings for offline viewing will appear here.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {offlineRecordings.map((rec) => (
+                  <Card key={rec.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium truncate">{rec.title}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            Downloaded {formatDistanceToNow(rec.downloadedAt, { addSuffix: true })}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => setSelectedOfflineRecording(rec)}
+                          >
+                            <Play className="h-4 w-4 mr-1" />
+                            Play
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteOfflineRecording(rec.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </TabsContent>
