@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Video, ArrowLeft, Clock, Mic, Camera, Users, PhoneOff, MonitorUp, ExternalLink, Minimize2, Maximize2, Home, Crown, PictureInPicture2, Circle, Timer } from "lucide-react";
+import { Loader2, Video, ArrowLeft, Clock, Mic, Camera, Users, PhoneOff, MonitorUp, ExternalLink, Minimize2, Maximize2, Home, Crown, PictureInPicture2, Circle, Timer, Bot } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import lmvLogo from "@/assets/lmv-logo.png";
@@ -845,6 +845,34 @@ const LiveClassPage: React.FC = () => {
             {/* Minimal control bar - only essential buttons not in Daily UI */}
             <div className="bg-card border-t p-3">
               <div className="flex items-center justify-center gap-3 max-w-xl mx-auto flex-wrap">
+                {/* AI Assist - Opens Daily's native AI chat panel */}
+                <Button
+                  variant="default"
+                  size="default"
+                  onClick={() => {
+                    // Send postMessage to Daily iframe to open AI chat/assistant panel
+                    if (iframeRef.current?.contentWindow) {
+                      iframeRef.current.contentWindow.postMessage(
+                        { action: 'daily-method', method: 'showLocalVideo' },
+                        '*'
+                      );
+                      // Open the "More" menu which contains AI features
+                      iframeRef.current.contentWindow.postMessage(
+                        { action: 'toggle-sidebar', sidebar: 'chat' },
+                        '*'
+                      );
+                    }
+                    toast({
+                      title: "AI Assist",
+                      description: "Use the Chat panel in the Daily interface for AI features like summaries and action items.",
+                    });
+                  }}
+                  className="gap-2 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600"
+                >
+                  <Bot className="h-4 w-4" />
+                  AI Assist
+                </Button>
+
                 {/* End Class - Host only (not available in Daily UI) */}
                 {isHost && (
                   <Button

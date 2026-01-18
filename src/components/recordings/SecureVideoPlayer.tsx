@@ -1,11 +1,13 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Play, Pause, Volume2, VolumeX, Maximize, RotateCcw } from "lucide-react";
+import { Loader2, Play, Pause, Volume2, VolumeX, Maximize, RotateCcw, Download, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import lmvLogo from "@/assets/lmv-logo.png";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { saveOfflineRecording, getOfflineRecording, isOfflineSupported } from "@/lib/offlineStorage";
 
 interface SecureVideoPlayerProps {
   classId: string;
@@ -14,6 +16,7 @@ interface SecureVideoPlayerProps {
   className?: string;
   initialProgress?: number;
   onProgressUpdate?: (progress: number, duration: number, completed: boolean) => void;
+  showDownload?: boolean;
 }
 
 const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
@@ -23,8 +26,10 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
   className,
   initialProgress = 0,
   onProgressUpdate,
+  showDownload = true,
 }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -36,16 +41,54 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [volume, setVolume] = useState(1);
   const [hasSetInitialProgress, setHasSetInitialProgress] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedProgressRef = useRef<number>(0);
+  const blobUrlRef = useRef<string | null>(null);
+
+  // Check if recording is already downloaded
+  useEffect(() => {
+    const checkDownloaded = async () => {
+      if (!isOfflineSupported()) return;
+      try {
+        const offline = await getOfflineRecording(classId);
+        if (offline) {
+          setIsDownloaded(true);
+        }
+      } catch (e) {
+        console.error("Error checking offline status:", e);
+      }
+    };
+    checkDownloaded();
+  }, [classId]);
 
   useEffect(() => {
+    let mounted = true;
+    
     const loadVideo = async () => {
       setLoading(true);
       setError(null);
 
       try {
+        // First check if we have an offline copy
+        if (isOfflineSupported()) {
+          const offlineRecording = await getOfflineRecording(classId);
+          if (offlineRecording && offlineRecording.blob) {
+            console.log("Loading from offline storage");
+            const blobUrl = URL.createObjectURL(offlineRecording.blob);
+            blobUrlRef.current = blobUrl;
+            
+            if (mounted && videoRef.current) {
+              videoRef.current.src = blobUrl;
+              setIsDownloaded(true);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
         // Get the current session for auth
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
@@ -55,8 +98,9 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
         // Construct the streaming URL with auth
         const streamUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stream-recording?classId=${classId}&action=stream`;
 
-        if (videoRef.current) {
-          // Set up video with auth header via fetch and blob
+        // Use the streaming URL directly for better performance
+        if (mounted && videoRef.current) {
+          // Set up video source with proper headers via fetch
           const response = await fetch(streamUrl, {
             headers: {
               Authorization: `Bearer ${session.access_token}`,
@@ -65,27 +109,51 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || "Failed to load recording");
+            throw new Error(errorData.error || `Failed to load recording (${response.status})`);
           }
 
           // Create blob URL for streaming
           const blob = await response.blob();
+          
+          if (!mounted) {
+            return;
+          }
+          
           const blobUrl = URL.createObjectURL(blob);
-          videoRef.current.src = blobUrl;
-
-          // Clean up blob URL when component unmounts
-          return () => URL.revokeObjectURL(blobUrl);
+          blobUrlRef.current = blobUrl;
+          
+          // Double-check videoRef is still valid before setting src
+          if (videoRef.current) {
+            videoRef.current.src = blobUrl;
+          } else {
+            // Clean up if video element is gone
+            URL.revokeObjectURL(blobUrl);
+            blobUrlRef.current = null;
+          }
         }
       } catch (err) {
+        if (!mounted) return;
         const message = err instanceof Error ? err.message : "Failed to load recording";
+        console.error("Video load error:", message);
         setError(message);
         onError?.(message);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadVideo();
+
+    return () => {
+      mounted = false;
+      // Clean up blob URL when component unmounts
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
   }, [classId, onError]);
 
   // Prevent right-click context menu
@@ -238,6 +306,68 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
     }
   };
 
+  // Download for offline viewing
+  const handleDownload = async () => {
+    if (!isOfflineSupported()) {
+      toast({
+        title: "Not Supported",
+        description: "Offline downloads are not supported on this device.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDownloading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Please log in to download recordings");
+      }
+
+      const streamUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stream-recording?classId=${classId}&action=stream`;
+      
+      toast({
+        title: "Downloading...",
+        description: "Please wait while the recording is saved for offline viewing.",
+      });
+
+      const response = await fetch(streamUrl, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to download recording");
+      }
+
+      const blob = await response.blob();
+      
+      await saveOfflineRecording({
+        id: classId,
+        title: title || "Recording",
+        blob,
+        downloadedAt: Date.now(),
+        duration: duration || 0,
+      });
+
+      setIsDownloaded(true);
+      toast({
+        title: "Download Complete",
+        description: "Recording saved! You can watch it offline from the Downloads tab.",
+      });
+    } catch (err) {
+      console.error("Download error:", err);
+      toast({
+        title: "Download Failed",
+        description: err instanceof Error ? err.message : "Could not download recording.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -284,6 +414,10 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleVideoEnded}
+        onError={(e) => {
+          console.error("Video element error:", e);
+          setError("Playback error. Please try again.");
+        }}
         playsInline
         controlsList="nodownload nofullscreen noremoteplayback"
         disablePictureInPicture
@@ -410,6 +544,30 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
                   {title}
                 </span>
               )}
+              
+              {/* Download button */}
+              {showDownload && isOfflineSupported() && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "text-white hover:bg-white/20 h-8 w-8",
+                    isDownloaded && "text-green-400"
+                  )}
+                  onClick={handleDownload}
+                  disabled={downloading || isDownloaded}
+                  title={isDownloaded ? "Downloaded for offline" : "Download for offline"}
+                >
+                  {downloading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isDownloaded ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              
               <Button
                 variant="ghost"
                 size="icon"
