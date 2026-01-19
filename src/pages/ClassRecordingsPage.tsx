@@ -40,6 +40,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 import SecureVideoPlayer from "@/components/recordings/SecureVideoPlayer";
+import { OfflineRecordingDialog } from "@/components/recordings/OfflineRecordingDialog";
 import { getOfflineRecordings, deleteOfflineRecording, isOfflineSupported, OfflineRecording } from "@/lib/offlineStorage";
 import {
   Dialog,
@@ -1349,6 +1350,15 @@ const ClassRecordingsPage: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Offline Recording Player Dialog */}
+      <OfflineRecordingDialog
+        open={!!selectedOfflineRecording}
+        recording={selectedOfflineRecording}
+        onOpenChange={(open) => {
+          if (!open) setSelectedOfflineRecording(null);
+        }}
+      />
 
       {/* Edit Recording Dialog */}
       <Dialog open={!!editingRecording} onOpenChange={(open) => !open && setEditingRecording(null)}>

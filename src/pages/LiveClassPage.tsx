@@ -847,27 +847,20 @@ const LiveClassPage: React.FC = () => {
               <div className="flex items-center justify-center gap-3 max-w-xl mx-auto flex-wrap">
                 {/* AI Assist - Opens Daily's native AI chat panel */}
                 <Button
-                  variant="default"
+                  variant="secondary"
                   size="default"
                   onClick={() => {
-                    // Send postMessage to Daily iframe to open AI chat/assistant panel
-                    if (iframeRef.current?.contentWindow) {
-                      iframeRef.current.contentWindow.postMessage(
-                        { action: 'daily-method', method: 'showLocalVideo' },
-                        '*'
-                      );
-                      // Open the "More" menu which contains AI features
-                      iframeRef.current.contentWindow.postMessage(
-                        { action: 'toggle-sidebar', sidebar: 'chat' },
-                        '*'
-                      );
-                    }
+                    if (!iframeRef.current?.contentWindow) return;
+                    iframeRef.current.contentWindow.postMessage(
+                      { action: "toggle-sidebar", sidebar: "chat" },
+                      "*"
+                    );
                     toast({
                       title: "AI Assist",
-                      description: "Use the Chat panel in the Daily interface for AI features like summaries and action items.",
+                      description: "Daily’s native AI features are available in the Chat panel.",
                     });
                   }}
-                  className="gap-2 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600"
+                  className="gap-2"
                 >
                   <Bot className="h-4 w-4" />
                   AI Assist

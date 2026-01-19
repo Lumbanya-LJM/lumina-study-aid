@@ -18,8 +18,14 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const DAILY_API_KEY = Deno.env.get("DAILY_API_KEY");
 
-    // Get auth token from request
-    const authHeader = req.headers.get("authorization");
+    // Read query params early (we may receive the auth token via query string for <video> playback)
+    const url = new URL(req.url);
+    const classId = url.searchParams.get("classId");
+    const action = url.searchParams.get("action") || "stream";
+    const tokenFromQuery = url.searchParams.get("token");
+
+    // Get auth token from request (header preferred; query is supported for media elements)
+    const authHeader = req.headers.get("authorization") || (tokenFromQuery ? `Bearer ${tokenFromQuery}` : null);
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -41,10 +47,7 @@ serve(async (req) => {
       });
     }
 
-    const url = new URL(req.url);
-    const classId = url.searchParams.get("classId");
-    const action = url.searchParams.get("action") || "stream";
-
+    // url/classId/action were parsed above
     if (!classId) {
       return new Response(JSON.stringify({ error: "classId required" }), {
         status: 400,
