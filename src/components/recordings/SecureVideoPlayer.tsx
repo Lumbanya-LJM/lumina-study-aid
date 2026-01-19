@@ -95,41 +95,17 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
           throw new Error("Please log in to view recordings");
         }
 
-        // Construct the streaming URL with auth
-        const streamUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stream-recording?classId=${classId}&action=stream`;
+        // Use a token-in-query playback URL so the <video> element can request range chunks.
+        // (The video element cannot send Authorization headers.)
+        const playbackUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stream-recording?` +
+          new URLSearchParams({
+            classId,
+            action: "stream",
+            token: session.access_token,
+          }).toString();
 
-        // Use the streaming URL directly for better performance
         if (mounted && videoRef.current) {
-          // Set up video source with proper headers via fetch
-          const response = await fetch(streamUrl, {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `Failed to load recording (${response.status})`);
-          }
-
-          // Create blob URL for streaming
-          const blob = await response.blob();
-          
-          if (!mounted) {
-            return;
-          }
-          
-          const blobUrl = URL.createObjectURL(blob);
-          blobUrlRef.current = blobUrl;
-          
-          // Double-check videoRef is still valid before setting src
-          if (videoRef.current) {
-            videoRef.current.src = blobUrl;
-          } else {
-            // Clean up if video element is gone
-            URL.revokeObjectURL(blobUrl);
-            blobUrlRef.current = null;
-          }
+          videoRef.current.src = playbackUrl;
         }
       } catch (err) {
         if (!mounted) return;
