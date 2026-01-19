@@ -9,6 +9,7 @@ import { Loader2, Video, ArrowLeft, Clock, Mic, Camera, Users, PhoneOff, Monitor
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import lmvLogo from "@/assets/lmv-logo.png";
+import { AIAssistPanel } from "@/components/liveclass/AIAssistPanel";
 
 interface LiveClass {
   id: string;
@@ -40,6 +41,7 @@ const LiveClassPage: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingStarting, setRecordingStarting] = useState(false);
   const [classDuration, setClassDuration] = useState(0);
+  const [isAIAssistOpen, setIsAIAssistOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -845,21 +847,11 @@ const LiveClassPage: React.FC = () => {
             {/* Minimal control bar - only essential buttons not in Daily UI */}
             <div className="bg-card border-t p-3">
               <div className="flex items-center justify-center gap-3 max-w-xl mx-auto flex-wrap">
-                {/* AI Assist - Opens Daily's native AI chat panel */}
+                {/* AI Assist - Opens dedicated AI panel */}
                 <Button
                   variant="secondary"
                   size="default"
-                  onClick={() => {
-                    if (!iframeRef.current?.contentWindow) return;
-                    iframeRef.current.contentWindow.postMessage(
-                      { action: "toggle-sidebar", sidebar: "chat" },
-                      "*"
-                    );
-                    toast({
-                      title: "AI Assist",
-                      description: "Daily’s native AI features are available in the Chat panel.",
-                    });
-                  }}
+                  onClick={() => setIsAIAssistOpen(true)}
                   className="gap-2"
                 >
                   <Bot className="h-4 w-4" />
@@ -914,6 +906,13 @@ const LiveClassPage: React.FC = () => {
               </div>
             </div>
 
+            {/* AI Assist Panel */}
+            <AIAssistPanel
+              isOpen={isAIAssistOpen}
+              onClose={() => setIsAIAssistOpen(false)}
+              classTitle={liveClass.title}
+              classDescription={liveClass.description}
+            />
           </>
         ) : (
           /* Pre-join screen */
