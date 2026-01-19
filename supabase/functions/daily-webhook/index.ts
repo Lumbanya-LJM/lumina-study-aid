@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyDailySignature } from "../_shared/security.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, daily-signature",
 };
 
 serve(async (req) => {
@@ -13,13 +14,25 @@ serve(async (req) => {
   }
 
   try {
+    const rawBody = await req.text();
+    const signature = req.headers.get("daily-signature") || "";
+    const webhookSecret = Deno.env.get("DAILY_WEBHOOK_SECRET") || "";
+
+    if (!verifyDailySignature(rawBody, signature, webhookSecret)) {
+      console.error("Invalid webhook signature");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const payload = await req.json();
+    const payload = JSON.parse(rawBody);
     console.log("Daily webhook received:", JSON.stringify(payload, null, 2));
 
     const eventType = payload.type;

@@ -7,23 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lenco-signature",
 };
 
-// Verify Lenco webhook signature
-function verifyLencoSignature(payload: string, signature: string, secret: string): boolean {
-  if (!secret) {
-    console.log("No webhook secret configured, skipping signature verification");
-    return true; // Allow in development
-  }
-  
-  try {
-    const hmac = createHmac("sha256", secret);
-    hmac.update(payload);
-    const expectedSignature = hmac.digest("hex");
-    return signature === expectedSignature;
-  } catch (error) {
-    console.error("Signature verification error:", error);
-    return false;
-  }
-}
+import { verifyLencoSignature } from "../_shared/security.ts";
 
 // Send payment confirmation email
 async function sendPaymentConfirmationEmail(
@@ -234,8 +218,8 @@ serve(async (req) => {
 
     console.log("Lenco webhook received");
 
-    // Verify signature if secret is configured
-    if (webhookSecret && !verifyLencoSignature(rawBody, signature, webhookSecret)) {
+    // Verify signature
+    if (!verifyLencoSignature(rawBody, signature, webhookSecret)) {
       console.error("Invalid webhook signature");
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
