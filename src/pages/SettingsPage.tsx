@@ -878,6 +878,8 @@ const SettingsPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowPasswords(!showPasswords)}
+                        aria-label={showPasswords ? 'Hide password' : 'Show password'}
+                        aria-pressed={showPasswords}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
                         {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
