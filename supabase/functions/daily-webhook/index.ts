@@ -1,10 +1,52 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, daily-signature",
 };
+
+// Verify Daily webhook signature to prevent spoofing
+function verifyDailySignature(payload: string, signatureHeader: string, secret: string): boolean {
+  if (!signatureHeader) {
+    console.error("Missing daily-signature header");
+    return false;
+  }
+  if (!secret) {
+    console.error("CRITICAL: DAILY_WEBHOOK_SECRET is not configured. Cannot verify signature.");
+    return false;
+  }
+
+  try {
+    const parts = signatureHeader.split(',');
+    const timestampStr = parts.find(part => part.startsWith('t='))?.split('=')[1];
+    const signature = parts.find(part => part.startsWith('v1='))?.split('=')[1];
+
+    if (!timestampStr || !signature) {
+      console.error("Invalid signature header format");
+      return false;
+    }
+
+    const timestamp = parseInt(timestampStr, 10);
+    // Prevent replay attacks: check if timestamp is within the last 5 minutes
+    const fiveMinutes = 5 * 60 * 1000;
+    if (Date.now() - (timestamp * 1000) > fiveMinutes) {
+      console.warn("Webhook timestamp is too old, possible replay attack.");
+      return false;
+    }
+
+    const signedPayload = `${timestamp}.${payload}`;
+    const hmac = createHmac("sha256", secret);
+    hmac.update(signedPayload);
+    const expectedSignature = hmac.digest("hex");
+
+    return signature === expectedSignature;
+  } catch (error) {
+    console.error("Error verifying Daily signature:", error);
+    return false;
+  }
+}
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -16,10 +58,30 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const DAILY_WEBHOOK_SECRET = Deno.env.get("DAILY_WEBHOOK_SECRET");
+
+    if (!DAILY_WEBHOOK_SECRET) {
+      console.error("CRITICAL: DAILY_WEBHOOK_SECRET is not set. Aborting webhook processing.");
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const rawBody = await req.text();
+    const signatureHeader = req.headers.get("daily-signature") || "";
+
+    if (!verifyDailySignature(rawBody, signatureHeader, DAILY_WEBHOOK_SECRET)) {
+      console.error("Invalid Daily webhook signature");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const payload = await req.json();
+    const payload = JSON.parse(rawBody);
     console.log("Daily webhook received:", JSON.stringify(payload, null, 2));
 
     const eventType = payload.type;
