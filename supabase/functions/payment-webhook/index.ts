@@ -9,11 +9,7 @@ const corsHeaders = {
 
 // Verify Lenco webhook signature
 function verifyLencoSignature(payload: string, signature: string, secret: string): boolean {
-  if (!secret) {
-    console.log("No webhook secret configured, skipping signature verification");
-    return true; // Allow in development
-  }
-  
+  // A secret must be provided to this function. The calling code should handle cases where the secret is missing.
   try {
     const hmac = createHmac("sha256", secret);
     hmac.update(payload);
@@ -230,13 +226,13 @@ serve(async (req) => {
   try {
     const rawBody = await req.text();
     const signature = req.headers.get("x-lenco-signature") || "";
-    const webhookSecret = Deno.env.get("LENCO_WEBHOOK_SECRET") || "";
+    const webhookSecret = Deno.env.get("LENCO_WEBHOOK_SECRET");
 
     console.log("Lenco webhook received");
 
-    // Verify signature if secret is configured
-    if (webhookSecret && !verifyLencoSignature(rawBody, signature, webhookSecret)) {
-      console.error("Invalid webhook signature");
+    // Always verify the signature; reject if the secret is not configured.
+    if (!webhookSecret || !verifyLencoSignature(rawBody, signature, webhookSecret)) {
+      console.error("Invalid webhook signature or missing secret");
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
