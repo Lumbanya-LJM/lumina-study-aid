@@ -1,7 +1,10 @@
 import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export const HomePageSkeleton: React.FC = () => {
+// ⚡ Bolt: Wrapped skeleton components with React.memo to prevent unnecessary re-renders.
+// These components are stateless and prop-less, making them ideal candidates for memoization.
+// This optimization avoids re-renders when parent components update, improving UI performance during loading states.
+export const HomePageSkeleton: React.FC = React.memo(() => {
   return (
     <div className="px-5 py-6 safe-top animate-fade-in">
       {/* Header */}
@@ -50,9 +53,9 @@ export const HomePageSkeleton: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
-export const ChatMessageSkeleton: React.FC = () => {
+export const ChatMessageSkeleton: React.FC = React.memo(() => {
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Lumina message */}
@@ -69,9 +72,9 @@ export const ChatMessageSkeleton: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
-export const LibraryCardSkeleton: React.FC = () => {
+export const LibraryCardSkeleton: React.FC = React.memo(() => {
   return (
     <div className="bg-card rounded-2xl p-4 border border-border/50 animate-fade-in">
       <div className="flex gap-4">
@@ -84,9 +87,9 @@ export const LibraryCardSkeleton: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
-export const FlashcardDeckSkeleton: React.FC = () => {
+export const FlashcardDeckSkeleton: React.FC = React.memo(() => {
   return (
     <div className="space-y-3 animate-fade-in">
       {[1, 2, 3].map((i) => (
@@ -103,9 +106,9 @@ export const FlashcardDeckSkeleton: React.FC = () => {
       ))}
     </div>
   );
-};
+});
 
-export const QuizCardSkeleton: React.FC = () => {
+export const QuizCardSkeleton: React.FC = React.memo(() => {
   return (
     <div className="space-y-3 animate-fade-in">
       {[1, 2, 3].map((i) => (
@@ -125,9 +128,9 @@ export const QuizCardSkeleton: React.FC = () => {
       ))}
     </div>
   );
-};
+});
 
-export const ProfileSkeleton: React.FC = () => {
+export const ProfileSkeleton: React.FC = React.memo(() => {
   return (
     <div className="px-5 py-6 safe-top animate-fade-in">
       {/* Header */}
@@ -154,9 +157,9 @@ export const ProfileSkeleton: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
-export const AchievementsSkeleton: React.FC = () => {
+export const AchievementsSkeleton: React.FC = React.memo(() => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Points Card */}
@@ -185,9 +188,9 @@ export const AchievementsSkeleton: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
-export const AnalyticsSkeleton: React.FC = () => {
+export const AnalyticsSkeleton: React.FC = React.memo(() => {
   return (
     <div className="px-5 py-6 safe-top animate-fade-in">
       {/* Header */}
@@ -218,4 +221,4 @@ export const AnalyticsSkeleton: React.FC = () => {
       </div>
     </div>
   );
-};
+});
