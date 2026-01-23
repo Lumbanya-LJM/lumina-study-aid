@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -616,10 +616,14 @@ const ClassRecordingsPage: React.FC = () => {
     return { percentage, completed: history.completed, resumeText };
   };
 
-  const filteredRecordings = recordings.filter(
-    (r) =>
-      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredRecordings = useMemo(
+    () =>
+      recordings.filter(
+        (r) =>
+          r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          r.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    [recordings, searchQuery]
   );
 
   // Get host recordings count
