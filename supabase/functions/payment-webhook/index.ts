@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
+import { timingSafeEqual } from "../_shared/security.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,15 +11,15 @@ const corsHeaders = {
 // Verify Lenco webhook signature
 function verifyLencoSignature(payload: string, signature: string, secret: string): boolean {
   if (!secret) {
-    console.log("No webhook secret configured, skipping signature verification");
-    return true; // Allow in development
+    console.error("Webhook secret is not configured. Signature verification failed.");
+    return false; // Fail secure
   }
   
   try {
     const hmac = createHmac("sha256", secret);
     hmac.update(payload);
     const expectedSignature = hmac.digest("hex");
-    return signature === expectedSignature;
+    return timingSafeEqual(signature, expectedSignature);
   } catch (error) {
     console.error("Signature verification error:", error);
     return false;
