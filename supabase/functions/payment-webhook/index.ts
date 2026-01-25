@@ -7,18 +7,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lenco-signature",
 };
 
+import { timingSafeEqual } from "../_shared/security.ts";
+
 // Verify Lenco webhook signature
 function verifyLencoSignature(payload: string, signature: string, secret: string): boolean {
   if (!secret) {
-    console.log("No webhook secret configured, skipping signature verification");
-    return true; // Allow in development
+    console.error("CRITICAL: LENCO_WEBHOOK_SECRET is not configured. Rejecting webhook as per security policy.");
+    return false; // Fail-secure: MUST have a secret
   }
   
   try {
     const hmac = createHmac("sha256", secret);
     hmac.update(payload);
     const expectedSignature = hmac.digest("hex");
-    return signature === expectedSignature;
+    // Use timing-safe comparison to prevent timing attacks
+    return timingSafeEqual(signature, expectedSignature);
   } catch (error) {
     console.error("Signature verification error:", error);
     return false;
