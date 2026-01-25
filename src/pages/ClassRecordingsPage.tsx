@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -616,17 +616,31 @@ const ClassRecordingsPage: React.FC = () => {
     return { percentage, completed: history.completed, resumeText };
   };
 
-  const filteredRecordings = recordings.filter(
-    (r) =>
-      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Memoize filtered recordings to prevent re-calculation on every render.
+  // This is especially important for performance when typing in the search input.
+  const filteredRecordings = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    if (!query) return recordings;
+    return recordings.filter(
+      (r) =>
+        r.title.toLowerCase().includes(query) ||
+        r.description?.toLowerCase().includes(query)
+    );
+  }, [recordings, searchQuery]);
+
+  // Memoize host-specific recordings for the same performance reasons.
+  const filteredHostRecordings = useMemo(() => {
+    return filteredRecordings.filter((r) => r.host_id === user?.id);
+  }, [filteredRecordings, user?.id]);
 
   // Get host recordings count
   const hostRecordingsCount = recordings.filter((r) => r.host_id === user?.id).length;
-  const filteredHostRecordings = filteredRecordings.filter((r) => r.host_id === user?.id);
-  const allHostSelected = filteredHostRecordings.length > 0 && 
-    filteredHostRecordings.every((r) => selectedForBulk.has(r.id));
+
+  // Memoize the derived boolean for "select all" functionality.
+  const allHostSelected = useMemo(() => {
+    return filteredHostRecordings.length > 0 &&
+           filteredHostRecordings.every((r) => selectedForBulk.has(r.id));
+  }, [filteredHostRecordings, selectedForBulk]);
 
   // Select all host recordings
   const selectAllHostRecordings = () => {
