@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyDailySignature } from "../_shared/security.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, daily-signature",
 };
 
 serve(async (req) => {
@@ -17,10 +18,23 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
+    // Signature verification
+    const rawBody = await req.text();
+    const signature = req.headers.get("daily-signature") || "";
+    const webhookSecret = Deno.env.get("DAILY_WEBHOOK_SECRET") || "";
+
+    if (!verifyDailySignature(rawBody, signature, webhookSecret)) {
+      console.error("Invalid Daily webhook signature");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const payload = await req.json();
-    console.log("Daily webhook received:", JSON.stringify(payload, null, 2));
+    const payload = JSON.parse(rawBody);
+    console.log("Daily webhook received (signature verified):", JSON.stringify(payload, null, 2));
 
     const eventType = payload.type;
     const roomName = payload.room_name || payload.payload?.room_name;
@@ -95,7 +109,13 @@ serve(async (req) => {
 
             // Save transcripts to database
             if (transcript.segments && transcript.segments.length > 0) {
-              const transcriptEntries = transcript.segments.map((segment: any) => ({
+              interface Segment {
+                text: string;
+                start: number;
+                speaker?: string;
+              }
+
+              const transcriptEntries = transcript.segments.map((segment: Segment) => ({
                 class_id: liveClass.id,
                 content: segment.text,
                 timestamp_ms: Math.floor(segment.start * 1000),
@@ -118,7 +138,7 @@ serve(async (req) => {
               console.log("Generating AI summary...");
               
               const fullTranscript = transcript.segments
-                .map((s: any) => `${s.speaker || 'Speaker'}: ${s.text}`)
+                .map((s: { speaker?: string; text: string }) => `${s.speaker || 'Speaker'}: ${s.text}`)
                 .join("\n");
 
               try {
