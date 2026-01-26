@@ -616,11 +616,11 @@ const ClassRecordingsPage: React.FC = () => {
     return { percentage, completed: history.completed, resumeText };
   };
 
-  const filteredRecordings = recordings.filter(
+  const filteredRecordings = React.useMemo(() => recordings.filter(
     (r) =>
       r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ), [recordings, searchQuery]);
 
   // Get host recordings count
   const hostRecordingsCount = recordings.filter((r) => r.host_id === user?.id).length;
