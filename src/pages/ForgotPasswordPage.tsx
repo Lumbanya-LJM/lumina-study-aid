@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LMVLogo } from '@/components/ui/lmv-logo';
 import { Mail, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { z } from 'zod';
@@ -204,11 +205,18 @@ const ForgotPasswordPage: React.FC = () => {
             type="submit"
             disabled={loading}
             className={cn(
-              "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
+              "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all flex items-center justify-center gap-2",
               loading ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
             )}
           >
-            {loading ? 'Sending...' : 'Send Reset Link'}
+            {loading ? (
+              <>
+                <Spinner className="h-5 w-5" />
+                Sending...
+              </>
+            ) : (
+              'Send Reset Link'
+            )}
           </button>
         </form>
 
