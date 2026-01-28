@@ -13,7 +13,7 @@ function verifyLencoSignature(payload: string, signature: string, secret: string
     console.log("No webhook secret configured, skipping signature verification");
     return true; // Allow in development
   }
-  
+
   try {
     const hmac = createHmac("sha256", secret);
     hmac.update(payload);
