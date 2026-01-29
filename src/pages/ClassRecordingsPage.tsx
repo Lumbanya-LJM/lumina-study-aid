@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -616,17 +616,32 @@ const ClassRecordingsPage: React.FC = () => {
     return { percentage, completed: history.completed, resumeText };
   };
 
-  const filteredRecordings = recordings.filter(
-    (r) =>
-      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Performance optimization: Memoize filtered lists to prevent re-calculation on every render.
+  // The filter logic will only re-run if the `recordings` list or `searchQuery` changes.
+  const filteredRecordings = useMemo(() => {
+    if (!searchQuery) return recordings;
+    return recordings.filter(
+      (r) =>
+        r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [recordings, searchQuery]);
+
+  // Performance optimization: Memoize host-specific recordings to prevent re-filtering on every render.
+  const filteredHostRecordings = useMemo(() => {
+    return filteredRecordings.filter((r) => r.host_id === user?.id);
+  }, [filteredRecordings, user?.id]);
 
   // Get host recordings count
-  const hostRecordingsCount = recordings.filter((r) => r.host_id === user?.id).length;
-  const filteredHostRecordings = filteredRecordings.filter((r) => r.host_id === user?.id);
-  const allHostSelected = filteredHostRecordings.length > 0 && 
-    filteredHostRecordings.every((r) => selectedForBulk.has(r.id));
+  const hostRecordingsCount = useMemo(() => {
+    return recordings.filter((r) => r.host_id === user?.id).length;
+  }, [recordings, user?.id]);
+
+  // Determine if all of the user's own recordings are selected for bulk action
+  const allHostSelected = useMemo(() => {
+    return filteredHostRecordings.length > 0 &&
+      filteredHostRecordings.every((r) => selectedForBulk.has(r.id));
+  }, [filteredHostRecordings, selectedForBulk]);
 
   // Select all host recordings
   const selectAllHostRecordings = () => {
