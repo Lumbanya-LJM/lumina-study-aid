@@ -10,14 +10,16 @@ const corsHeaders = {
 // Verify Lenco webhook signature
 function verifyLencoSignature(payload: string, signature: string, secret: string): boolean {
   if (!secret) {
-    console.log("No webhook secret configured, skipping signature verification");
-    return true; // Allow in development
+    console.error("LENCO_WEBHOOK_SECRET is not configured. Rejecting request.");
+    return false;
   }
   
   try {
     const hmac = createHmac("sha256", secret);
     hmac.update(payload);
     const expectedSignature = hmac.digest("hex");
+    // NOTE: Use a constant-time comparison function in a real-world scenario
+    // to prevent timing attacks, though it's less critical for webhooks.
     return signature === expectedSignature;
   } catch (error) {
     console.error("Signature verification error:", error);
@@ -234,8 +236,8 @@ serve(async (req) => {
 
     console.log("Lenco webhook received");
 
-    // Verify signature if secret is configured
-    if (webhookSecret && !verifyLencoSignature(rawBody, signature, webhookSecret)) {
+    // 🛡️ SECURITY: Always verify webhook signature to prevent request forgery.
+    if (!verifyLencoSignature(rawBody, signature, webhookSecret)) {
       console.error("Invalid webhook signature");
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
