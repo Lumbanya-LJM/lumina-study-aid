@@ -1,25 +1,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { verifySignature } from "../_shared/security.ts";
 
 serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
   try {
+    const rawBody = await req.text();
+    const signature = req.headers.get("x-daily-signature") || "";
+    const webhookSecret = Deno.env.get("DAILY_WEBHOOK_SECRET") || "";
+
+    // Verify signature
+    if (!verifySignature(rawBody, signature, webhookSecret)) {
+      console.error("Invalid or missing Daily webhook signature");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const payload = await req.json();
+    const payload = JSON.parse(rawBody);
     console.log("Daily webhook received:", JSON.stringify(payload, null, 2));
 
     const eventType = payload.type;
@@ -52,7 +56,7 @@ serve(async (req) => {
       if (!liveClass) {
         console.log("No live class found for room:", roomName);
         return new Response(JSON.stringify({ success: true, message: "No matching class found" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
         });
       }
 
@@ -250,7 +254,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, message: "Recording processed" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -276,7 +280,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, message: "Meeting end processed" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -286,7 +290,7 @@ serve(async (req) => {
       // Transcription will be fetched when recording.ready-to-download fires
       return new Response(
         JSON.stringify({ success: true, message: "Transcription event received" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -294,13 +298,13 @@ serve(async (req) => {
     console.log("Unhandled event type:", eventType);
     return new Response(
       JSON.stringify({ success: true, message: `Event ${eventType} acknowledged` }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Daily webhook error:", error);
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 });
