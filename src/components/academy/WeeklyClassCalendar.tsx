@@ -61,29 +61,31 @@ export const WeeklyClassCalendar: React.FC = () => {
 
       const courseIds = enrollments.map(e => e.course_id);
 
-      // Get course names
-      const { data: courses } = await supabase
-        .from('academy_courses')
-        .select('id, name')
-        .in('id', courseIds);
+      // Parallelize fetching course names, recurring classes, and scheduled classes
+      const [coursesRes, recurringRes, scheduledRes] = await Promise.all([
+        supabase
+          .from('academy_courses')
+          .select('id, name')
+          .in('id', courseIds),
+        supabase
+          .from('live_classes')
+          .select('*')
+          .in('course_id', courseIds)
+          .eq('is_recurring', true)
+          .in('status', ['scheduled', 'live']),
+        supabase
+          .from('live_classes')
+          .select('*')
+          .in('course_id', courseIds)
+          .in('status', ['scheduled', 'live'])
+          .order('scheduled_at', { ascending: true })
+      ]);
+
+      const courses = coursesRes.data;
+      const recurring = recurringRes.data;
+      const scheduled = scheduledRes.data;
 
       const courseMap = new Map(courses?.map(c => [c.id, c.name]) || []);
-
-      // Get recurring classes (pattern-based)
-      const { data: recurring } = await supabase
-        .from('live_classes')
-        .select('*')
-        .in('course_id', courseIds)
-        .eq('is_recurring', true)
-        .in('status', ['scheduled', 'live']);
-
-      // Get all scheduled classes for the week view
-      const { data: scheduled } = await supabase
-        .from('live_classes')
-        .select('*')
-        .in('course_id', courseIds)
-        .in('status', ['scheduled', 'live'])
-        .order('scheduled_at', { ascending: true });
 
       // Add course names
       const recurringWithNames = (recurring || []).map(c => ({
