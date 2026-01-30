@@ -238,6 +238,7 @@ export const StudentSidebar: React.FC = () => {
           <Button
             variant="outline"
             size="icon"
+            aria-label="Open menu"
             className={cn(
               "lg:hidden fixed z-50 h-12 w-12 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300",
               isAtTop ? "top-4 left-4" : "bottom-24 right-4"
