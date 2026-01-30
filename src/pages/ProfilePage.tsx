@@ -169,6 +169,7 @@ const ProfilePage: React.FC = () => {
           <button
             onClick={() => setEditProfileOpen(true)}
             className="absolute top-4 right-4 z-20 p-2 bg-primary-foreground/20 hover:bg-primary-foreground/30 rounded-xl transition-colors"
+            aria-label="Edit profile"
           >
             <Pencil className="w-4 h-4 text-primary-foreground" />
           </button>
