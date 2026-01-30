@@ -134,8 +134,10 @@ const LuminaAcademyPage: React.FC = () => {
     });
   };
 
-  // Filter out dismissed updates
-  const visibleUpdates = updates.filter(u => !dismissedUpdates.has(u.id));
+  // Filter out dismissed updates - memoize to prevent re-filtering on every render
+  const visibleUpdates = React.useMemo(() =>
+    updates.filter(u => !dismissedUpdates.has(u.id)),
+  [updates, dismissedUpdates]);
 
   // Check if user is a tutor
   useEffect(() => {
@@ -248,66 +250,64 @@ const LuminaAcademyPage: React.FC = () => {
 
   const loadCourseData = async (courseId: string) => {
     setLoadingCourseData(true);
+    const now = new Date().toISOString();
 
     try {
-      // Load live classes
-      const { data: liveData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'live')
-        .order('started_at', { ascending: false });
+      // Parallelize data fetching to improve performance
+      const [
+        liveRes,
+        scheduledRes,
+        recordingsRes,
+        materialsRes,
+        updatesRes,
+        courseRes
+      ] = await Promise.all([
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'live')
+          .order('started_at', { ascending: false }),
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'scheduled')
+          .gte('scheduled_at', now)
+          .order('scheduled_at', { ascending: true }),
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'ended')
+          .not('recording_url', 'is', null)
+          .neq('recording_url', 'no_recording_available')
+          .order('ended_at', { ascending: false }),
+        supabase
+          .from('course_materials')
+          .select('*')
+          .eq('course_id', courseId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('tutor_updates')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('is_published', true)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('academy_courses')
+          .select('tutor_id')
+          .eq('id', courseId)
+          .maybeSingle()
+      ]);
 
-      setLiveClasses(liveData || []);
+      setLiveClasses(liveRes.data || []);
+      setScheduledClasses(scheduledRes.data || []);
+      setRecordings(recordingsRes.data || []);
+      setMaterials(materialsRes.data || []);
+      setUpdates(updatesRes.data || []);
 
-      // Load scheduled classes
-      const { data: scheduledData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'scheduled')
-        .gte('scheduled_at', new Date().toISOString())
-        .order('scheduled_at', { ascending: true });
-
-      setScheduledClasses(scheduledData || []);
-
-      // Load recordings (ended classes with valid recording_url)
-      const { data: recordingsData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'ended')
-        .not('recording_url', 'is', null)
-        .neq('recording_url', 'no_recording_available')
-        .order('ended_at', { ascending: false });
-
-      setRecordings(recordingsData || []);
-
-      // Load course materials
-      const { data: materialsData } = await supabase
-        .from('course_materials')
-        .select('*')
-        .eq('course_id', courseId)
-        .order('created_at', { ascending: false });
-
-      setMaterials(materialsData || []);
-
-      // Load updates
-      const { data: updatesData } = await supabase
-        .from('tutor_updates')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('is_published', true)
-        .order('created_at', { ascending: false });
-
-      setUpdates(updatesData || []);
-
-      // Load assigned tutor for this course (from academy_courses.tutor_id)
-      const { data: courseData } = await supabase
-        .from('academy_courses')
-        .select('tutor_id')
-        .eq('id', courseId)
-        .single();
+      const courseData = courseRes.data;
 
       if (courseData?.tutor_id) {
         // Get tutor details from tutor_applications
