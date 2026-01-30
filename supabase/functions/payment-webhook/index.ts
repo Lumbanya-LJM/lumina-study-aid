@@ -1,29 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lenco-signature",
-};
-
-// Verify Lenco webhook signature
-function verifyLencoSignature(payload: string, signature: string, secret: string): boolean {
-  if (!secret) {
-    console.log("No webhook secret configured, skipping signature verification");
-    return true; // Allow in development
-  }
-  
-  try {
-    const hmac = createHmac("sha256", secret);
-    hmac.update(payload);
-    const expectedSignature = hmac.digest("hex");
-    return signature === expectedSignature;
-  } catch (error) {
-    console.error("Signature verification error:", error);
-    return false;
-  }
-}
+import { verifySignature } from "../_shared/security.ts";
 
 // Send payment confirmation email
 async function sendPaymentConfirmationEmail(
@@ -223,10 +200,6 @@ async function sendClassJoinEmail(
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
   try {
     const rawBody = await req.text();
     const signature = req.headers.get("x-lenco-signature") || "";
@@ -234,12 +207,12 @@ serve(async (req) => {
 
     console.log("Lenco webhook received");
 
-    // Verify signature if secret is configured
-    if (webhookSecret && !verifyLencoSignature(rawBody, signature, webhookSecret)) {
-      console.error("Invalid webhook signature");
+    // Verify signature
+    if (!verifySignature(rawBody, signature, webhookSecret)) {
+      console.error("Invalid or missing webhook signature");
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
       });
     }
 
@@ -266,7 +239,7 @@ serve(async (req) => {
       console.error("Missing payment reference in webhook");
       return new Response(JSON.stringify({ error: "Missing reference" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
       });
     }
 
@@ -289,7 +262,7 @@ serve(async (req) => {
         console.error("Payment not found:", reference);
         return new Response(JSON.stringify({ error: "Payment not found" }), {
           status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
         });
       }
     }
@@ -460,7 +433,7 @@ serve(async (req) => {
       status: newStatus,
       paymentId: paymentRecord.id
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Payment webhook error:", error);
@@ -468,7 +441,7 @@ serve(async (req) => {
       error: error instanceof Error ? error.message : "Unknown error" 
     }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
     });
   }
 });
