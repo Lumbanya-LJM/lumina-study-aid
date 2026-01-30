@@ -111,11 +111,45 @@ const ClassRecordingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [recordings, setRecordings] = useState<ClassRecording[]>([]);
-  const [archivedRecordings, setArchivedRecordings] = useState<ClassRecording[]>([]);
-  const [pendingRecordings, setPendingRecordings] = useState<ClassRecording[]>([]);
-  const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
-  const [liveClasses, setLiveClasses] = useState<UpcomingClass[]>([]);
+  // Batch all classes into a single state to reduce network requests
+  const [allClasses, setAllClasses] = useState<ClassRecording[]>([]);
+
+  // Categorize and sort classes using useMemo to avoid unnecessary recalculations
+  const recordings = useMemo(() =>
+    allClasses
+      .filter(c => c.status === "ended" && !c.is_archived && !!c.recording_url && c.recording_url !== "no_recording_available")
+      .sort((a, b) => new Date(b.ended_at || 0).getTime() - new Date(a.ended_at || 0).getTime()),
+    [allClasses]
+  );
+
+  const archivedRecordings = useMemo(() =>
+    allClasses
+      .filter(c => c.status === "ended" && !!c.is_archived && !!c.recording_url && c.recording_url !== "no_recording_available")
+      .sort((a, b) => new Date(b.ended_at || 0).getTime() - new Date(a.ended_at || 0).getTime()),
+    [allClasses]
+  );
+
+  const pendingRecordings = useMemo(() =>
+    allClasses
+      .filter(c => c.status === "ended" && !c.recording_url && !!c.daily_room_name)
+      .sort((a, b) => new Date(b.ended_at || 0).getTime() - new Date(a.ended_at || 0).getTime()),
+    [allClasses]
+  );
+
+  const upcomingClasses = useMemo(() =>
+    allClasses
+      .filter(c => c.status === "scheduled" && !!c.scheduled_at && new Date(c.scheduled_at) >= new Date())
+      .sort((a, b) => new Date(a.scheduled_at || 0).getTime() - new Date(b.scheduled_at || 0).getTime()),
+    [allClasses]
+  );
+
+  const liveClasses = useMemo(() =>
+    allClasses
+      .filter(c => c.status === "live")
+      .sort((a, b) => new Date(b.started_at || 0).getTime() - new Date(a.started_at || 0).getTime()),
+    [allClasses]
+  );
+
   const [watchHistory, setWatchHistory] = useState<Map<string, WatchHistory>>(new Map());
   const [aiSummaries, setAiSummaries] = useState<Map<string, AISummary>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -163,59 +197,18 @@ const ClassRecordingsPage: React.FC = () => {
 
   const loadClasses = useCallback(async () => {
     try {
-      // Load active recordings (ended classes with recordings, not archived)
-      const { data: recordingsData } = await supabase
+      // Batch load all relevant classes in a single query to reduce network requests
+      const { data: classesData } = await supabase
         .from("live_classes")
         .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .eq("is_archived", false)
-        .not("recording_url", "is", null)
-        .neq("recording_url", "no_recording_available")
-        .order("ended_at", { ascending: false });
+        .or("status.eq.live,status.eq.scheduled,status.eq.ended");
 
-      setRecordings(recordingsData || []);
+      setAllClasses(classesData || []);
 
-      // Load archived recordings (only for hosts)
-      const { data: archivedData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .eq("is_archived", true)
-        .not("recording_url", "is", null)
-        .neq("recording_url", "no_recording_available")
-        .order("ended_at", { ascending: false });
-
-      setArchivedRecordings(archivedData || []);
-
-      // Load pending recordings (ended classes without recordings)
-      const { data: pendingData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .is("recording_url", null)
-        .not("daily_room_name", "is", null)
-        .order("ended_at", { ascending: false });
-
-      setPendingRecordings(pendingData || []);
-
-      // Load upcoming scheduled classes
-      const { data: upcomingData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "scheduled")
-        .gte("scheduled_at", new Date().toISOString())
-        .order("scheduled_at", { ascending: true });
-
-      setUpcomingClasses(upcomingData || []);
-
-      // Load live classes
-      const { data: liveData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "live")
-        .order("started_at", { ascending: false });
-
-      setLiveClasses(liveData || []);
+      // Calculate which classes need AI summaries (ended classes with recordings)
+      const recordingsForSummaries = (classesData || []).filter(
+        c => c.status === "ended" && !!c.recording_url && c.recording_url !== "no_recording_available"
+      );
 
       // Load watch history for the current user
       if (user) {
@@ -240,8 +233,8 @@ const ClassRecordingsPage: React.FC = () => {
       }
 
       // Load AI summaries for all recordings
-      if (recordingsData && recordingsData.length > 0) {
-        const classIds = recordingsData.map((r) => r.id);
+      if (recordingsForSummaries && recordingsForSummaries.length > 0) {
+        const classIds = recordingsForSummaries.map((r) => r.id);
         const { data: summariesData } = await supabase
           .from("class_ai_summaries")
           .select("*")
@@ -616,17 +609,36 @@ const ClassRecordingsPage: React.FC = () => {
     return { percentage, completed: history.completed, resumeText };
   };
 
-  const filteredRecordings = recordings.filter(
-    (r) =>
-      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredRecordings = useMemo(() =>
+    recordings.filter(
+      (r) =>
+        r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [recordings, searchQuery]
   );
 
-  // Get host recordings count
-  const hostRecordingsCount = recordings.filter((r) => r.host_id === user?.id).length;
-  const filteredHostRecordings = filteredRecordings.filter((r) => r.host_id === user?.id);
-  const allHostSelected = filteredHostRecordings.length > 0 && 
-    filteredHostRecordings.every((r) => selectedForBulk.has(r.id));
+  // Get host recordings count and filtered lists with memoization
+  const hostRecordingsCount = useMemo(() =>
+    recordings.filter((r) => r.host_id === user?.id).length,
+    [recordings, user?.id]
+  );
+
+  const filteredHostRecordings = useMemo(() =>
+    filteredRecordings.filter((r) => r.host_id === user?.id),
+    [filteredRecordings, user?.id]
+  );
+
+  const allHostSelected = useMemo(() =>
+    filteredHostRecordings.length > 0 &&
+    filteredHostRecordings.every((r) => selectedForBulk.has(r.id)),
+    [filteredHostRecordings, selectedForBulk]
+  );
+
+  const hostArchivedRecordings = useMemo(() =>
+    archivedRecordings.filter(r => r.host_id === user?.id),
+    [archivedRecordings, user?.id]
+  );
 
   // Select all host recordings
   const selectAllHostRecordings = () => {
@@ -759,9 +771,9 @@ const ClassRecordingsPage: React.FC = () => {
             <TabsTrigger value="archived" className="gap-1 text-xs sm:text-sm">
               <Archive className="h-4 w-4" />
               <span className="hidden sm:inline">Archived</span>
-              {archivedRecordings.filter(r => r.host_id === user?.id).length > 0 && (
+              {hostArchivedRecordings.length > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                  {archivedRecordings.filter(r => r.host_id === user?.id).length}
+                  {hostArchivedRecordings.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -1048,7 +1060,7 @@ const ClassRecordingsPage: React.FC = () => {
 
           {/* Archived Recordings Tab */}
           <TabsContent value="archived" className="space-y-4">
-            {archivedRecordings.filter(r => r.host_id === user?.id).length === 0 ? (
+            {hostArchivedRecordings.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -1060,9 +1072,7 @@ const ClassRecordingsPage: React.FC = () => {
               </Card>
             ) : (
               <div className="space-y-3">
-                {archivedRecordings
-                  .filter(r => r.host_id === user?.id)
-                  .map((recording) => (
+                {hostArchivedRecordings.map((recording) => (
                     <Card key={recording.id} className="opacity-80">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
