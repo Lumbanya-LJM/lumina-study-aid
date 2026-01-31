@@ -11,51 +11,99 @@ interface GetUserEmailsRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Create a client with the user's JWT to verify identity and check permissions
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Authorization check: User must be an Admin, Moderator, or a Tutor with at least one assigned course
+    const { data: isAdmin } = await userClient.rpc('has_role', { _role: 'admin', _user_id: user.id });
+    const { data: isModerator } = await userClient.rpc('has_role', { _role: 'moderator', _user_id: user.id });
+
+    const { data: courses } = await userClient
+      .from('academy_courses')
+      .select('id')
+      .eq('tutor_id', user.id)
+      .limit(1);
+
+    const isTutor = courses && courses.length > 0;
+
+    if (!isAdmin && !isModerator && !isTutor) {
+      console.log(`[get-user-emails] Forbidden: User ${user.id} attempted unauthorized access`);
+      return new Response(JSON.stringify({ error: "Forbidden: Insufficient permissions" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const { userIds }: GetUserEmailsRequest = await req.json();
 
-    if (!userIds || userIds.length === 0) {
+    if (!Array.isArray(userIds)) {
+      return new Response(JSON.stringify({ error: "Invalid payload: userIds must be an array" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (userIds.length === 0) {
       return new Response(JSON.stringify({ emails: [] }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    console.log(`[get-user-emails] Fetching emails for ${userIds.length} users`);
+    if (userIds.length > 500) {
+      return new Response(JSON.stringify({ error: "Request too large: maximum 500 userIds allowed" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
-    // Create Supabase admin client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+    console.log(`[get-user-emails] Authorized access by ${user.id}. Fetching emails for ${userIds.length} users`);
+
+    // Use admin client to fetch emails from auth.users (requires service role)
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Fetch users from auth.users using admin API
     const emails: { user_id: string; email: string }[] = [];
     
     for (const userId of userIds) {
       try {
-        const { data: userData, error } = await supabase.auth.admin.getUserById(userId);
-        
+        const { data: userData, error } = await adminClient.auth.admin.getUserById(userId);
         if (!error && userData?.user?.email) {
-          emails.push({
-            user_id: userId,
-            email: userData.user.email
-          });
+          emails.push({ user_id: userId, email: userData.user.email });
         }
       } catch (err) {
-        console.log(`[get-user-emails] Could not fetch email for user ${userId}:`, err);
+        console.log(`[get-user-emails] Could not fetch email for user ${userId}`);
       }
     }
-
-    console.log(`[get-user-emails] Successfully fetched ${emails.length} emails`);
 
     return new Response(JSON.stringify({ emails }), {
       status: 200,
@@ -63,14 +111,11 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error: unknown) {
     console.error("[get-user-emails] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    // Fail securely by not leaking internal error details
+    return new Response(JSON.stringify({ error: "An internal server error occurred" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 
