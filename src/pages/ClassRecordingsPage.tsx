@@ -654,7 +654,12 @@ const ClassRecordingsPage: React.FC = () => {
         {/* Page Header */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              aria-label="Go back"
+            >
               <ChevronLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-xl font-bold">Classes</h1>
@@ -664,6 +669,7 @@ const ClassRecordingsPage: React.FC = () => {
             size="sm"
             onClick={handleSyncRecordings}
             disabled={syncing}
+            aria-label="Sync recordings"
           >
             {syncing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
