@@ -291,6 +291,7 @@ const HomePage: React.FC = () => {
           </div>
           <button 
             onClick={() => navigate('/notifications')}
+            aria-label="Notifications"
             className="relative p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
           >
             <Bell className="w-5 h-5 text-foreground" />
@@ -327,10 +328,21 @@ const HomePage: React.FC = () => {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-foreground">Your Progress</h2>
             <div className="flex gap-1">
-              <Button variant="ghost" size="sm" onClick={() => setHistoryModalOpen(true)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setHistoryModalOpen(true)}
+                aria-label="View stats history"
+              >
                 <History className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setClearStatsOpen(true)} className="text-destructive">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setClearStatsOpen(true)}
+                className="text-destructive"
+                aria-label="Clear stats"
+              >
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>

@@ -1,0 +1,3 @@
+## 2026-01-31 - [Improving Form and Icon-Button Accessibility]
+**Learning:** High-traffic pages like `AuthPage.tsx` often use raw HTML elements for custom styling, which can bypass the accessibility features of standard UI components. Missing `id` and `htmlFor` associations, as well as missing `aria-label` on icon-only buttons, are common patterns that significantly degrade the experience for screen reader users.
+**Action:** Always verify that form fields have explicit `id`/`htmlFor` associations and that all icon-only buttons have descriptive `aria-label` attributes. Use dynamic labels (e.g., "Show password" vs "Hide password") for toggle buttons to provide clear state feedback.
