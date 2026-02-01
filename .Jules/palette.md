@@ -1,0 +1,3 @@
+## 2025-05-14 - Accessible Selection Lists and Consistent Button Usage
+**Learning:** Raw `div` containers with `onClick` handlers are not accessible to keyboard users or screen readers. In `AuthPage.tsx`, course selection items were `div`s. Additionally, using raw `<button>` elements instead of the project's `Button` component led to inconsistent loading states and missed haptic feedback.
+**Action:** Convert interactive list items to `<button>` with `role="checkbox"` and `aria-checked`. Migrate raw buttons to the `Button` component, using `variant="link"` and `className="h-auto p-0"` for inline text-like buttons to maintain their visual style while gaining component benefits.
