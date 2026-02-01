@@ -608,10 +608,11 @@ const AuthPage: React.FC = () => {
     <form onSubmit={handleCredentialsSubmit} className="space-y-4">
       {!isLogin && (
         <div>
-          <label className="text-sm font-medium text-foreground mb-2 block">Full Name</label>
+          <label htmlFor="fullName" className="text-sm font-medium text-foreground mb-2 block">Full Name</label>
           <div className="relative">
             <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
+              id="fullName"
               type="text"
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
@@ -624,10 +625,11 @@ const AuthPage: React.FC = () => {
       )}
 
       <div>
-        <label className="text-sm font-medium text-foreground mb-2 block">Email Address</label>
+        <label htmlFor="email" className="text-sm font-medium text-foreground mb-2 block">Email Address</label>
         <div className="relative">
           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
+            id="email"
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -639,10 +641,11 @@ const AuthPage: React.FC = () => {
       </div>
 
       <div>
-        <label className="text-sm font-medium text-foreground mb-2 block">Password</label>
+        <label htmlFor="password" className="text-sm font-medium text-foreground mb-2 block">Password</label>
         <div className="relative">
           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
+            id="password"
             type={showPassword ? 'text' : 'password'}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -654,6 +657,7 @@ const AuthPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -663,13 +667,14 @@ const AuthPage: React.FC = () => {
 
       {isLogin && (
         <div className="text-right">
-          <button
+          <Button
+            variant="link"
             type="button"
             onClick={() => navigate('/forgot-password')}
-            className="text-sm text-primary hover:underline"
+            className="text-sm h-auto p-0 text-primary hover:underline"
           >
             Forgot password?
-          </button>
+          </Button>
         </div>
       )}
 
@@ -690,25 +695,23 @@ const AuthPage: React.FC = () => {
         onSelect={setSelectedSchool}
       />
       
-      <button
+      <Button
         type="button"
         onClick={() => setStep('profile')}
         disabled={!selectedSchool}
-        className={cn(
-          "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
-          !selectedSchool ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
-        )}
+        className="w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all"
       >
         Continue
-      </button>
+      </Button>
 
-      <button
+      <Button
+        variant="link"
         type="button"
         onClick={() => setStep('credentials')}
         className="w-full py-3 text-primary font-medium hover:underline"
       >
         Go Back
-      </button>
+      </Button>
     </div>
   );
 
@@ -727,10 +730,11 @@ const AuthPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-foreground mb-2 block">Institution</label>
+          <label htmlFor="university" className="text-sm font-medium text-foreground mb-2 block">Institution</label>
           <div className="relative">
             <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <select
+              id="university"
               value={formData.university}
               onChange={(e) => setFormData({ ...formData, university: e.target.value })}
               className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground appearance-none"
@@ -744,6 +748,7 @@ const AuthPage: React.FC = () => {
             <div className="relative mt-2">
               <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
+                id="customUniversity"
                 type="text"
                 value={formData.customUniversity}
                 onChange={(e) => setFormData({ ...formData, customUniversity: e.target.value })}
@@ -756,12 +761,13 @@ const AuthPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-foreground mb-2 block">
+          <label htmlFor="yearOfStudy" className="text-sm font-medium text-foreground mb-2 block">
             {formData.university === 'Zambia Institute of Advanced Legal Education (ZIALE)' ? 'Attempt Status' : 'Year of Study'}
           </label>
           <div className="relative">
             <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <select
+              id="yearOfStudy"
               value={formData.yearOfStudy}
               onChange={(e) => setFormData({ ...formData, yearOfStudy: parseInt(e.target.value) })}
               className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground appearance-none"
@@ -773,24 +779,22 @@ const AuthPage: React.FC = () => {
           </div>
         </div>
 
-        <button
+        <Button
           type="submit"
-          disabled={loading}
-          className={cn(
-            "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
-            loading ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
-          )}
+          loading={loading}
+          className="w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all"
         >
           Continue
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="link"
           type="button"
           onClick={() => setStep(hasPresetSchool ? 'credentials' : 'school')}
           className="w-full py-3 text-primary font-medium hover:underline"
         >
           Go Back
-        </button>
+        </Button>
       </form>
     );
   };
@@ -821,11 +825,14 @@ const AuthPage: React.FC = () => {
             {courses.map((course) => {
               const isSelected = formData.selectedCourses.includes(course.id);
               return (
-                <div
+                <button
                   key={course.id}
+                  type="button"
                   onClick={() => toggleCourse(course.id)}
+                  role="checkbox"
+                  aria-checked={isSelected}
                   className={cn(
-                    "p-4 rounded-2xl border cursor-pointer transition-all",
+                    "p-4 rounded-2xl border cursor-pointer transition-all text-left w-full",
                     isSelected 
                       ? "bg-primary/10 border-primary/50" 
                       : "bg-secondary border-border/50 hover:border-primary/30"
@@ -850,7 +857,7 @@ const AuthPage: React.FC = () => {
                       )}
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -893,16 +900,14 @@ const AuthPage: React.FC = () => {
           </div>
         </div>
 
-        <button
+        <Button
           type="submit"
-          disabled={loading || !canSubmit}
-          className={cn(
-            "w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all",
-            (loading || !canSubmit) ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
-          )}
+          loading={loading}
+          disabled={!canSubmit}
+          className="w-full py-4 rounded-2xl font-semibold text-primary-foreground gradient-primary shadow-glow transition-all"
         >
           {loading ? 'Creating Account...' : (formData.selectedCourses.length > 0 ? 'Create Account & Enroll' : 'Create Account')}
-        </button>
+        </Button>
 
         {!canSubmit && (
           <p className="text-xs text-center text-muted-foreground">
@@ -910,13 +915,14 @@ const AuthPage: React.FC = () => {
           </p>
         )}
 
-        <button
+        <Button
+          variant="link"
           type="button"
           onClick={() => setStep('profile')}
           className="w-full py-3 text-primary font-medium hover:underline"
         >
           Go Back
-        </button>
+        </Button>
       </form>
     );
   };
@@ -1008,13 +1014,14 @@ const AuthPage: React.FC = () => {
         {step === 'credentials' && isLogin && selectedRole === 'tutor' && (
           <p className="text-xs text-muted-foreground mb-4 max-w-xs mx-auto">
             Use your approved credentials. New tutors must{' '}
-            <button 
+            <Button
+              variant="link"
               type="button"
               onClick={() => setIsLogin(false)}
-              className="text-primary hover:underline"
+              className="h-auto p-0 text-primary hover:underline"
             >
               sign up and apply
-            </button>{' '}
+            </Button>{' '}
             first.
           </p>
         )}
@@ -1093,12 +1100,13 @@ const AuthPage: React.FC = () => {
           <div className="mt-6 text-center">
             <p className="text-muted-foreground text-sm">
               {isLogin ? "Don't have an account?" : "Already have an account?"}
-              <button
+              <Button
+                variant="link"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-primary font-semibold ml-1 hover:underline"
+                className="h-auto p-0 text-primary font-semibold ml-1 hover:underline"
               >
                 {isLogin ? 'Sign Up' : 'Sign In'}
-              </button>
+              </Button>
             </p>
           </div>
         )}
