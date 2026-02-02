@@ -73,6 +73,8 @@ interface LiveClass {
   course_id: string | null;
   host_id: string;
   recording_url: string | null;
+  is_recurring?: boolean;
+  recurrence_description?: string | null;
 }
 
 interface CourseMaterial {
@@ -207,30 +209,26 @@ const LuminaAcademyPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Get enrollments
+      // Use a single query with a join to fetch both enrollments and course details
+      // This reduces network overhead and improves load time
       const { data: enrollments, error: enrollError } = await supabase
         .from('academy_enrollments')
-        .select('course_id')
+        .select(`
+          course:academy_courses!inner(*)
+        `)
         .eq('user_id', user.id)
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .eq('academy_courses.is_active', true);
 
       if (enrollError) throw enrollError;
 
-      if (enrollments && enrollments.length > 0) {
-        const courseIds = enrollments.map(e => e.course_id);
-        
-        const { data: courses, error: coursesError } = await supabase
-          .from('academy_courses')
-          .select('*')
-          .in('id', courseIds)
-          .eq('is_active', true);
-
-        if (coursesError) throw coursesError;
-
-        setEnrolledCourses(courses || []);
+      if (enrollments) {
+        // Extract the course data from the join results
+        const courses = enrollments.map(e => (e as unknown as { course: Course }).course).filter(Boolean);
+        setEnrolledCourses(courses);
         
         // Auto-select first course if available
-        if (courses && courses.length > 0 && !selectedCourse) {
+        if (courses.length > 0 && !selectedCourse) {
           setSelectedCourse(courses[0]);
         }
       }
@@ -250,64 +248,61 @@ const LuminaAcademyPage: React.FC = () => {
     setLoadingCourseData(true);
 
     try {
-      // Load live classes
-      const { data: liveData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'live')
-        .order('started_at', { ascending: false });
+      // Parallelize multiple independent data fetches to improve performance
+      const [
+        liveRes,
+        scheduledRes,
+        recordingsRes,
+        materialsRes,
+        updatesRes,
+        courseRes
+      ] = await Promise.all([
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'live')
+          .order('started_at', { ascending: false }),
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'scheduled')
+          .gte('scheduled_at', new Date().toISOString())
+          .order('scheduled_at', { ascending: true }),
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'ended')
+          .not('recording_url', 'is', null)
+          .neq('recording_url', 'no_recording_available')
+          .order('ended_at', { ascending: false }),
+        supabase
+          .from('course_materials')
+          .select('*')
+          .eq('course_id', courseId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('tutor_updates')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('is_published', true)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('academy_courses')
+          .select('tutor_id')
+          .eq('id', courseId)
+          .maybeSingle()
+      ]);
 
-      setLiveClasses(liveData || []);
+      setLiveClasses(liveRes.data || []);
+      setScheduledClasses(scheduledRes.data || []);
+      setRecordings(recordingsRes.data || []);
+      setMaterials(materialsRes.data || []);
+      setUpdates(updatesRes.data || []);
 
-      // Load scheduled classes
-      const { data: scheduledData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'scheduled')
-        .gte('scheduled_at', new Date().toISOString())
-        .order('scheduled_at', { ascending: true });
-
-      setScheduledClasses(scheduledData || []);
-
-      // Load recordings (ended classes with valid recording_url)
-      const { data: recordingsData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'ended')
-        .not('recording_url', 'is', null)
-        .neq('recording_url', 'no_recording_available')
-        .order('ended_at', { ascending: false });
-
-      setRecordings(recordingsData || []);
-
-      // Load course materials
-      const { data: materialsData } = await supabase
-        .from('course_materials')
-        .select('*')
-        .eq('course_id', courseId)
-        .order('created_at', { ascending: false });
-
-      setMaterials(materialsData || []);
-
-      // Load updates
-      const { data: updatesData } = await supabase
-        .from('tutor_updates')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('is_published', true)
-        .order('created_at', { ascending: false });
-
-      setUpdates(updatesData || []);
-
-      // Load assigned tutor for this course (from academy_courses.tutor_id)
-      const { data: courseData } = await supabase
-        .from('academy_courses')
-        .select('tutor_id')
-        .eq('id', courseId)
-        .single();
+      const courseData = courseRes.data;
 
       if (courseData?.tutor_id) {
         // Get tutor details from tutor_applications
@@ -586,7 +581,7 @@ const LuminaAcademyPage: React.FC = () => {
                       <Calendar className="w-4 h-4 text-primary" />
                       Upcoming Classes
                     </h3>
-                    {scheduledClasses.map((scheduledClass: any) => (
+                    {scheduledClasses.map((scheduledClass) => (
                       <div
                         key={scheduledClass.id}
                         className="bg-card rounded-2xl p-4 border border-border/50"

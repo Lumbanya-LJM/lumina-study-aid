@@ -163,84 +163,79 @@ const ClassRecordingsPage: React.FC = () => {
 
   const loadClasses = useCallback(async () => {
     try {
-      // Load active recordings (ended classes with recordings, not archived)
-      const { data: recordingsData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .eq("is_archived", false)
-        .not("recording_url", "is", null)
-        .neq("recording_url", "no_recording_available")
-        .order("ended_at", { ascending: false });
-
-      setRecordings(recordingsData || []);
-
-      // Load archived recordings (only for hosts)
-      const { data: archivedData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .eq("is_archived", true)
-        .not("recording_url", "is", null)
-        .neq("recording_url", "no_recording_available")
-        .order("ended_at", { ascending: false });
-
-      setArchivedRecordings(archivedData || []);
-
-      // Load pending recordings (ended classes without recordings)
-      const { data: pendingData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .is("recording_url", null)
-        .not("daily_room_name", "is", null)
-        .order("ended_at", { ascending: false });
-
-      setPendingRecordings(pendingData || []);
-
-      // Load upcoming scheduled classes
-      const { data: upcomingData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "scheduled")
-        .gte("scheduled_at", new Date().toISOString())
-        .order("scheduled_at", { ascending: true });
-
-      setUpcomingClasses(upcomingData || []);
-
-      // Load live classes
-      const { data: liveData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "live")
-        .order("started_at", { ascending: false });
-
-      setLiveClasses(liveData || []);
-
-      // Load watch history for the current user
-      if (user) {
-        const { data: historyData } = await supabase
+      // Parallelize multiple independent data fetches to improve performance
+      const [
+        recordingsRes,
+        archivedRes,
+        pendingRes,
+        upcomingRes,
+        liveRes,
+        historyRes
+      ] = await Promise.all([
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "ended")
+          .eq("is_archived", false)
+          .not("recording_url", "is", null)
+          .neq("recording_url", "no_recording_available")
+          .order("ended_at", { ascending: false }),
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "ended")
+          .eq("is_archived", true)
+          .not("recording_url", "is", null)
+          .neq("recording_url", "no_recording_available")
+          .order("ended_at", { ascending: false }),
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "ended")
+          .is("recording_url", null)
+          .not("daily_room_name", "is", null)
+          .order("ended_at", { ascending: false }),
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "scheduled")
+          .gte("scheduled_at", new Date().toISOString())
+          .order("scheduled_at", { ascending: true }),
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "live")
+          .order("started_at", { ascending: false }),
+        user ? supabase
           .from("recording_watch_history")
           .select("*")
-          .eq("user_id", user.id);
+          .eq("user_id", user.id) : Promise.resolve({ data: null, error: null })
+      ]);
 
-        if (historyData) {
-          const historyMap = new Map<string, WatchHistory>();
-          historyData.forEach((h) => {
-            historyMap.set(h.class_id, {
-              class_id: h.class_id,
-              progress_seconds: h.progress_seconds,
-              duration_seconds: h.duration_seconds,
-              completed: h.completed,
-              last_watched_at: h.last_watched_at,
-            });
+      const recordingsData = recordingsRes.data || [];
+      setRecordings(recordingsData);
+      setArchivedRecordings(archivedRes.data || []);
+      setPendingRecordings(pendingRes.data || []);
+      setUpcomingClasses(upcomingRes.data || []);
+      setLiveClasses(liveRes.data || []);
+
+      if (historyRes.data) {
+        const historyMap = new Map<string, WatchHistory>();
+        (historyRes.data as unknown[]).forEach((item) => {
+          const h = item as WatchHistory;
+          historyMap.set(h.class_id, {
+            class_id: h.class_id,
+            progress_seconds: h.progress_seconds,
+            duration_seconds: h.duration_seconds,
+            completed: h.completed,
+            last_watched_at: h.last_watched_at,
           });
-          setWatchHistory(historyMap);
-        }
+        });
+        setWatchHistory(historyMap);
       }
 
       // Load AI summaries for all recordings
-      if (recordingsData && recordingsData.length > 0) {
+      if (recordingsData.length > 0) {
         const classIds = recordingsData.map((r) => r.id);
         const { data: summariesData } = await supabase
           .from("class_ai_summaries")
@@ -249,7 +244,8 @@ const ClassRecordingsPage: React.FC = () => {
 
         if (summariesData) {
           const summariesMap = new Map<string, AISummary>();
-          summariesData.forEach((s) => {
+          (summariesData as unknown[]).forEach((item) => {
+            const s = item as AISummary;
             const keyPoints = Array.isArray(s.key_points) 
               ? s.key_points.map((k) => String(k)) 
               : [];
