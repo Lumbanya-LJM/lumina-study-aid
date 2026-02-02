@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, MessageCircle, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -112,6 +113,7 @@ export const ConversationSearch: React.FC<ConversationSearchProps> = ({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search conversations..."
+              aria-label="Search conversations"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pl-10 pr-10"
@@ -120,7 +122,8 @@ export const ConversationSearch: React.FC<ConversationSearchProps> = ({
             {query && (
               <button
                 onClick={() => setQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-secondary"
+                aria-label="Clear search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <X className="w-3 h-3 text-muted-foreground" />
               </button>
@@ -128,7 +131,8 @@ export const ConversationSearch: React.FC<ConversationSearchProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+            aria-label="Close search"
+            className="p-2 rounded-xl hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <X className="w-5 h-5 text-muted-foreground" />
           </button>
@@ -140,7 +144,7 @@ export const ConversationSearch: React.FC<ConversationSearchProps> = ({
         <div className="px-5 py-4 space-y-2">
           {isSearching ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <Spinner className="w-6 h-6 border-primary" />
             </div>
           ) : query && results.length === 0 ? (
             <div className="text-center py-12">

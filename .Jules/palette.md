@@ -1,0 +1,3 @@
+## 2025-05-15 - Improving Accessibility and Polish in Core Interactive Components
+**Learning:** Raw `<input>` and `<select>` elements used for custom styling frequently lack proper label association. Using matching `id` and `htmlFor` is essential for screen reader support. Additionally, icon-only buttons (like notifications, search clear/close, and password toggles) require explicit `aria-label` attributes and `focus-visible` styles to be usable by all students.
+**Action:** Always check for label association in forms and ensure all icon-only buttons have descriptive `aria-label` and visible focus states. Use the shared `Spinner` component for all loading states to maintain consistency.
