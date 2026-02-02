@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { validateUser, checkAdminOrTutor, corsHeaders } from "../_shared/security.ts";
 
 // Web Push requires VAPID keys for authentication
 // These should match what's used in the frontend
@@ -38,6 +34,18 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Security: Validate the requester and ensure they have administrative or tutor privileges
+    const requester = await validateUser(req);
+    const isAuthorized = await checkAdminOrTutor(supabase, requester.id);
+
+    if (!isAuthorized) {
+      console.warn(`Unauthorized push notification request from user: ${requester.id}`);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Administrative or tutor privileges required" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     const { userId, userIds, payload }: RequestBody = await req.json();
 
