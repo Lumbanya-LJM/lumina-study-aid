@@ -608,10 +608,11 @@ const AuthPage: React.FC = () => {
     <form onSubmit={handleCredentialsSubmit} className="space-y-4">
       {!isLogin && (
         <div>
-          <label className="text-sm font-medium text-foreground mb-2 block">Full Name</label>
+          <label htmlFor="full-name" className="text-sm font-medium text-foreground mb-2 block">Full Name</label>
           <div className="relative">
             <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
+              id="full-name"
               type="text"
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
@@ -624,10 +625,11 @@ const AuthPage: React.FC = () => {
       )}
 
       <div>
-        <label className="text-sm font-medium text-foreground mb-2 block">Email Address</label>
+        <label htmlFor="email" className="text-sm font-medium text-foreground mb-2 block">Email Address</label>
         <div className="relative">
           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
+            id="email"
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -639,10 +641,11 @@ const AuthPage: React.FC = () => {
       </div>
 
       <div>
-        <label className="text-sm font-medium text-foreground mb-2 block">Password</label>
+        <label htmlFor="password" className="text-sm font-medium text-foreground mb-2 block">Password</label>
         <div className="relative">
           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
+            id="password"
             type={showPassword ? 'text' : 'password'}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -654,7 +657,8 @@ const AuthPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-lg"
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
@@ -727,10 +731,11 @@ const AuthPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-foreground mb-2 block">Institution</label>
+          <label htmlFor="university" className="text-sm font-medium text-foreground mb-2 block">Institution</label>
           <div className="relative">
             <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <select
+              id="university"
               value={formData.university}
               onChange={(e) => setFormData({ ...formData, university: e.target.value })}
               className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground appearance-none"
@@ -744,10 +749,12 @@ const AuthPage: React.FC = () => {
             <div className="relative mt-2">
               <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
+                id="custom-university"
                 type="text"
                 value={formData.customUniversity}
                 onChange={(e) => setFormData({ ...formData, customUniversity: e.target.value })}
                 placeholder="Enter your institution name"
+                aria-label="Enter your custom institution name"
                 required
                 className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground"
               />
@@ -756,12 +763,13 @@ const AuthPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-foreground mb-2 block">
+          <label htmlFor="year-of-study" className="text-sm font-medium text-foreground mb-2 block">
             {formData.university === 'Zambia Institute of Advanced Legal Education (ZIALE)' ? 'Attempt Status' : 'Year of Study'}
           </label>
           <div className="relative">
             <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <select
+              id="year-of-study"
               value={formData.yearOfStudy}
               onChange={(e) => setFormData({ ...formData, yearOfStudy: parseInt(e.target.value) })}
               className="w-full pl-12 pr-4 py-4 rounded-2xl bg-secondary border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground appearance-none"
