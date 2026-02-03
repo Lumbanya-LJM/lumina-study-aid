@@ -1,0 +1,3 @@
+## 2025-05-14 - [Accessibility fixes for form labels and icon buttons]
+**Learning:** Raw `<input>` and `<select>` elements used for custom styling often miss `id`/`htmlFor` associations, making them inaccessible to screen readers. Icon-only buttons frequently lack `aria-label`. Playwright's `get_by_label` can cause strict mode violations if multiple elements contain the same label text (e.g., an input and its toggle button).
+**Action:** Always verify `id`/`htmlFor` associations in custom forms. Add `aria-label` to all icon-only buttons. Use `exact=True` in Playwright's `get_by_label` to avoid ambiguous matches with related buttons. For conditional inputs, use `sr-only` labels.
