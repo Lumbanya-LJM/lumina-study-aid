@@ -1,0 +1,3 @@
+## 2026-02-03 - [Consolidated Supabase Data Fetching]
+**Learning:** Using SQL joins in Supabase queries (e.g., `.select('*, academy_courses!inner(*)')`) and parallelizing independent queries with `Promise.all` can eliminate significant network-bound waterfalls. In React, wrapping these optimized fetchers in `useCallback` with stable dependencies prevents redundant re-executions and keeps real-time subscriptions efficient.
+**Action:** Always check for sequential `await supabase` calls. Use joins for parent-child relationships and `Promise.all` for unrelated datasets. Ensure `useCallback` dependencies are minimized by using functional state updates or passing data as arguments.
