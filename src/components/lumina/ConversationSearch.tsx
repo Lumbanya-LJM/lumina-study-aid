@@ -121,6 +121,7 @@ export const ConversationSearch: React.FC<ConversationSearchProps> = ({
               <button
                 onClick={() => setQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-secondary"
+                aria-label="Clear search"
               >
                 <X className="w-3 h-3 text-muted-foreground" />
               </button>
@@ -129,6 +130,7 @@ export const ConversationSearch: React.FC<ConversationSearchProps> = ({
           <button
             onClick={onClose}
             className="p-2 rounded-xl hover:bg-secondary transition-colors"
+            aria-label="Close search"
           >
             <X className="w-5 h-5 text-muted-foreground" />
           </button>
