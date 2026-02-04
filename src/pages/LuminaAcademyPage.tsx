@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { 
   ArrowLeft, 
@@ -73,6 +73,8 @@ interface LiveClass {
   course_id: string | null;
   host_id: string;
   recording_url: string | null;
+  is_recurring?: boolean;
+  recurrence_description?: string | null;
 }
 
 interface CourseMaterial {
@@ -135,7 +137,10 @@ const LuminaAcademyPage: React.FC = () => {
   };
 
   // Filter out dismissed updates
-  const visibleUpdates = updates.filter(u => !dismissedUpdates.has(u.id));
+  const visibleUpdates = useMemo(() =>
+    updates.filter(u => !dismissedUpdates.has(u.id)),
+    [updates, dismissedUpdates]
+  );
 
   // Check if user is a tutor
   useEffect(() => {
@@ -155,13 +160,20 @@ const LuminaAcademyPage: React.FC = () => {
     if (user?.id) {
       loadEnrolledCourses();
     }
-  }, [user?.id]);
+  }, [user?.id, loadEnrolledCourses]);
+
+  // Auto-select first course when courses are loaded
+  useEffect(() => {
+    if (enrolledCourses.length > 0 && !selectedCourse) {
+      setSelectedCourse(enrolledCourses[0]);
+    }
+  }, [enrolledCourses, selectedCourse]);
 
   useEffect(() => {
     if (selectedCourse) {
       loadCourseData(selectedCourse.id);
     }
-  }, [selectedCourse]);
+  }, [selectedCourse, loadCourseData]);
 
   // Real-time subscriptions for the selected course
   useEffect(() => {
@@ -200,40 +212,27 @@ const LuminaAcademyPage: React.FC = () => {
       supabase.removeChannel(classesChannel);
       supabase.removeChannel(updatesChannel);
     };
-  }, [selectedCourse, toast]);
+  }, [selectedCourse, toast, loadCourseData]);
 
-  const loadEnrolledCourses = async () => {
+  const loadEnrolledCourses = useCallback(async () => {
     if (!user?.id) return;
     setIsLoading(true);
 
     try {
-      // Get enrollments
+      // Get enrollments with course details in a single query
       const { data: enrollments, error: enrollError } = await supabase
         .from('academy_enrollments')
-        .select('course_id')
+        .select(`
+          course:academy_courses!inner(*)
+        `)
         .eq('user_id', user.id)
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .eq('academy_courses.is_active', true);
 
       if (enrollError) throw enrollError;
 
-      if (enrollments && enrollments.length > 0) {
-        const courseIds = enrollments.map(e => e.course_id);
-        
-        const { data: courses, error: coursesError } = await supabase
-          .from('academy_courses')
-          .select('*')
-          .in('id', courseIds)
-          .eq('is_active', true);
-
-        if (coursesError) throw coursesError;
-
-        setEnrolledCourses(courses || []);
-        
-        // Auto-select first course if available
-        if (courses && courses.length > 0 && !selectedCourse) {
-          setSelectedCourse(courses[0]);
-        }
-      }
+      const courses = enrollments?.map(e => (e.course as unknown as Course)) || [];
+      setEnrolledCourses(courses);
     } catch (error) {
       console.error('Error loading enrolled courses:', error);
       toast({
@@ -244,70 +243,65 @@ const LuminaAcademyPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id, toast]);
 
-  const loadCourseData = async (courseId: string) => {
+  const loadCourseData = useCallback(async (courseId: string) => {
     setLoadingCourseData(true);
 
     try {
-      // Load live classes
-      const { data: liveData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'live')
-        .order('started_at', { ascending: false });
+      // Parallelize independent queries to avoid network waterfall
+      const [
+        { data: liveData },
+        { data: scheduledData },
+        { data: recordingsData },
+        { data: materialsData },
+        { data: updatesData },
+        { data: courseData }
+      ] = await Promise.all([
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'live')
+          .order('started_at', { ascending: false }),
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'scheduled')
+          .gte('scheduled_at', new Date().toISOString())
+          .order('scheduled_at', { ascending: true }),
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'ended')
+          .not('recording_url', 'is', null)
+          .neq('recording_url', 'no_recording_available')
+          .order('ended_at', { ascending: false }),
+        supabase
+          .from('course_materials')
+          .select('*')
+          .eq('course_id', courseId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('tutor_updates')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('is_published', true)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('academy_courses')
+          .select('tutor_id')
+          .eq('id', courseId)
+          .single()
+      ]);
 
       setLiveClasses(liveData || []);
-
-      // Load scheduled classes
-      const { data: scheduledData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'scheduled')
-        .gte('scheduled_at', new Date().toISOString())
-        .order('scheduled_at', { ascending: true });
-
       setScheduledClasses(scheduledData || []);
-
-      // Load recordings (ended classes with valid recording_url)
-      const { data: recordingsData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'ended')
-        .not('recording_url', 'is', null)
-        .neq('recording_url', 'no_recording_available')
-        .order('ended_at', { ascending: false });
-
       setRecordings(recordingsData || []);
-
-      // Load course materials
-      const { data: materialsData } = await supabase
-        .from('course_materials')
-        .select('*')
-        .eq('course_id', courseId)
-        .order('created_at', { ascending: false });
-
       setMaterials(materialsData || []);
-
-      // Load updates
-      const { data: updatesData } = await supabase
-        .from('tutor_updates')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('is_published', true)
-        .order('created_at', { ascending: false });
-
       setUpdates(updatesData || []);
-
-      // Load assigned tutor for this course (from academy_courses.tutor_id)
-      const { data: courseData } = await supabase
-        .from('academy_courses')
-        .select('tutor_id')
-        .eq('id', courseId)
-        .single();
 
       if (courseData?.tutor_id) {
         // Get tutor details from tutor_applications
@@ -355,7 +349,7 @@ const LuminaAcademyPage: React.FC = () => {
     } finally {
       setLoadingCourseData(false);
     }
-  };
+  }, [enrolledCourses]);
 
   const getUpdateIcon = (type: string) => {
     switch (type) {
@@ -586,7 +580,7 @@ const LuminaAcademyPage: React.FC = () => {
                       <Calendar className="w-4 h-4 text-primary" />
                       Upcoming Classes
                     </h3>
-                    {scheduledClasses.map((scheduledClass: any) => (
+                    {scheduledClasses.map((scheduledClass: LiveClass) => (
                       <div
                         key={scheduledClass.id}
                         className="bg-card rounded-2xl p-4 border border-border/50"
