@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -163,83 +163,87 @@ const ClassRecordingsPage: React.FC = () => {
 
   const loadClasses = useCallback(async () => {
     try {
-      // Load active recordings (ended classes with recordings, not archived)
-      const { data: recordingsData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .eq("is_archived", false)
-        .not("recording_url", "is", null)
-        .neq("recording_url", "no_recording_available")
-        .order("ended_at", { ascending: false });
+      // Parallelize all primary data fetching to avoid waterfalls
+      const [
+        { data: recordingsData },
+        { data: archivedData },
+        { data: pendingData },
+        { data: upcomingData },
+        { data: liveData },
+        { data: historyData }
+      ] = await Promise.all([
+        // Load active recordings (ended classes with recordings, not archived)
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "ended")
+          .eq("is_archived", false)
+          .not("recording_url", "is", null)
+          .neq("recording_url", "no_recording_available")
+          .order("ended_at", { ascending: false }),
 
-      setRecordings(recordingsData || []);
+        // Load archived recordings (only for hosts)
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "ended")
+          .eq("is_archived", true)
+          .not("recording_url", "is", null)
+          .neq("recording_url", "no_recording_available")
+          .order("ended_at", { ascending: false }),
 
-      // Load archived recordings (only for hosts)
-      const { data: archivedData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .eq("is_archived", true)
-        .not("recording_url", "is", null)
-        .neq("recording_url", "no_recording_available")
-        .order("ended_at", { ascending: false });
+        // Load pending recordings (ended classes without recordings)
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "ended")
+          .is("recording_url", null)
+          .not("daily_room_name", "is", null)
+          .order("ended_at", { ascending: false }),
 
-      setArchivedRecordings(archivedData || []);
+        // Load upcoming scheduled classes
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "scheduled")
+          .gte("scheduled_at", new Date().toISOString())
+          .order("scheduled_at", { ascending: true }),
 
-      // Load pending recordings (ended classes without recordings)
-      const { data: pendingData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .is("recording_url", null)
-        .not("daily_room_name", "is", null)
-        .order("ended_at", { ascending: false });
+        // Load live classes
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "live")
+          .order("started_at", { ascending: false }),
 
-      setPendingRecordings(pendingData || []);
-
-      // Load upcoming scheduled classes
-      const { data: upcomingData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "scheduled")
-        .gte("scheduled_at", new Date().toISOString())
-        .order("scheduled_at", { ascending: true });
-
-      setUpcomingClasses(upcomingData || []);
-
-      // Load live classes
-      const { data: liveData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "live")
-        .order("started_at", { ascending: false });
-
-      setLiveClasses(liveData || []);
-
-      // Load watch history for the current user
-      if (user) {
-        const { data: historyData } = await supabase
+        // Load watch history for the current user
+        user ? supabase
           .from("recording_watch_history")
           .select("*")
-          .eq("user_id", user.id);
+          .eq("user_id", user.id) : Promise.resolve({ data: [] })
+      ]);
 
-        if (historyData) {
-          const historyMap = new Map<string, WatchHistory>();
-          historyData.forEach((h) => {
-            historyMap.set(h.class_id, {
-              class_id: h.class_id,
-              progress_seconds: h.progress_seconds,
-              duration_seconds: h.duration_seconds,
-              completed: h.completed,
-              last_watched_at: h.last_watched_at,
-            });
+      setRecordings(recordingsData || []);
+      setArchivedRecordings(archivedData || []);
+      setPendingRecordings(pendingData || []);
+      setUpcomingClasses(upcomingData || []);
+      setLiveClasses(liveData || []);
+
+      if (historyData) {
+        const historyMap = new Map<string, WatchHistory>();
+        historyData.forEach((h) => {
+          historyMap.set(h.class_id, {
+            class_id: h.class_id,
+            progress_seconds: h.progress_seconds,
+            duration_seconds: h.duration_seconds,
+            completed: h.completed,
+            last_watched_at: h.last_watched_at,
           });
-          setWatchHistory(historyMap);
-        }
+        });
+        setWatchHistory(historyMap);
       }
 
-      // Load AI summaries for all recordings
+      // Load AI summaries for all recordings if any exist
       if (recordingsData && recordingsData.length > 0) {
         const classIds = recordingsData.map((r) => r.id);
         const { data: summariesData } = await supabase
@@ -616,15 +620,24 @@ const ClassRecordingsPage: React.FC = () => {
     return { percentage, completed: history.completed, resumeText };
   };
 
-  const filteredRecordings = recordings.filter(
-    (r) =>
-      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Memoize filtering and counting to prevent expensive recalculations on every render
+  const filteredRecordings = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return recordings.filter(
+      (r) =>
+        r.title.toLowerCase().includes(query) ||
+        r.description?.toLowerCase().includes(query)
+    );
+  }, [recordings, searchQuery]);
 
   // Get host recordings count
-  const hostRecordingsCount = recordings.filter((r) => r.host_id === user?.id).length;
-  const filteredHostRecordings = filteredRecordings.filter((r) => r.host_id === user?.id);
+  const hostRecordingsCount = useMemo(() =>
+    recordings.filter((r) => r.host_id === user?.id).length,
+  [recordings, user?.id]);
+
+  const filteredHostRecordings = useMemo(() =>
+    filteredRecordings.filter((r) => r.host_id === user?.id),
+  [filteredRecordings, user?.id]);
   const allHostSelected = filteredHostRecordings.length > 0 && 
     filteredHostRecordings.every((r) => selectedForBulk.has(r.id));
 
