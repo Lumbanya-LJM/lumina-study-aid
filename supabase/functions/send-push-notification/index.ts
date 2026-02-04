@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { validateUser, checkAdminOrTutor, corsHeaders } from "../_shared/security.ts";
 
 // Web Push requires VAPID keys for authentication
 // These should match what's used in the frontend
@@ -35,9 +31,28 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // 1. Authenticate user using JWT
+    const user = await validateUser(req);
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // 2. Create Supabase admin client for role checks and DB access
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // 3. Authorize user (Admin, Moderator, or Tutor only)
+    const isAuthorized = await checkAdminOrTutor(supabase, user.id);
+    if (!isAuthorized) {
+      return new Response(JSON.stringify({ error: "Forbidden: Insufficient permissions" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
     const { userId, userIds, payload }: RequestBody = await req.json();
 
@@ -51,7 +66,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Sending push notifications to ${targetUserIds.length} users`);
+    console.log(`Sending push notifications to ${targetUserIds.length} users (requested by ${user.id})`);
 
     // Get all subscriptions for target users
     const { data: subscriptions, error: subError } = await supabase
@@ -76,7 +91,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     // For now, we'll log the notification intent
     // Full web push implementation requires the web-push library with VAPID signing
-    // In production, you would use a service like Firebase Cloud Messaging, OneSignal, or implement VAPID signing
     
     const results = [];
     
@@ -85,10 +99,6 @@ const handler = async (req: Request): Promise<Response> => {
         // Log notification for debugging
         console.log(`Would send to endpoint: ${subscription.endpoint.substring(0, 50)}...`);
         console.log(`Payload: ${JSON.stringify(payload)}`);
-        
-        // In a full implementation, you would:
-        // 1. Create a signed JWT with VAPID keys
-        // 2. Send a POST request to the push endpoint with encrypted payload
         
         results.push({
           userId: subscription.user_id,
@@ -119,8 +129,9 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Error in send-push-notification function:", errorMessage);
+    // Secure error response: don't leak internals
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
