@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { 
   ArrowLeft, 
@@ -73,6 +73,8 @@ interface LiveClass {
   course_id: string | null;
   host_id: string;
   recording_url: string | null;
+  is_recurring?: boolean;
+  recurrence_description?: string | null;
 }
 
 interface CourseMaterial {
@@ -151,17 +153,180 @@ const LuminaAcademyPage: React.FC = () => {
     checkTutorRole();
   }, [user?.id]);
 
+
+  const loadEnrolledCourses = useCallback(async () => {
+    if (!user?.id) return;
+    setIsLoading(true);
+
+    try {
+      // Get enrollments
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('academy_enrollments')
+        .select('course_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+
+      if (enrollError) throw enrollError;
+
+      if (enrollments && enrollments.length > 0) {
+        const courseIds = enrollments.map(e => e.course_id);
+        
+        const { data: courses, error: coursesError } = await supabase
+          .from('academy_courses')
+          .select('*')
+          .in('id', courseIds)
+          .eq('is_active', true);
+
+        if (coursesError) throw coursesError;
+
+        setEnrolledCourses(courses || []);
+      }
+    } catch (error) {
+      console.error('Error loading enrolled courses:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load your courses',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id, toast]);
+
+  const loadCourseData = useCallback(async (courseId: string) => {
+    setLoadingCourseData(true);
+
+    try {
+      // Parallelize all independent course data fetching
+      const [
+        { data: liveData },
+        { data: scheduledData },
+        { data: recordingsData },
+        { data: materialsData },
+        { data: updatesData },
+        { data: courseData }
+      ] = await Promise.all([
+        // Load live classes
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'live')
+          .order('started_at', { ascending: false }),
+
+        // Load scheduled classes
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'scheduled')
+          .gte('scheduled_at', new Date().toISOString())
+          .order('scheduled_at', { ascending: true }),
+
+        // Load recordings (ended classes with valid recording_url)
+        supabase
+          .from('live_classes')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('status', 'ended')
+          .not('recording_url', 'is', null)
+          .neq('recording_url', 'no_recording_available')
+          .order('ended_at', { ascending: false }),
+
+        // Load course materials
+        supabase
+          .from('course_materials')
+          .select('*')
+          .eq('course_id', courseId)
+          .order('created_at', { ascending: false }),
+
+        // Load updates
+        supabase
+          .from('tutor_updates')
+          .select('*')
+          .eq('course_id', courseId)
+          .eq('is_published', true)
+          .order('created_at', { ascending: false }),
+
+        // Load assigned tutor for this course (from academy_courses.tutor_id)
+        supabase
+          .from('academy_courses')
+          .select('name, tutor_id')
+          .eq('id', courseId)
+          .single()
+      ]);
+
+      setLiveClasses(liveData || []);
+      setScheduledClasses(scheduledData || []);
+      setRecordings(recordingsData || []);
+      setMaterials(materialsData || []);
+      setUpdates(updatesData || []);
+
+      if (courseData?.tutor_id) {
+        // Get tutor details from tutor_applications
+        const { data: tutorProfile } = await supabase
+          .from('tutor_applications')
+          .select('user_id, full_name')
+          .eq('user_id', courseData.tutor_id)
+          .eq('status', 'approved')
+          .single();
+        
+        if (tutorProfile) {
+          setCourseTutors([tutorProfile]);
+        } else {
+          // Fallback to profiles table
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_id, full_name')
+            .eq('user_id', courseData.tutor_id)
+            .single();
+          
+          setCourseTutors(profile ? [profile] : []);
+        }
+      } else {
+        // No assigned tutor, check if any tutor has this course in their selected_courses
+        const { data: tutorApps } = await supabase
+          .from('tutor_applications')
+          .select('user_id, full_name, selected_courses')
+          .eq('status', 'approved');
+        
+        const courseName = courseData?.name;
+        
+        if (courseName && tutorApps) {
+          const matchingTutors = tutorApps.filter(t => 
+            t.selected_courses?.includes(courseName)
+          );
+          setCourseTutors(matchingTutors.map(t => ({ user_id: t.user_id, full_name: t.full_name })));
+        } else {
+          setCourseTutors([]);
+        }
+      }
+
+    } catch (error) {
+      console.error('Error loading course data:', error);
+    } finally {
+      setLoadingCourseData(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (user?.id) {
       loadEnrolledCourses();
     }
-  }, [user?.id]);
+  }, [user?.id, loadEnrolledCourses]);
 
   useEffect(() => {
     if (selectedCourse) {
       loadCourseData(selectedCourse.id);
     }
-  }, [selectedCourse]);
+  }, [selectedCourse, loadCourseData]);
+
+  // Auto-select first course if none is selected
+  useEffect(() => {
+    if (enrolledCourses.length > 0 && !selectedCourse) {
+      setSelectedCourse(enrolledCourses[0]);
+    }
+  }, [enrolledCourses, selectedCourse]);
 
   // Real-time subscriptions for the selected course
   useEffect(() => {
@@ -200,162 +365,7 @@ const LuminaAcademyPage: React.FC = () => {
       supabase.removeChannel(classesChannel);
       supabase.removeChannel(updatesChannel);
     };
-  }, [selectedCourse, toast]);
-
-  const loadEnrolledCourses = async () => {
-    if (!user?.id) return;
-    setIsLoading(true);
-
-    try {
-      // Get enrollments
-      const { data: enrollments, error: enrollError } = await supabase
-        .from('academy_enrollments')
-        .select('course_id')
-        .eq('user_id', user.id)
-        .eq('status', 'active');
-
-      if (enrollError) throw enrollError;
-
-      if (enrollments && enrollments.length > 0) {
-        const courseIds = enrollments.map(e => e.course_id);
-        
-        const { data: courses, error: coursesError } = await supabase
-          .from('academy_courses')
-          .select('*')
-          .in('id', courseIds)
-          .eq('is_active', true);
-
-        if (coursesError) throw coursesError;
-
-        setEnrolledCourses(courses || []);
-        
-        // Auto-select first course if available
-        if (courses && courses.length > 0 && !selectedCourse) {
-          setSelectedCourse(courses[0]);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading enrolled courses:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load your courses',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadCourseData = async (courseId: string) => {
-    setLoadingCourseData(true);
-
-    try {
-      // Load live classes
-      const { data: liveData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'live')
-        .order('started_at', { ascending: false });
-
-      setLiveClasses(liveData || []);
-
-      // Load scheduled classes
-      const { data: scheduledData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'scheduled')
-        .gte('scheduled_at', new Date().toISOString())
-        .order('scheduled_at', { ascending: true });
-
-      setScheduledClasses(scheduledData || []);
-
-      // Load recordings (ended classes with valid recording_url)
-      const { data: recordingsData } = await supabase
-        .from('live_classes')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('status', 'ended')
-        .not('recording_url', 'is', null)
-        .neq('recording_url', 'no_recording_available')
-        .order('ended_at', { ascending: false });
-
-      setRecordings(recordingsData || []);
-
-      // Load course materials
-      const { data: materialsData } = await supabase
-        .from('course_materials')
-        .select('*')
-        .eq('course_id', courseId)
-        .order('created_at', { ascending: false });
-
-      setMaterials(materialsData || []);
-
-      // Load updates
-      const { data: updatesData } = await supabase
-        .from('tutor_updates')
-        .select('*')
-        .eq('course_id', courseId)
-        .eq('is_published', true)
-        .order('created_at', { ascending: false });
-
-      setUpdates(updatesData || []);
-
-      // Load assigned tutor for this course (from academy_courses.tutor_id)
-      const { data: courseData } = await supabase
-        .from('academy_courses')
-        .select('tutor_id')
-        .eq('id', courseId)
-        .single();
-
-      if (courseData?.tutor_id) {
-        // Get tutor details from tutor_applications
-        const { data: tutorProfile } = await supabase
-          .from('tutor_applications')
-          .select('user_id, full_name')
-          .eq('user_id', courseData.tutor_id)
-          .eq('status', 'approved')
-          .single();
-        
-        if (tutorProfile) {
-          setCourseTutors([tutorProfile]);
-        } else {
-          // Fallback to profiles table
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('user_id, full_name')
-            .eq('user_id', courseData.tutor_id)
-            .single();
-          
-          setCourseTutors(profile ? [profile] : []);
-        }
-      } else {
-        // No assigned tutor, check if any tutor has this course in their selected_courses
-        const { data: tutorApps } = await supabase
-          .from('tutor_applications')
-          .select('user_id, full_name, selected_courses')
-          .eq('status', 'approved');
-        
-        const selectedCourseData = enrolledCourses.find(c => c.id === courseId);
-        const courseName = selectedCourseData?.name;
-        
-        if (courseName && tutorApps) {
-          const matchingTutors = tutorApps.filter(t => 
-            t.selected_courses?.includes(courseName)
-          );
-          setCourseTutors(matchingTutors.map(t => ({ user_id: t.user_id, full_name: t.full_name })));
-        } else {
-          setCourseTutors([]);
-        }
-      }
-
-    } catch (error) {
-      console.error('Error loading course data:', error);
-    } finally {
-      setLoadingCourseData(false);
-    }
-  };
+  }, [selectedCourse, toast, loadCourseData]);
 
   const getUpdateIcon = (type: string) => {
     switch (type) {
@@ -586,7 +596,7 @@ const LuminaAcademyPage: React.FC = () => {
                       <Calendar className="w-4 h-4 text-primary" />
                       Upcoming Classes
                     </h3>
-                    {scheduledClasses.map((scheduledClass: any) => (
+                    {scheduledClasses.map((scheduledClass: LiveClass) => (
                       <div
                         key={scheduledClass.id}
                         className="bg-card rounded-2xl p-4 border border-border/50"
