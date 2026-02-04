@@ -616,17 +616,31 @@ const ClassRecordingsPage: React.FC = () => {
     return { percentage, completed: history.completed, resumeText };
   };
 
-  const filteredRecordings = recordings.filter(
-    (r) =>
-      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredRecordings = useMemo(() => {
+    const searchLower = searchQuery.toLowerCase();
+    return recordings.filter(
+      (r) =>
+        r.title.toLowerCase().includes(searchLower) ||
+        r.description?.toLowerCase().includes(searchLower)
+    );
+  }, [recordings, searchQuery]);
+
+  // Get host recordings count and selection state with memoization
+  const hostRecordingsCount = useMemo(() =>
+    recordings.filter((r) => r.host_id === user?.id).length,
+    [recordings, user?.id]
   );
 
-  // Get host recordings count
-  const hostRecordingsCount = recordings.filter((r) => r.host_id === user?.id).length;
-  const filteredHostRecordings = filteredRecordings.filter((r) => r.host_id === user?.id);
-  const allHostSelected = filteredHostRecordings.length > 0 && 
-    filteredHostRecordings.every((r) => selectedForBulk.has(r.id));
+  const filteredHostRecordings = useMemo(() =>
+    filteredRecordings.filter((r) => r.host_id === user?.id),
+    [filteredRecordings, user?.id]
+  );
+
+  const allHostSelected = useMemo(() =>
+    filteredHostRecordings.length > 0 &&
+    filteredHostRecordings.every((r) => selectedForBulk.has(r.id)),
+    [filteredHostRecordings, selectedForBulk]
+  );
 
   // Select all host recordings
   const selectAllHostRecordings = () => {
