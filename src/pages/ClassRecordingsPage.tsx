@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -163,80 +163,85 @@ const ClassRecordingsPage: React.FC = () => {
 
   const loadClasses = useCallback(async () => {
     try {
-      // Load active recordings (ended classes with recordings, not archived)
-      const { data: recordingsData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .eq("is_archived", false)
-        .not("recording_url", "is", null)
-        .neq("recording_url", "no_recording_available")
-        .order("ended_at", { ascending: false });
+      // Parallelize all independent data fetching to eliminate network waterfall
+      const [
+        { data: recordingsData },
+        { data: archivedData },
+        { data: pendingData },
+        { data: upcomingData },
+        { data: liveData },
+        historyRes
+      ] = await Promise.all([
+        // 1. Active recordings
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "ended")
+          .eq("is_archived", false)
+          .not("recording_url", "is", null)
+          .neq("recording_url", "no_recording_available")
+          .order("ended_at", { ascending: false }),
 
+        // 2. Archived recordings
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "ended")
+          .eq("is_archived", true)
+          .not("recording_url", "is", null)
+          .neq("recording_url", "no_recording_available")
+          .order("ended_at", { ascending: false }),
+
+        // 3. Pending recordings
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "ended")
+          .is("recording_url", null)
+          .not("daily_room_name", "is", null)
+          .order("ended_at", { ascending: false }),
+
+        // 4. Upcoming classes
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "scheduled")
+          .gte("scheduled_at", new Date().toISOString())
+          .order("scheduled_at", { ascending: true }),
+
+        // 5. Live classes
+        supabase
+          .from("live_classes")
+          .select("*, academy_courses(name)")
+          .eq("status", "live")
+          .order("started_at", { ascending: false }),
+
+        // 6. Watch history (if user exists)
+        user
+          ? supabase.from("recording_watch_history").select("*").eq("user_id", user.id)
+          : Promise.resolve({ data: [] })
+      ]);
+
+      // Update state with results from Promise.all
       setRecordings(recordingsData || []);
-
-      // Load archived recordings (only for hosts)
-      const { data: archivedData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .eq("is_archived", true)
-        .not("recording_url", "is", null)
-        .neq("recording_url", "no_recording_available")
-        .order("ended_at", { ascending: false });
-
       setArchivedRecordings(archivedData || []);
-
-      // Load pending recordings (ended classes without recordings)
-      const { data: pendingData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "ended")
-        .is("recording_url", null)
-        .not("daily_room_name", "is", null)
-        .order("ended_at", { ascending: false });
-
       setPendingRecordings(pendingData || []);
-
-      // Load upcoming scheduled classes
-      const { data: upcomingData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "scheduled")
-        .gte("scheduled_at", new Date().toISOString())
-        .order("scheduled_at", { ascending: true });
-
       setUpcomingClasses(upcomingData || []);
-
-      // Load live classes
-      const { data: liveData } = await supabase
-        .from("live_classes")
-        .select("*, academy_courses(name)")
-        .eq("status", "live")
-        .order("started_at", { ascending: false });
-
       setLiveClasses(liveData || []);
 
-      // Load watch history for the current user
-      if (user) {
-        const { data: historyData } = await supabase
-          .from("recording_watch_history")
-          .select("*")
-          .eq("user_id", user.id);
-
-        if (historyData) {
-          const historyMap = new Map<string, WatchHistory>();
-          historyData.forEach((h) => {
-            historyMap.set(h.class_id, {
-              class_id: h.class_id,
-              progress_seconds: h.progress_seconds,
-              duration_seconds: h.duration_seconds,
-              completed: h.completed,
-              last_watched_at: h.last_watched_at,
-            });
+      // Process watch history
+      if (historyRes.data) {
+        const historyMap = new Map<string, WatchHistory>();
+        historyRes.data.forEach((h) => {
+          historyMap.set(h.class_id, {
+            class_id: h.class_id,
+            progress_seconds: h.progress_seconds,
+            duration_seconds: h.duration_seconds,
+            completed: h.completed,
+            last_watched_at: h.last_watched_at,
           });
-          setWatchHistory(historyMap);
-        }
+        });
+        setWatchHistory(historyMap);
       }
 
       // Load AI summaries for all recordings
@@ -616,17 +621,29 @@ const ClassRecordingsPage: React.FC = () => {
     return { percentage, completed: history.completed, resumeText };
   };
 
-  const filteredRecordings = recordings.filter(
-    (r) =>
-      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Memoize filtered recordings to prevent expensive recalculation on every render
+  const filteredRecordings = useMemo(() => {
+    const lowerQuery = searchQuery.toLowerCase();
+    return recordings.filter(
+      (r) =>
+        r.title.toLowerCase().includes(lowerQuery) ||
+        r.description?.toLowerCase().includes(lowerQuery)
+    );
+  }, [recordings, searchQuery]);
 
-  // Get host recordings count
-  const hostRecordingsCount = recordings.filter((r) => r.host_id === user?.id).length;
-  const filteredHostRecordings = filteredRecordings.filter((r) => r.host_id === user?.id);
-  const allHostSelected = filteredHostRecordings.length > 0 && 
-    filteredHostRecordings.every((r) => selectedForBulk.has(r.id));
+  // Memoize host-specific counts and lists
+  const hostRecordingsCount = useMemo(() =>
+    recordings.filter((r) => r.host_id === user?.id).length
+  , [recordings, user?.id]);
+
+  const filteredHostRecordings = useMemo(() =>
+    filteredRecordings.filter((r) => r.host_id === user?.id)
+  , [filteredRecordings, user?.id]);
+
+  const allHostSelected = useMemo(() =>
+    filteredHostRecordings.length > 0 &&
+    filteredHostRecordings.every((r) => selectedForBulk.has(r.id))
+  , [filteredHostRecordings, selectedForBulk]);
 
   // Select all host recordings
   const selectAllHostRecordings = () => {
