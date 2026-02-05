@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,12 +13,56 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const authHeader = req.headers.get("Authorization");
+
+    if (!authHeader || !supabaseUrl || !supabaseAnonKey) {
+      return new Response(JSON.stringify({ success: false, error: "Missing authentication" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error("Authentication failed:", authError);
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const DAILY_API_KEY = Deno.env.get("DAILY_API_KEY");
     if (!DAILY_API_KEY) {
       throw new Error("DAILY_API_KEY is not configured");
     }
 
     const { action, roomName, classId, title, userName, userId, isOwner, expiresInMinutes = 180 } = await req.json();
+
+    // Check user roles for administrative actions
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+
+    const isAdminOrMod = roles?.some(r => r.role === "admin" || r.role === "moderator");
+
+    // Restrict administrative actions to admins and moderators (tutors)
+    const adminActions = ["create", "delete", "start-recording", "stop-recording"];
+    if (adminActions.includes(action) && !isAdminOrMod) {
+      console.warn(`User ${user.id} attempted unauthorized action: ${action}`);
+      return new Response(JSON.stringify({ success: false, error: "Forbidden: Administrative privileges required" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     console.log("Daily room action:", action, { roomName, classId, title, userName, isOwner });
 
     if (action === "create") {
@@ -85,12 +129,15 @@ serve(async (req) => {
         throw new Error("roomName is required for get-token");
       }
 
-      const tokenData: any = {
+      // Only allow owner privileges if the user is an admin or moderator
+      const hasOwnerPrivileges = isOwner === true && isAdminOrMod;
+
+      const tokenData = {
         properties: {
           room_name: roomName,
           user_name: userName || "Student",
-          user_id: userId || undefined,
-          is_owner: isOwner === true, // Owner can manage the room
+          user_id: user.id, // Use authenticated user ID
+          is_owner: hasOwnerPrivileges, // Owner can manage the room
           // Recording is plan-dependent; don't request cloud recording in token properties.
           exp: Math.floor(Date.now() / 1000) + (expiresInMinutes * 60),
         },
