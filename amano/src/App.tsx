@@ -22,6 +22,12 @@ const CoursePlayerPage = lazy(() => import("@/features/learn/CoursePlayerPage"))
 const LearningPage = lazy(() => import("@/features/learn/LearningPage"));
 const CertificatesPage = lazy(() => import("@/features/learn/CertificatesPage"));
 const LanguagesPage = lazy(() => import("@/features/learn/LanguagesPage"));
+const InstructorDashboardPage = lazy(() => import("@/features/studio/InstructorDashboardPage"));
+const InstructorCoursesPage = lazy(() => import("@/features/studio/InstructorCoursesPage"));
+const CourseBuilderPage = lazy(() => import("@/features/studio/CourseBuilderPage"));
+const InstructorEarningsPage = lazy(() => import("@/features/studio/InstructorEarningsPage"));
+const BusinessDashboardPage = lazy(() => import("@/features/b2b/BusinessDashboardPage"));
+const UniversityDashboardPage = lazy(() => import("@/features/b2b/UniversityDashboardPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -62,6 +68,13 @@ export default function App() {
                     <Route path="/learning/:courseId/lesson/:lessonId" element={<CoursePlayerPage />} />
                     <Route path="/certificates" element={<CertificatesPage />} />
                     <Route path="/languages" element={<LanguagesPage />} />
+                    <Route path="/instructor" element={<InstructorDashboardPage />} />
+                    <Route path="/instructor/courses" element={<InstructorCoursesPage />} />
+                    <Route path="/instructor/courses/new" element={<CourseBuilderPage />} />
+                    <Route path="/instructor/courses/:draftId/edit" element={<CourseBuilderPage />} />
+                    <Route path="/instructor/earnings" element={<InstructorEarningsPage />} />
+                    <Route path="/business" element={<BusinessDashboardPage />} />
+                    <Route path="/university" element={<UniversityDashboardPage />} />
                     <Route path="/design" element={<DesignSystemPage />} />
                     {/* Modules landing in later phases — never a dead end */}
                     <Route path="*" element={<ComingSoonPage />} />

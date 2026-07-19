@@ -1,5 +1,15 @@
-import { Bell, LogOut, Palette, Search, Settings, User } from "lucide-react";
-import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
+import {
+  Bell,
+  Building2,
+  Landmark,
+  LayoutDashboard,
+  LogOut,
+  Palette,
+  Search,
+  Settings,
+  User,
+} from "lucide-react";
+import { NavLink, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { AmanoLogo, AmanoMark } from "@/design-system/AmanoLogo";
 import { AmanoAILauncher } from "@/design-system/AmanoAILauncher";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/features/auth/store";
 import { cn } from "@/lib/utils";
-import { navByRole } from "./nav";
+import { navForPath } from "./nav";
 import { CommandPalette, useCommandPalette } from "./CommandPalette";
 
 /**
@@ -23,7 +33,8 @@ import { CommandPalette, useCommandPalette } from "./CommandPalette";
  * the student navigation until then.
  */
 export function AppShell() {
-  const items = navByRole.student!;
+  const { pathname } = useLocation();
+  const items = navForPath(pathname);
   const palette = useCommandPalette();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -86,6 +97,20 @@ export function AppShell() {
               <DropdownMenuItem onClick={() => navigate("/profile")}>
                 <User className="mr-2 h-4 w-4" /> My profile
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Workspaces
+              </DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => navigate("/instructor")}>
+                <LayoutDashboard className="mr-2 h-4 w-4" /> Instructor Studio
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/business")}>
+                <Building2 className="mr-2 h-4 w-4" /> Amano for Business
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/university")}>
+                <Landmark className="mr-2 h-4 w-4" /> University portal
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate("/settings")}>
                 <Settings className="mr-2 h-4 w-4" /> Settings
               </DropdownMenuItem>

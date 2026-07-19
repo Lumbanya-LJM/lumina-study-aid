@@ -16,7 +16,9 @@ governs it lives in [`../docs/amano/`](../docs/amano/00-architecture-overview.md
 | 3 · Authentication | ✅ mock-first auth · OTP verify · onboarding · guards (Supabase-shaped for the swap) |
 | 4 · Landing page | ✅ full public marketing surface at `/` |
 | 5 · Student core | ✅ explore · course detail · player · quiz · certificates — the full learning loop |
-| 6+ · Amano AI, Verified Skills, network, instructor, … | per `docs/amano/06-scale-and-roadmap.md` |
+| Instructor Studio | ✅ dashboard · revenue analytics · course builder with drafts · earnings & payouts |
+| B2B dashboards | ✅ Amano for Business (seats, teams, compliance, assign paths) · University portal (faculties, credentials, CPD) |
+| Next · Amano AI, Verified Skills flow, network, mentorship, … | per `docs/amano/06-scale-and-roadmap.md` |
 
 ## Run it
 
