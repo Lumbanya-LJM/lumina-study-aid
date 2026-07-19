@@ -5,11 +5,16 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/app/AppShell";
+import { RedirectIfAuthed, RequireAuth } from "@/features/auth/guards";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const HomePage = lazy(() => import("@/pages/HomePage"));
 const DesignSystemPage = lazy(() => import("@/pages/DesignSystemPage"));
 const ComingSoonPage = lazy(() => import("@/pages/ComingSoonPage"));
+const AuthPage = lazy(() => import("@/features/auth/AuthPage"));
+const VerifyPage = lazy(() => import("@/features/auth/VerifyPage"));
+const ForgotPasswordPage = lazy(() => import("@/features/auth/ForgotPasswordPage"));
+const OnboardingPage = lazy(() => import("@/features/auth/OnboardingPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -33,12 +38,21 @@ export default function App() {
           <BrowserRouter>
             <Suspense fallback={<PageFallback />}>
               <Routes>
-                <Route element={<AppShell />}>
-                  <Route path="/" element={<Navigate to="/home" replace />} />
-                  <Route path="/home" element={<HomePage />} />
-                  <Route path="/design" element={<DesignSystemPage />} />
-                  {/* Modules landing in later phases — never a dead end */}
-                  <Route path="*" element={<ComingSoonPage />} />
+                <Route element={<RedirectIfAuthed />}>
+                  <Route path="/auth" element={<AuthPage mode="signin" />} />
+                  <Route path="/auth/signup" element={<AuthPage mode="signup" />} />
+                  <Route path="/auth/forgot" element={<ForgotPasswordPage />} />
+                </Route>
+                <Route path="/auth/verify" element={<VerifyPage />} />
+                <Route element={<RequireAuth />}>
+                  <Route path="/onboarding" element={<OnboardingPage />} />
+                  <Route element={<AppShell />}>
+                    <Route path="/" element={<Navigate to="/home" replace />} />
+                    <Route path="/home" element={<HomePage />} />
+                    <Route path="/design" element={<DesignSystemPage />} />
+                    {/* Modules landing in later phases — never a dead end */}
+                    <Route path="*" element={<ComingSoonPage />} />
+                  </Route>
                 </Route>
               </Routes>
             </Suspense>

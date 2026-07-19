@@ -1,8 +1,17 @@
-import { Bell, Search } from "lucide-react";
-import { NavLink, Outlet, Link } from "react-router-dom";
+import { Bell, LogOut, Palette, Search, Settings, User } from "lucide-react";
+import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
 import { AmanoLogo, AmanoMark } from "@/design-system/AmanoLogo";
 import { AmanoAILauncher } from "@/design-system/AmanoAILauncher";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/features/auth/store";
 import { cn } from "@/lib/utils";
 import { navByRole } from "./nav";
 import { CommandPalette, useCommandPalette } from "./CommandPalette";
@@ -16,6 +25,14 @@ import { CommandPalette, useCommandPalette } from "./CommandPalette";
 export function AppShell() {
   const items = navByRole.student!;
   const palette = useCommandPalette();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const initials = (user?.displayName ?? "A")
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <div className="min-h-dvh bg-background">
@@ -50,13 +67,42 @@ export function AppShell() {
             <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
           </Link>
 
-          <Link to="/@misozi-tembo" aria-label="Profile">
-            <Avatar className="h-8 w-8 border border-border">
-              <AvatarFallback className="bg-surface-2 font-serif text-sm text-accent">
-                MT
-              </AvatarFallback>
-            </Avatar>
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger aria-label="Account menu">
+              <Avatar className="h-8 w-8 border border-border">
+                <AvatarFallback className="bg-surface-2 font-serif text-sm text-accent">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <p className="text-sm font-semibold">{user?.displayName}</p>
+                <p className="text-xs font-normal text-muted-foreground">
+                  {user?.email}
+                </p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/profile")}>
+                <User className="mr-2 h-4 w-4" /> My profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")}>
+                <Settings className="mr-2 h-4 w-4" /> Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/design")}>
+                <Palette className="mr-2 h-4 w-4" /> Design system
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  signOut();
+                  navigate("/auth");
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" /> Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 

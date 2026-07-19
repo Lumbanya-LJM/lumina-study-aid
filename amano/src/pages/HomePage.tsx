@@ -14,12 +14,15 @@ import {
   myEnrollments,
   people,
 } from "@/data/sample/catalog";
+import { useAuth } from "@/features/auth/store";
 
 /**
  * Student home feed — Phase 2 preview wired to sample data.
  * The full feed (AI recommendations, goals, calendar) lands in Phase 5.
  */
 export default function HomePage() {
+  const firstName =
+    useAuth((s) => s.user?.displayName.split(" ")[0]) ?? "friend";
   const continueLearning = myEnrollments
     .map((e) => ({ enrollment: e, course: courseById(e.courseId)! }))
     .filter((x) => x.course);
@@ -36,7 +39,7 @@ export default function HomePage() {
       <motion.header variants={fadeRise} className="flex items-end justify-between">
         <div>
           <h1 className="font-serif text-2xl text-foreground md:text-3xl">
-            Mwapoleni, Misozi
+            Mwapoleni, {firstName}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             You're 12 lessons from your Corporate Lawyer Path milestone.
