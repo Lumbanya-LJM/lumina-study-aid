@@ -13,8 +13,10 @@ governs it lives in [`../docs/amano/`](../docs/amano/00-architecture-overview.md
 |---|---|
 | 1 · Architecture | ✅ `docs/amano/` |
 | 2 · UI system | ✅ tokens · type · motion · signature components · app shell · sample data |
-| 3 · Authentication | next |
-| 4+ · Landing, student core, AI, Verified Skills, … | per `docs/amano/06-scale-and-roadmap.md` |
+| 3 · Authentication | ✅ mock-first auth · OTP verify · onboarding · guards (Supabase-shaped for the swap) |
+| 4 · Landing page | ✅ full public marketing surface at `/` |
+| 5 · Student core | ✅ explore · course detail · player · quiz · certificates — the full learning loop |
+| 6+ · Amano AI, Verified Skills, network, instructor, … | per `docs/amano/06-scale-and-roadmap.md` |
 
 ## Run it
 
