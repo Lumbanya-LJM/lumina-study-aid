@@ -24,11 +24,25 @@ export interface Person {
   roles: Role[];
 }
 
+export type PatternFamily =
+  | "pillars" // law — columns
+  | "steps" // business — ascending bars
+  | "arcs" // corporate — concentric arcs
+  | "nodes" // tech — dot lattice
+  | "seeds" // agriculture — sown rows
+  | "zigzag" // heritage — textile chevrons
+  | "waves" // language — speech contours
+  | "suns"; // lifestyle — circles
+
 export interface Vertical {
   id: string;
   name: string; // "Amano Law"
   slug: string;
   tagline: string;
+  /** Muted academy accent as space-separated HSL ("352 40% 38%") —
+   *  composed as hsl(accent) / hsl(accent / 0.12) wherever needed. */
+  accent: string;
+  pattern: PatternFamily;
 }
 
 export interface Course {
@@ -45,7 +59,6 @@ export interface Course {
   learners: number;
   durationHours: number;
   lessons: number;
-  thumbnailTone: string; // placeholder gradient seed until real art
   skills: string[]; // skill ids this course leads to
 }
 

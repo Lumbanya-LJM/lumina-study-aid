@@ -116,6 +116,13 @@
     @apply border-border;
   }
 
+  /* Re-anchor inherited text color at every theatre boundary — without this,
+     elements with no explicit text-* class keep the light-scope ink they
+     inherited from body. */
+  .dark {
+    color: hsl(var(--foreground));
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;

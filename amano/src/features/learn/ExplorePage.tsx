@@ -57,12 +57,17 @@ export default function ExplorePage() {
               key={v.id}
               onClick={() => setVerticalId(verticalId === v.id ? null : v.id)}
               className={cn(
-                "shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
                 verticalId === v.id
                   ? "border-primary/50 bg-primary/10 text-accent"
                   : "border-border text-muted-foreground hover:text-foreground"
               )}
             >
+              <span
+                aria-hidden
+                className="h-2 w-2 rounded-full"
+                style={{ background: `hsl(${v.accent})` }}
+              />
               {v.name}
             </button>
           ))}

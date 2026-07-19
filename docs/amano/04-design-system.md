@@ -60,6 +60,15 @@ classes — components never hard-code hex.
 }
 ```
 
+**Academy accents.** Each vertical carries a muted secondary color (Law
+oxblood, Business forest, Corporate aubergine, Tech indigo, Agriculture
+olive, Heritage ochre, Language teal, Lifestyle rose) stored on the
+`Vertical` record as HSL. They appear only on category badges, the
+generative pattern art, and small details — never on buttons or actions.
+Course art is generative: a textile-inspired SVG pattern family per academy
+(`CourseArt`), drawn in the academy accent over a deep tinted ground and
+seeded per course, standing in until real thumbnails exist.
+
 **Usage discipline.** Gold is a *precious* accent: primary CTAs, active states,
 credential moments (certificates, verified-skill badges), key data points. Never
 gold body text, never gold surfaces. Large areas stay obsidian/graphite; hierarchy

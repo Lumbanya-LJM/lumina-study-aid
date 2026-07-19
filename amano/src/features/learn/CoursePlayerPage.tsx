@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { CourseArt } from "@/design-system/CourseArt";
 import { fadeRise } from "@/design-system/motion";
 import { courseById } from "@/data/sample/catalog";
 import { allLessons, getCurriculum, getQuiz, PASS_MARK } from "@/data/sample/curriculum";
@@ -76,11 +77,13 @@ export default function CoursePlayerPage() {
               variants={fadeRise}
               initial="hidden"
               animate="visible"
-              className={cn(
-                "dark relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-gradient-to-br",
-                course.thumbnailTone
-              )}
+              className="dark relative aspect-video w-full overflow-hidden rounded-lg border border-border"
             >
+              <CourseArt
+                courseId={course.id}
+                verticalId={course.verticalId}
+                className="absolute inset-0"
+              />
               <button
                 aria-label={playing ? "Pause" : "Play"}
                 onClick={() => setPlaying(!playing)}

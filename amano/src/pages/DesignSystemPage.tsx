@@ -10,7 +10,7 @@ import { PersonCell } from "@/design-system/PersonCell";
 import { StatTile } from "@/design-system/StatTile";
 import { VerifiedSkillBadge } from "@/design-system/VerifiedSkillBadge";
 import { fadeRise, staggerParent } from "@/design-system/motion";
-import { courses, myBadges, people } from "@/data/sample/catalog";
+import { courses, myBadges, people, verticals } from "@/data/sample/catalog";
 
 const swatches = [
   { name: "Porcelain", cls: "bg-background", hex: "#F8F6F1" },
@@ -52,6 +52,29 @@ export default function DesignSystemPage() {
               <div className={`h-16 rounded-md border border-border ${s.cls}`} />
               <p className="text-xs font-medium text-foreground">{s.name}</p>
               <p className="text-[11px] tabular-nums text-muted-foreground">{s.hex}</p>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+
+      <motion.section variants={fadeRise}>
+        <h2 className="mb-4 font-serif text-xl text-foreground">Academy accents</h2>
+        <p className="mb-4 max-w-lg text-sm text-muted-foreground">
+          Each academy carries a muted accent — used sparingly on badges,
+          pattern art, and category details. Never on buttons; gold keeps the
+          action hierarchy.
+        </p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {verticals.map((v) => (
+            <div key={v.id} className="card-raise flex items-center gap-3 p-3">
+              <span
+                className="h-8 w-8 shrink-0 rounded-md"
+                style={{ background: `hsl(${v.accent})` }}
+              />
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-foreground">{v.name}</p>
+                <p className="text-[11px] tabular-nums text-muted-foreground">{v.accent}</p>
+              </div>
             </div>
           ))}
         </div>

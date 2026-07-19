@@ -16,11 +16,12 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { CourseArt, VerticalBadge } from "@/design-system/CourseArt";
 import { CourseCard } from "@/design-system/CourseCard";
 import { PersonCell } from "@/design-system/PersonCell";
 import { SectionHeader } from "@/design-system/SectionHeader";
 import { fadeRise, staggerParent } from "@/design-system/motion";
-import { courses, personById, skillById, verticalById } from "@/data/sample/catalog";
+import { courses, personById, skillById } from "@/data/sample/catalog";
 import { allLessons, getCurriculum } from "@/data/sample/curriculum";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -37,7 +38,6 @@ export default function CourseDetailPage() {
   }
 
   const instructor = personById(course.instructorId);
-  const vertical = verticalById(course.verticalId);
   const curriculum = getCurriculum(course.id);
   const lessons = allLessons(course.id);
   const enrolled = learn.enrolled.includes(course.id);
@@ -63,16 +63,15 @@ export default function CourseDetailPage() {
       {/* Hero */}
       <motion.section
         variants={fadeRise}
-        className={cn(
-          "dark relative overflow-hidden rounded-lg border border-border bg-gradient-to-br p-6 md:p-10",
-          course.thumbnailTone
-        )}
+        className="dark relative overflow-hidden rounded-lg border border-border p-6 md:p-10"
       >
-        {vertical && (
-          <span className="rounded-full border border-primary/30 bg-background/60 px-3 py-1 text-xs font-medium text-accent backdrop-blur-sm">
-            {vertical.name}
-          </span>
-        )}
+        <CourseArt
+          courseId={course.id}
+          verticalId={course.verticalId}
+          className="absolute inset-0"
+        />
+        <div className="relative">
+        <VerticalBadge verticalId={course.verticalId} />
         <h1 className="mt-4 max-w-2xl font-serif text-3xl leading-tight text-foreground md:text-4xl">
           {course.title}
         </h1>
@@ -121,6 +120,7 @@ export default function CourseDetailPage() {
             <div className="h-full bg-gold-gradient" style={{ width: `${progress}%` }} />
           </div>
         )}
+        </div>
       </motion.section>
 
       <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
