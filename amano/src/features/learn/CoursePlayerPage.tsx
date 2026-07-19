@@ -77,7 +77,7 @@ export default function CoursePlayerPage() {
               initial="hidden"
               animate="visible"
               className={cn(
-                "relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-gradient-to-br",
+                "dark relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-gradient-to-br",
                 course.thumbnailTone
               )}
             >
@@ -264,7 +264,7 @@ function QuizRunner({ courseId }: { courseId: string }) {
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }}
-        className="mx-auto max-w-md rounded-lg border border-primary/30 bg-surface p-8 text-center shadow-glow-gold"
+        className="dark mx-auto max-w-md rounded-lg border border-primary/30 bg-surface p-8 text-center shadow-glow-gold"
       >
         <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-gold-gradient">
           <Award className="h-10 w-10 text-primary-foreground" />

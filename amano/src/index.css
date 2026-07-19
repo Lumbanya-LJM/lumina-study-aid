@@ -9,89 +9,107 @@
    ────────────────────────────────────────────────────────────── */
 
 @layer base {
-  :root,
-  .dark {
-    /* Ground — lifted graphite: still dark mode, but livelier than pure
-       obsidian. The brand's deep obsidian lives on in the logo and in
-       accents; surfaces sit several steps brighter. */
-    --background: 240 6% 13%; /* Lifted obsidian */
-    --surface: 240 6% 17%; /* Graphite */
-    --surface-2: 240 5% 21%; /* Raised card */
-    --border: 240 5% 29%;
-    --input: 240 5% 29%;
+  /* ── Dual-tone architecture ──────────────────────────────────────────
+     The everyday product runs on porcelain light: warm ivory ground,
+     white cards, soft shadows, obsidian ink. Deep obsidian is reserved
+     for brand theatre — landing hero, certificates, credential
+     ceremonies, the Heritage museum — applied by scoping a `dark` class
+     on that subtree. Gold buttons are identical in both worlds. */
+
+  :root {
+    /* Ground — porcelain */
+    --background: 40 33% 96%; /* Porcelain #F8F6F1 */
+    --surface: 0 0% 100%; /* White card */
+    --surface-2: 40 22% 93%; /* Recessed */
+    --border: 40 14% 86%;
+    --input: 40 14% 86%;
 
     /* Ink */
-    --foreground: 40 30% 97%; /* Warm ivory */
-    --muted: 240 5% 21%;
-    --muted-foreground: 240 7% 74%;
+    --foreground: 240 10% 10%; /* Obsidian ink */
+    --muted: 40 22% 93%;
+    --muted-foreground: 240 5% 42%;
 
     /* Brand */
+    --primary: 43 74% 46%; /* Heritage Gold (grounded for light) */
+    --primary-foreground: 240 10% 8%;
+    --accent: 43 65% 34%; /* Deep gold — link/label ink on light */
+    --accent-foreground: 40 30% 98%;
+    --secondary: 40 22% 93%;
+    --secondary-foreground: 240 10% 10%;
+    --ring: 43 74% 40%;
+
+    /* Surfaces consumed by shadcn primitives */
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 10%;
+
+    /* Semantic */
+    --success: 152 60% 32%;
+    --warning: 35 92% 42%;
+    --destructive: 0 68% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --info: 214 84% 45%;
+
+    --radius: 1rem;
+
+    /* Soft elevation for light surfaces; theatre scope disables it */
+    --shadow-card:
+      0 1px 2px hsl(240 10% 10% / 0.05),
+      0 10px 28px -10px hsl(240 10% 10% / 0.12);
+
+    /* Sidebar (shadcn sidebar primitive) */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 10%;
+    --sidebar-primary: 43 74% 46%;
+    --sidebar-primary-foreground: 240 10% 8%;
+    --sidebar-accent: 40 22% 93%;
+    --sidebar-accent-foreground: 240 10% 10%;
+    --sidebar-border: 40 14% 86%;
+    --sidebar-ring: 43 74% 40%;
+  }
+
+  /* Brand theatre — deep obsidian, richer than the everyday graphite was */
+  .dark {
+    --background: 240 7% 10%; /* Deep obsidian */
+    --surface: 240 6% 14%; /* Graphite */
+    --surface-2: 240 6% 18%; /* Raised */
+    --border: 240 5% 26%;
+    --input: 240 5% 26%;
+
+    --foreground: 40 30% 97%; /* Warm ivory */
+    --muted: 240 6% 18%;
+    --muted-foreground: 240 7% 72%;
+
     --primary: 43 74% 52%; /* Heritage Gold */
     --primary-foreground: 240 10% 6%;
     --accent: 45 56% 74%; /* Champagne Gold */
     --accent-foreground: 240 10% 6%;
-    --secondary: 240 7% 11%;
-    --secondary-foreground: 40 30% 96%;
+    --secondary: 240 6% 18%;
+    --secondary-foreground: 40 30% 97%;
     --ring: 45 56% 74%;
 
-    /* Surfaces consumed by shadcn primitives */
-    --card: 240 6% 17%;
+    --card: 240 6% 14%;
     --card-foreground: 40 30% 97%;
-    --popover: 240 6% 17%;
+    --popover: 240 6% 14%;
     --popover-foreground: 40 30% 97%;
 
-    /* Semantic */
     --success: 152 55% 42%;
     --warning: 38 92% 55%;
     --destructive: 0 66% 54%;
-    --destructive-foreground: 40 30% 96%;
+    --destructive-foreground: 40 30% 97%;
     --info: 214 84% 60%;
 
-    --radius: 1rem;
+    --shadow-card: 0 0 #0000; /* dark UIs elevate with hairlines, not shadows */
 
-    /* Sidebar (shadcn sidebar primitive) */
-    --sidebar-background: 240 6% 15%;
+    --sidebar-background: 240 7% 12%;
     --sidebar-foreground: 40 30% 97%;
     --sidebar-primary: 43 74% 52%;
     --sidebar-primary-foreground: 240 10% 6%;
-    --sidebar-accent: 240 5% 21%;
+    --sidebar-accent: 240 6% 18%;
     --sidebar-accent-foreground: 40 30% 97%;
-    --sidebar-border: 240 5% 25%;
+    --sidebar-border: 240 5% 22%;
     --sidebar-ring: 45 56% 74%;
-  }
-
-  .light {
-    --background: 40 30% 98%;
-    --surface: 0 0% 100%;
-    --surface-2: 40 20% 96%;
-    --border: 40 12% 88%;
-    --input: 40 12% 88%;
-
-    --foreground: 240 10% 8%;
-    --muted: 40 20% 94%;
-    --muted-foreground: 240 5% 40%;
-
-    --primary: 43 74% 44%;
-    --primary-foreground: 40 30% 98%;
-    --accent: 43 50% 60%;
-    --accent-foreground: 240 10% 8%;
-    --secondary: 40 20% 94%;
-    --secondary-foreground: 240 10% 8%;
-    --ring: 43 74% 44%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 8%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 8%;
-
-    --sidebar-background: 40 30% 97%;
-    --sidebar-foreground: 240 10% 8%;
-    --sidebar-primary: 43 74% 44%;
-    --sidebar-primary-foreground: 40 30% 98%;
-    --sidebar-accent: 40 20% 93%;
-    --sidebar-accent-foreground: 240 10% 8%;
-    --sidebar-border: 40 12% 88%;
-    --sidebar-ring: 43 74% 44%;
   }
 
   * {
@@ -138,9 +156,11 @@
     @apply bg-gold-gradient bg-clip-text text-transparent;
   }
 
-  /* Hairline elevation instead of shadows (dark-UI discipline) */
+  /* Card elevation: soft shadow on light, hairline-only in theatre scope
+     (the --shadow-card var collapses to none inside .dark) */
   .card-raise {
-    @apply bg-surface-2 border border-border rounded-lg;
+    @apply bg-surface border border-border rounded-lg;
+    box-shadow: var(--shadow-card);
   }
 
   .tabular-nums {

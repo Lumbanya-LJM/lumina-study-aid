@@ -12,7 +12,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
       {/* Brand panel */}
-      <aside className="relative hidden overflow-hidden bg-obsidian-radial lg:flex lg:flex-col lg:justify-between lg:p-12">
+      <aside className="dark relative hidden overflow-hidden bg-obsidian-radial lg:flex lg:flex-col lg:justify-between lg:p-12">
         <Link to="/">
           <AmanoLogo />
         </Link>

@@ -13,12 +13,12 @@ import { fadeRise, staggerParent } from "@/design-system/motion";
 import { courses, myBadges, people } from "@/data/sample/catalog";
 
 const swatches = [
-  { name: "Lifted Obsidian", cls: "bg-background", hex: "#1F1F23" },
-  { name: "Graphite", cls: "bg-surface", hex: "#29292E" },
-  { name: "Raised", cls: "bg-surface-2", hex: "#333338" },
-  { name: "Heritage Gold", cls: "bg-primary", hex: "#E0A82E" },
-  { name: "Champagne", cls: "bg-accent", hex: "#E8D5A4" },
-  { name: "Ivory ink", cls: "bg-foreground", hex: "#F7F5F0" },
+  { name: "Porcelain", cls: "bg-background", hex: "#F8F6F1" },
+  { name: "White card", cls: "bg-surface", hex: "#FFFFFF" },
+  { name: "Recessed", cls: "bg-surface-2", hex: "#F1EDE4" },
+  { name: "Heritage Gold", cls: "bg-primary", hex: "#CC9414" },
+  { name: "Deep gold ink", cls: "bg-accent", hex: "#8F6A1E" },
+  { name: "Obsidian ink", cls: "bg-foreground", hex: "#17171C" },
 ];
 
 /** Internal reference: the Amano UI system on one page. Route: /design */
@@ -38,9 +38,9 @@ export default function DesignSystemPage() {
           The Amano design system
         </h1>
         <p className="mt-2 max-w-xl text-muted-foreground">
-          Quiet confidence: obsidian ground, heritage gold accents, editorial
-          serif moments, disciplined motion. Reference:
-          docs/amano/04-design-system.md.
+          Quiet confidence, dual-tone: porcelain light for the everyday
+          product, deep obsidian reserved for brand theatre — heroes,
+          certificates, ceremonies. Reference: docs/amano/04-design-system.md.
         </p>
       </motion.header>
 

@@ -6,25 +6,42 @@ spacing, restrained motion. Inspiration register: Apple, Linear, Notion, Stripe,
 Arc, Raycast, Superhuman, Framer, Vercel. Never cluttered, never childish, never
 generic.
 
-## 1. Color tokens
+## 1. Color tokens — dual-tone architecture
 
-Dark is the **default and primary** theme (obsidian is the brand ground); light
-mode is a supported appearance setting. All tokens as HSL CSS variables consumed
-by Tailwind semantic classes — components never hard-code hex.
+Founder direction (2026-07): the everyday product runs on **porcelain light**
+— warm ivory ground, white cards with soft shadows, obsidian ink — while
+**deep obsidian is reserved for brand theatre**: the landing hero, Verified
+Skills band, Heritage museum, certificates, credential ceremonies, and the
+auth brand panel. Theatre surfaces opt in by scoping a `dark` class on their
+subtree; every token re-resolves inside it. Gold buttons are identical in
+both worlds. All tokens as HSL CSS variables consumed by Tailwind semantic
+classes — components never hard-code hex.
 
 ```css
-:root { /* dark (default) */
-  /* Ground — "lifted obsidian": founder direction (2026-07) brightened the
-     surfaces several steps; the deep obsidian of the brand lives on in the
-     logo and accents, while the UI ground stays dark but lively. */
-  --background: 240 6% 13%;        /* Lifted obsidian #1F1F23       */
-  --surface:    240 6% 17%;        /* Graphite base   #29292E       */
-  --surface-2:  240 5% 21%;        /* Raised card     #333338       */
-  --border:     240 5% 29%;        /* Hairlines                     */
+:root { /* porcelain light (default, everyday product) */
+  --background: 40 33% 96%;        /* Porcelain      #F8F6F1        */
+  --surface:    0 0% 100%;         /* White card                    */
+  --surface-2:  40 22% 93%;        /* Recessed                      */
+  --border:     40 14% 86%;        /* Hairlines                     */
+  --foreground: 240 10% 10%;       /* Obsidian ink                  */
+  --muted-foreground: 240 5% 42%;
+  --primary:    43 74% 46%;        /* Heritage Gold (grounded)      */
+  --accent:     43 65% 34%;        /* Deep gold — link/label ink    */
+  --shadow-card: 0 1px 2px hsl(240 10% 10% / .05),
+                 0 10px 28px -10px hsl(240 10% 10% / .12);
+}
+
+.dark { /* brand theatre — scoped, not a global mode */
+  /* Ground */
+  --background: 240 7% 10%;        /* Deep obsidian                 */
+  --surface:    240 6% 14%;        /* Graphite base                 */
+  --surface-2:  240 6% 18%;        /* Raised card                   */
+  --border:     240 5% 26%;        /* Hairlines                     */
+  --shadow-card: 0 0 #0000;        /* hairline elevation only       */
 
   /* Ink */
   --foreground: 40 30% 97%;        /* Warm ivory     #F7F5F0        */
-  --muted-foreground: 240 7% 74%;  /* Secondary text                */
+  --muted-foreground: 240 7% 72%;  /* Secondary text                */
 
   /* Brand */
   --primary:    43 74% 52%;        /* Heritage Gold  #E0A82E        */

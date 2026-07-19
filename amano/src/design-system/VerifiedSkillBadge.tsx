@@ -42,7 +42,7 @@ export function VerifiedSkillBadge({
       initial="hidden"
       animate="visible"
       className={cn(
-        "relative mx-auto flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-primary/30 bg-surface p-8 text-center shadow-glow-gold",
+        "dark relative mx-auto flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-primary/30 bg-surface p-8 text-center shadow-glow-gold",
         className
       )}
     >

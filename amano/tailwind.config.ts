@@ -75,6 +75,7 @@ export default {
       boxShadow: {
         "glow-gold": "0 0 40px -12px hsl(43 74% 52% / 0.45)",
         float: "0 12px 40px -16px hsl(240 10% 4% / 0.6)",
+        soft: "var(--shadow-card)",
       },
       keyframes: {
         "accordion-down": {

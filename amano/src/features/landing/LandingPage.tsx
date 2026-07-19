@@ -162,8 +162,8 @@ export default function LandingPage() {
         )}
       </header>
 
-      {/* ── Hero ── */}
-      <div className="relative overflow-hidden bg-obsidian-radial">
+      {/* ── Hero (brand theatre: obsidian) ── */}
+      <div className="dark relative overflow-hidden bg-obsidian-radial">
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[-22rem] h-[44rem] w-[44rem] -translate-x-1/2 rounded-full border border-primary/15"
@@ -272,8 +272,8 @@ export default function LandingPage() {
         </motion.div>
       </Section>
 
-      {/* ── Verified Skills ── */}
-      <Section className="max-w-none bg-surface py-20 md:py-28">
+      {/* ── Verified Skills (brand theatre: obsidian) ── */}
+      <Section className="dark max-w-none bg-background py-20 md:py-28">
         <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2">
           <div>
             <SectionTitle
@@ -301,7 +301,7 @@ export default function LandingPage() {
               </Button>
             </motion.div>
           </div>
-          <motion.div variants={fadeRise} className="relative mx-auto w-full max-w-sm rounded-lg border border-primary/30 bg-background p-8 text-center shadow-glow-gold">
+          <motion.div variants={fadeRise} className="relative mx-auto w-full max-w-sm rounded-lg border border-primary/30 bg-surface p-8 text-center shadow-glow-gold">
             <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-gold-gradient">
               <BadgeCheck className="h-10 w-10 text-primary-foreground" />
             </div>
@@ -326,7 +326,7 @@ export default function LandingPage() {
         />
         <motion.div
           variants={fadeRise}
-          className="relative overflow-hidden rounded-lg border border-border bg-gradient-to-br from-yellow-950/40 via-stone-950 to-background p-8 md:p-14"
+          className="dark relative overflow-hidden rounded-lg border border-border bg-gradient-to-br from-yellow-950/40 via-stone-950 to-background p-8 md:p-14"
         >
           <Landmark className="h-8 w-8 text-primary/60" strokeWidth={1.25} />
           <h3 className="mt-5 max-w-lg font-serif text-2xl leading-snug text-foreground md:text-3xl">
@@ -412,12 +412,12 @@ export default function LandingPage() {
       </Section>
 
       {/* ── Testimonials ── */}
-      <Section className="max-w-none bg-surface py-20">
+      <Section className="max-w-none bg-surface-2 py-20">
         <div className="mx-auto max-w-6xl">
           <SectionTitle kicker="Amano in action" title="Stories from the ground" />
           <div className="grid gap-4 md:grid-cols-3">
             {testimonials.map((t) => (
-              <motion.figure key={t.name} variants={fadeRise} className="rounded-lg border border-border bg-background p-6">
+              <motion.figure key={t.name} variants={fadeRise} className="rounded-lg border border-border bg-surface p-6 shadow-soft">
                 <blockquote className="font-serif text-lg leading-relaxed text-foreground">
                   “{t.quote}”
                 </blockquote>
@@ -481,7 +481,7 @@ export default function LandingPage() {
                 "relative flex flex-col rounded-lg border p-7",
                 plan.highlight
                   ? "border-primary/50 bg-surface shadow-glow-gold"
-                  : "border-border bg-surface"
+                  : "border-border bg-surface shadow-soft"
               )}
             >
               {plan.highlight && (
@@ -514,8 +514,8 @@ export default function LandingPage() {
         </div>
       </Section>
 
-      {/* ── Final CTA ── */}
-      <Section className="text-center">
+      {/* ── Final CTA (brand theatre: obsidian) ── */}
+      <Section className="dark max-w-none bg-background py-20 text-center md:py-28">
         <motion.h2 variants={fadeRise} className="mx-auto max-w-2xl font-serif text-3xl leading-tight text-foreground md:text-5xl">
           Your wisdom is your <span className="text-gold-gradient">opportunity</span>.
         </motion.h2>

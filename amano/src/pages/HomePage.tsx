@@ -71,7 +71,7 @@ export default function HomePage() {
             <Link
               key={course.id}
               to={`/learning/${course.id}/lesson/${nextId}`}
-              className="group flex items-center gap-4 rounded-lg border border-border bg-surface p-3 transition-colors hover:border-primary/25"
+              className="group flex items-center gap-4 rounded-lg border border-border bg-surface p-3 shadow-soft transition-colors hover:border-primary/25"
             >
               <div className="grid h-12 w-12 shrink-0 place-items-center rounded-md bg-surface-2 text-primary transition-colors group-hover:bg-gold-gradient group-hover:text-primary-foreground">
                 <Play className="h-5 w-5" />

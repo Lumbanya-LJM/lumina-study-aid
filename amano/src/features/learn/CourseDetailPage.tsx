@@ -64,7 +64,7 @@ export default function CourseDetailPage() {
       <motion.section
         variants={fadeRise}
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border bg-gradient-to-br p-6 md:p-10",
+          "dark relative overflow-hidden rounded-lg border border-border bg-gradient-to-br p-6 md:p-10",
           course.thumbnailTone
         )}
       >

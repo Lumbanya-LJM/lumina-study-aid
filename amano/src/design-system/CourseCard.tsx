@@ -23,14 +23,15 @@ export function CourseCard({
       <Link
         to={`/courses/${course.slug}`}
         className={cn(
-          "group block overflow-hidden rounded-lg border border-border bg-surface",
+          "group block overflow-hidden rounded-lg border border-border bg-surface shadow-soft",
           "transition-colors hover:border-primary/25"
         )}
       >
-        {/* Placeholder art: tonal gradient + serif initial, until real thumbnails */}
+        {/* Placeholder art: tonal gradient + serif initial, until real thumbnails.
+            Theatre-scoped so overlaid text stays ivory on the dark art. */}
         <div
           className={cn(
-            "relative aspect-video w-full bg-gradient-to-br",
+            "dark relative aspect-video w-full bg-gradient-to-br",
             course.thumbnailTone
           )}
         >

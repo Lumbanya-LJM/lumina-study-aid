@@ -41,7 +41,7 @@ export default function CertificatesPage() {
               <motion.article
                 key={cert.serial}
                 variants={fadeRise}
-                className="relative overflow-hidden rounded-lg border border-primary/30 bg-surface p-7"
+                className="dark relative overflow-hidden rounded-lg border border-primary/30 bg-surface p-7 shadow-float"
               >
                 <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full border border-primary/15" />
                 <div className="flex items-start justify-between">
