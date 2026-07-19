@@ -84,7 +84,7 @@ export default function OnboardingPage() {
             className="flex-1"
           >
             <h1 className="font-serif text-2xl text-foreground">
-              Mwapoleni, {firstName}. What brings you to Amano?
+              Welcome, {firstName}. What brings you to Amano?
             </h1>
             <div className="mt-6 space-y-3">
               {intents.map((item) => (

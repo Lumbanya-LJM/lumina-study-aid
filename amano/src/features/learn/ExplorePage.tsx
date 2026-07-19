@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { SearchX } from "lucide-react";
+import { ArrowRight, Languages, SearchX } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { CourseCard } from "@/design-system/CourseCard";
 import { EmptyState } from "@/design-system/EmptyState";
@@ -66,6 +67,27 @@ export default function ExplorePage() {
             </button>
           ))}
         </div>
+      </motion.div>
+
+      {/* Amano Language entry point */}
+      <motion.div variants={fadeRise}>
+        <Link
+          to="/languages"
+          className="group flex items-center gap-4 rounded-lg border border-primary/30 bg-primary/10 p-4 transition-colors hover:bg-primary/15"
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-gold-gradient text-primary-foreground">
+            <Languages className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-foreground">
+              New · Amano Language
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              Learn Africa's languages — Bemba, Swahili, Yoruba, isiZulu and more, by country
+            </span>
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-accent transition-transform group-hover:translate-x-0.5" />
+        </Link>
       </motion.div>
 
       {filtered.length ? (

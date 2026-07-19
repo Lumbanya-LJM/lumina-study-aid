@@ -52,7 +52,7 @@ export default function HomePage() {
       <motion.header variants={fadeRise} className="flex items-end justify-between">
         <div>
           <h1 className="font-serif text-2xl text-foreground md:text-3xl">
-            Mwapoleni, {firstName}
+            Welcome back, {firstName}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             You're 12 lessons from your Corporate Lawyer Path milestone.

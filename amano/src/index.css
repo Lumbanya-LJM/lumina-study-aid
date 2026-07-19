@@ -11,17 +11,19 @@
 @layer base {
   :root,
   .dark {
-    /* Ground */
-    --background: 240 10% 4%; /* Deep Obsidian */
-    --surface: 240 8% 8%; /* Graphite */
-    --surface-2: 240 7% 11%; /* Raised card */
-    --border: 240 6% 16%;
-    --input: 240 6% 16%;
+    /* Ground — lifted graphite: still dark mode, but livelier than pure
+       obsidian. The brand's deep obsidian lives on in the logo and in
+       accents; surfaces sit several steps brighter. */
+    --background: 240 6% 13%; /* Lifted obsidian */
+    --surface: 240 6% 17%; /* Graphite */
+    --surface-2: 240 5% 21%; /* Raised card */
+    --border: 240 5% 29%;
+    --input: 240 5% 29%;
 
     /* Ink */
-    --foreground: 40 30% 96%; /* Warm ivory */
-    --muted: 240 7% 11%;
-    --muted-foreground: 240 5% 62%;
+    --foreground: 40 30% 97%; /* Warm ivory */
+    --muted: 240 5% 21%;
+    --muted-foreground: 240 7% 74%;
 
     /* Brand */
     --primary: 43 74% 52%; /* Heritage Gold */
@@ -33,10 +35,10 @@
     --ring: 45 56% 74%;
 
     /* Surfaces consumed by shadcn primitives */
-    --card: 240 8% 8%;
-    --card-foreground: 40 30% 96%;
-    --popover: 240 8% 8%;
-    --popover-foreground: 40 30% 96%;
+    --card: 240 6% 17%;
+    --card-foreground: 40 30% 97%;
+    --popover: 240 6% 17%;
+    --popover-foreground: 40 30% 97%;
 
     /* Semantic */
     --success: 152 55% 42%;
@@ -48,13 +50,13 @@
     --radius: 1rem;
 
     /* Sidebar (shadcn sidebar primitive) */
-    --sidebar-background: 240 9% 6%;
-    --sidebar-foreground: 40 30% 96%;
+    --sidebar-background: 240 6% 15%;
+    --sidebar-foreground: 40 30% 97%;
     --sidebar-primary: 43 74% 52%;
     --sidebar-primary-foreground: 240 10% 6%;
-    --sidebar-accent: 240 7% 11%;
-    --sidebar-accent-foreground: 40 30% 96%;
-    --sidebar-border: 240 6% 14%;
+    --sidebar-accent: 240 5% 21%;
+    --sidebar-accent-foreground: 40 30% 97%;
+    --sidebar-border: 240 5% 25%;
     --sidebar-ring: 45 56% 74%;
   }
 

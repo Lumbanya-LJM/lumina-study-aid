@@ -14,15 +14,17 @@ by Tailwind semantic classes — components never hard-code hex.
 
 ```css
 :root { /* dark (default) */
-  /* Ground */
-  --background: 240 10% 4%;        /* Deep Obsidian  #0A0A0F        */
-  --surface:    240 8% 8%;         /* Graphite base  #121218        */
-  --surface-2:  240 7% 11%;        /* Raised card    #1A1A22        */
-  --border:     240 6% 16%;        /* Hairlines      #262630        */
+  /* Ground — "lifted obsidian": founder direction (2026-07) brightened the
+     surfaces several steps; the deep obsidian of the brand lives on in the
+     logo and accents, while the UI ground stays dark but lively. */
+  --background: 240 6% 13%;        /* Lifted obsidian #1F1F23       */
+  --surface:    240 6% 17%;        /* Graphite base   #29292E       */
+  --surface-2:  240 5% 21%;        /* Raised card     #333338       */
+  --border:     240 5% 29%;        /* Hairlines                     */
 
   /* Ink */
-  --foreground: 40 30% 96%;        /* Warm ivory     #F7F5F0        */
-  --muted-foreground: 240 5% 62%;  /* Secondary text                */
+  --foreground: 40 30% 97%;        /* Warm ivory     #F7F5F0        */
+  --muted-foreground: 240 7% 74%;  /* Secondary text                */
 
   /* Brand */
   --primary:    43 74% 52%;        /* Heritage Gold  #E0A82E        */

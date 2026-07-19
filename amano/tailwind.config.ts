@@ -70,11 +70,11 @@ export default {
         "gold-gradient":
           "linear-gradient(135deg, hsl(43 74% 52%), hsl(45 56% 74%))",
         "obsidian-radial":
-          "radial-gradient(80% 60% at 50% 0%, hsl(240 8% 10%) 0%, hsl(240 10% 4%) 70%)",
+          "radial-gradient(80% 60% at 50% 0%, hsl(240 6% 19%) 0%, hsl(240 6% 13%) 70%)",
       },
       boxShadow: {
         "glow-gold": "0 0 40px -12px hsl(43 74% 52% / 0.45)",
-        float: "0 12px 40px -16px hsl(240 10% 2% / 0.7)",
+        float: "0 12px 40px -16px hsl(240 10% 4% / 0.6)",
       },
       keyframes: {
         "accordion-down": {

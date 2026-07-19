@@ -13,9 +13,9 @@ import { fadeRise, staggerParent } from "@/design-system/motion";
 import { courses, myBadges, people } from "@/data/sample/catalog";
 
 const swatches = [
-  { name: "Deep Obsidian", cls: "bg-background", hex: "#0A0A0F" },
-  { name: "Graphite", cls: "bg-surface", hex: "#121218" },
-  { name: "Raised", cls: "bg-surface-2", hex: "#1A1A22" },
+  { name: "Lifted Obsidian", cls: "bg-background", hex: "#1F1F23" },
+  { name: "Graphite", cls: "bg-surface", hex: "#29292E" },
+  { name: "Raised", cls: "bg-surface-2", hex: "#333338" },
   { name: "Heritage Gold", cls: "bg-primary", hex: "#E0A82E" },
   { name: "Champagne", cls: "bg-accent", hex: "#E8D5A4" },
   { name: "Ivory ink", cls: "bg-foreground", hex: "#F7F5F0" },

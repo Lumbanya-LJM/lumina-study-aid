@@ -15,8 +15,32 @@ export const verticals: Vertical[] = [
   { id: "tech", name: "Amano Tech & Digital", slug: "tech", tagline: "Modern tools, modern work" },
   { id: "agri", name: "Amano Agriculture", slug: "agri", tagline: "Grow more with less" },
   { id: "heritage", name: "Amano History & Heritage", slug: "heritage", tagline: "The continent's story, told by its own" },
+  { id: "language", name: "Amano Language", slug: "language", tagline: "Speak the continent" },
   { id: "lifestyle", name: "Amano Lifestyle", slug: "lifestyle", tagline: "Skills for a fuller life" },
 ];
+
+/** Amano Language — country tiles and their most-learned languages.
+ *  Starter set; more countries join as the product develops. */
+export interface LanguageCountry {
+  country: string;
+  flag: string;
+  languages: string[];
+}
+
+export const languageCountries: LanguageCountry[] = [
+  { country: "Zambia", flag: "🇿🇲", languages: ["Bemba", "Nyanja", "Tonga", "Lozi"] },
+  { country: "Nigeria", flag: "🇳🇬", languages: ["Yoruba", "Igbo", "Hausa"] },
+  { country: "Zimbabwe", flag: "🇿🇼", languages: ["Shona", "Ndebele"] },
+  { country: "Tanzania", flag: "🇹🇿", languages: ["Swahili"] },
+  { country: "South Africa", flag: "🇿🇦", languages: ["isiZulu", "isiXhosa", "Afrikaans", "Sesotho"] },
+  { country: "Egypt", flag: "🇪🇬", languages: ["Egyptian Arabic"] },
+];
+
+/** Languages with a live starter course in the prototype. */
+export const languageCourseSlugs: Record<string, string> = {
+  Bemba: "bemba-for-beginners",
+  Swahili: "swahili-essentials",
+};
 
 export const people: Person[] = [
   { id: "p1", handle: "chanda-mulenga", displayName: "Chanda Mulenga", headline: "Corporate Lawyer · Lusaka", location: "Lusaka, Zambia", verified: true, roles: ["instructor", "mentor"] },
@@ -27,6 +51,7 @@ export const people: Person[] = [
   { id: "p6", handle: "thandiwe-phiri", displayName: "Thandiwe Phiri", headline: "Public speaking coach · Toastmasters champion", location: "Kitwe, Zambia", verified: true, roles: ["instructor", "mentor"] },
   { id: "p7", handle: "misozi-tembo", displayName: "Misozi Tembo", headline: "Law student · UNZA — aspiring corporate lawyer", location: "Lusaka, Zambia", roles: ["student"] },
   { id: "p8", handle: "joseph-sakala", displayName: "Joseph Sakala", headline: "Procurement Officer · Mining sector", location: "Solwezi, Zambia", roles: ["student"] },
+  { id: "p9", handle: "amina-juma", displayName: "Amina Juma", headline: "Swahili teacher · Language coach", location: "Dar es Salaam, Tanzania", verified: true, roles: ["instructor"] },
 ];
 
 export const skills: Skill[] = [
@@ -48,6 +73,8 @@ export const courses: Course[] = [
   { id: "c8", verticalId: "heritage", title: "History of the Bemba Kingdom", slug: "history-of-the-bemba-kingdom", subtitle: "The Chitimukulu, the crocodile clan, and a living kingdom", instructorId: "p4", level: "Beginner", priceZmw: null, rating: 5.0, ratingCount: 489, learners: 6120, durationHours: 7, lessons: 28, thumbnailTone: "from-yellow-900/60 to-stone-900", skills: [] },
   { id: "c9", verticalId: "business", title: "Business Registration & PACRA", slug: "business-registration-pacra", subtitle: "Register, formalise, and protect your business step by step", instructorId: "p1", level: "Beginner", priceZmw: 250, rating: 4.7, ratingCount: 298, learners: 3540, durationHours: 4, lessons: 18, thumbnailTone: "from-cyan-900/50 to-stone-900", skills: [] },
   { id: "c10", verticalId: "business", title: "Financial Literacy for Life", slug: "financial-literacy-for-life", subtitle: "Budgets, savings groups, mobile money, and building wealth", instructorId: "p2", level: "Beginner", priceZmw: null, rating: 4.8, ratingCount: 733, learners: 8910, durationHours: 5, lessons: 22, thumbnailTone: "from-teal-900/60 to-stone-900", skills: ["sk-bookkeeping"] },
+  { id: "c11", verticalId: "language", title: "Bemba for Beginners", slug: "bemba-for-beginners", subtitle: "Greetings, family, market talk — speak from the first lesson", instructorId: "p4", level: "Beginner", priceZmw: null, rating: 4.9, ratingCount: 214, learners: 2890, durationHours: 8, lessons: 32, thumbnailTone: "from-amber-800/50 to-stone-900", skills: [] },
+  { id: "c12", verticalId: "language", title: "Swahili Essentials", slug: "swahili-essentials", subtitle: "East Africa's lingua franca for travel, trade, and connection", instructorId: "p9", level: "Beginner", priceZmw: 260, rating: 4.8, ratingCount: 342, learners: 4110, durationHours: 10, lessons: 40, thumbnailTone: "from-sky-900/50 to-stone-900", skills: [] },
 ];
 
 export const myEnrollments: Enrollment[] = [

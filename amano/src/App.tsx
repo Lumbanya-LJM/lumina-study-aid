@@ -21,6 +21,7 @@ const CourseDetailPage = lazy(() => import("@/features/learn/CourseDetailPage"))
 const CoursePlayerPage = lazy(() => import("@/features/learn/CoursePlayerPage"));
 const LearningPage = lazy(() => import("@/features/learn/LearningPage"));
 const CertificatesPage = lazy(() => import("@/features/learn/CertificatesPage"));
+const LanguagesPage = lazy(() => import("@/features/learn/LanguagesPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -60,6 +61,7 @@ export default function App() {
                     <Route path="/learning" element={<LearningPage />} />
                     <Route path="/learning/:courseId/lesson/:lessonId" element={<CoursePlayerPage />} />
                     <Route path="/certificates" element={<CertificatesPage />} />
+                    <Route path="/languages" element={<LanguagesPage />} />
                     <Route path="/design" element={<DesignSystemPage />} />
                     {/* Modules landing in later phases — never a dead end */}
                     <Route path="*" element={<ComingSoonPage />} />
