@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ──────────────────────────────────────────────────────────────
+   Amano design tokens — "Quiet Confidence"
+   Dark (obsidian) is the brand-default theme; light is a setting.
+   See docs/amano/04-design-system.md in the architecture package.
+   ────────────────────────────────────────────────────────────── */
+
+@layer base {
+  :root,
+  .dark {
+    /* Ground */
+    --background: 240 10% 4%; /* Deep Obsidian */
+    --surface: 240 8% 8%; /* Graphite */
+    --surface-2: 240 7% 11%; /* Raised card */
+    --border: 240 6% 16%;
+    --input: 240 6% 16%;
+
+    /* Ink */
+    --foreground: 40 30% 96%; /* Warm ivory */
+    --muted: 240 7% 11%;
+    --muted-foreground: 240 5% 62%;
+
+    /* Brand */
+    --primary: 43 74% 52%; /* Heritage Gold */
+    --primary-foreground: 240 10% 6%;
+    --accent: 45 56% 74%; /* Champagne Gold */
+    --accent-foreground: 240 10% 6%;
+    --secondary: 240 7% 11%;
+    --secondary-foreground: 40 30% 96%;
+    --ring: 45 56% 74%;
+
+    /* Surfaces consumed by shadcn primitives */
+    --card: 240 8% 8%;
+    --card-foreground: 40 30% 96%;
+    --popover: 240 8% 8%;
+    --popover-foreground: 40 30% 96%;
+
+    /* Semantic */
+    --success: 152 55% 42%;
+    --warning: 38 92% 55%;
+    --destructive: 0 66% 54%;
+    --destructive-foreground: 40 30% 96%;
+    --info: 214 84% 60%;
+
+    --radius: 1rem;
+
+    /* Sidebar (shadcn sidebar primitive) */
+    --sidebar-background: 240 9% 6%;
+    --sidebar-foreground: 40 30% 96%;
+    --sidebar-primary: 43 74% 52%;
+    --sidebar-primary-foreground: 240 10% 6%;
+    --sidebar-accent: 240 7% 11%;
+    --sidebar-accent-foreground: 40 30% 96%;
+    --sidebar-border: 240 6% 14%;
+    --sidebar-ring: 45 56% 74%;
+  }
+
+  .light {
+    --background: 40 30% 98%;
+    --surface: 0 0% 100%;
+    --surface-2: 40 20% 96%;
+    --border: 40 12% 88%;
+    --input: 40 12% 88%;
+
+    --foreground: 240 10% 8%;
+    --muted: 40 20% 94%;
+    --muted-foreground: 240 5% 40%;
+
+    --primary: 43 74% 44%;
+    --primary-foreground: 40 30% 98%;
+    --accent: 43 50% 60%;
+    --accent-foreground: 240 10% 8%;
+    --secondary: 40 20% 94%;
+    --secondary-foreground: 240 10% 8%;
+    --ring: 43 74% 44%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 8%;
+
+    --sidebar-background: 40 30% 97%;
+    --sidebar-foreground: 240 10% 8%;
+    --sidebar-primary: 43 74% 44%;
+    --sidebar-primary-foreground: 40 30% 98%;
+    --sidebar-accent: 40 20% 93%;
+    --sidebar-accent-foreground: 240 10% 8%;
+    --sidebar-border: 40 12% 88%;
+    --sidebar-ring: 43 74% 44%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    @apply font-serif;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.25);
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--accent));
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Glass — floating layers only (headers, palette, AI panel, sheets) */
+  .glass {
+    background: hsl(var(--surface) / 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .text-gold-gradient {
+    @apply bg-gold-gradient bg-clip-text text-transparent;
+  }
+
+  /* Hairline elevation instead of shadows (dark-UI discipline) */
+  .card-raise {
+    @apply bg-surface-2 border border-border rounded-lg;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Hide scrollbars on horizontal snap rows (mobile card rails) */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
