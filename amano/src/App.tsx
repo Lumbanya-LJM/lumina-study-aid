@@ -15,6 +15,7 @@ const AuthPage = lazy(() => import("@/features/auth/AuthPage"));
 const VerifyPage = lazy(() => import("@/features/auth/VerifyPage"));
 const ForgotPasswordPage = lazy(() => import("@/features/auth/ForgotPasswordPage"));
 const OnboardingPage = lazy(() => import("@/features/auth/OnboardingPage"));
+const LandingPage = lazy(() => import("@/features/landing/LandingPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -38,6 +39,7 @@ export default function App() {
           <BrowserRouter>
             <Suspense fallback={<PageFallback />}>
               <Routes>
+                <Route path="/" element={<LandingPage />} />
                 <Route element={<RedirectIfAuthed />}>
                   <Route path="/auth" element={<AuthPage mode="signin" />} />
                   <Route path="/auth/signup" element={<AuthPage mode="signup" />} />
@@ -47,7 +49,6 @@ export default function App() {
                 <Route element={<RequireAuth />}>
                   <Route path="/onboarding" element={<OnboardingPage />} />
                   <Route element={<AppShell />}>
-                    <Route path="/" element={<Navigate to="/home" replace />} />
                     <Route path="/home" element={<HomePage />} />
                     <Route path="/design" element={<DesignSystemPage />} />
                     {/* Modules landing in later phases — never a dead end */}
