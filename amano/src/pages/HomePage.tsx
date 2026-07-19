@@ -7,14 +7,10 @@ import { PersonCell } from "@/design-system/PersonCell";
 import { SectionHeader } from "@/design-system/SectionHeader";
 import { VerifiedSkillBadge } from "@/design-system/VerifiedSkillBadge";
 import { fadeRise, staggerParent } from "@/design-system/motion";
-import {
-  courseById,
-  courses,
-  myBadges,
-  myEnrollments,
-  people,
-} from "@/data/sample/catalog";
+import { courseById, courses, myBadges, people } from "@/data/sample/catalog";
+import { allLessons } from "@/data/sample/curriculum";
 import { useAuth } from "@/features/auth/store";
+import { courseProgress, useLearn } from "@/features/learn/store";
 
 /**
  * Student home feed — Phase 2 preview wired to sample data.
@@ -23,9 +19,26 @@ import { useAuth } from "@/features/auth/store";
 export default function HomePage() {
   const firstName =
     useAuth((s) => s.user?.displayName.split(" ")[0]) ?? "friend";
-  const continueLearning = myEnrollments
-    .map((e) => ({ enrollment: e, course: courseById(e.courseId)! }))
-    .filter((x) => x.course);
+  const learn = useLearn();
+  const continueLearning = learn.enrolled
+    .map((courseId) => {
+      const course = courseById(courseId);
+      if (!course) return null;
+      const progressPct = courseProgress(learn, courseId);
+      if (progressPct >= 100) return null;
+      const lessons = allLessons(courseId);
+      const nextLesson =
+        lessons.find((l) => l.id === learn.lastLesson[courseId]) ??
+        lessons.find((l) => !(learn.completed[courseId] ?? []).includes(l.id));
+      return {
+        course,
+        progressPct,
+        nextTitle: nextLesson?.title ?? "Final assessment",
+        nextId: nextLesson?.id ?? lessons[lessons.length - 1].id,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .slice(0, 3);
   const mentors = people.filter((p) => p.roles.includes("mentor")).slice(0, 3);
 
   return (
@@ -54,10 +67,10 @@ export default function HomePage() {
       <section>
         <SectionHeader title="Continue learning" to="/learning" />
         <motion.div variants={fadeRise} className="space-y-3">
-          {continueLearning.map(({ enrollment, course }) => (
+          {continueLearning.map(({ course, progressPct, nextTitle, nextId }) => (
             <Link
               key={course.id}
-              to={`/courses/${course.slug}`}
+              to={`/learning/${course.id}/lesson/${nextId}`}
               className="group flex items-center gap-4 rounded-lg border border-border bg-surface p-3 transition-colors hover:border-primary/25"
             >
               <div className="grid h-12 w-12 shrink-0 place-items-center rounded-md bg-surface-2 text-primary transition-colors group-hover:bg-gold-gradient group-hover:text-primary-foreground">
@@ -68,17 +81,17 @@ export default function HomePage() {
                   {course.title}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
-                  Next: {enrollment.lastLesson}
+                  Next: {nextTitle}
                 </p>
                 <div className="mt-2 h-1 overflow-hidden rounded-full bg-border">
                   <div
                     className="h-full rounded-full bg-gold-gradient"
-                    style={{ width: `${enrollment.progressPct}%` }}
+                    style={{ width: `${progressPct}%` }}
                   />
                 </div>
               </div>
               <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                {enrollment.progressPct}%
+                {progressPct}%
               </span>
             </Link>
           ))}

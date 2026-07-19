@@ -16,6 +16,11 @@ const VerifyPage = lazy(() => import("@/features/auth/VerifyPage"));
 const ForgotPasswordPage = lazy(() => import("@/features/auth/ForgotPasswordPage"));
 const OnboardingPage = lazy(() => import("@/features/auth/OnboardingPage"));
 const LandingPage = lazy(() => import("@/features/landing/LandingPage"));
+const ExplorePage = lazy(() => import("@/features/learn/ExplorePage"));
+const CourseDetailPage = lazy(() => import("@/features/learn/CourseDetailPage"));
+const CoursePlayerPage = lazy(() => import("@/features/learn/CoursePlayerPage"));
+const LearningPage = lazy(() => import("@/features/learn/LearningPage"));
+const CertificatesPage = lazy(() => import("@/features/learn/CertificatesPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -50,6 +55,11 @@ export default function App() {
                   <Route path="/onboarding" element={<OnboardingPage />} />
                   <Route element={<AppShell />}>
                     <Route path="/home" element={<HomePage />} />
+                    <Route path="/explore" element={<ExplorePage />} />
+                    <Route path="/courses/:slug" element={<CourseDetailPage />} />
+                    <Route path="/learning" element={<LearningPage />} />
+                    <Route path="/learning/:courseId/lesson/:lessonId" element={<CoursePlayerPage />} />
+                    <Route path="/certificates" element={<CertificatesPage />} />
                     <Route path="/design" element={<DesignSystemPage />} />
                     {/* Modules landing in later phases — never a dead end */}
                     <Route path="*" element={<ComingSoonPage />} />
