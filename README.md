@@ -1,74 +1,80 @@
-# Welcome to your Lovable project
+# AMANO — Business Intelligence Solutions
 
-## Project info
+**One Platform. Every Operation. Intelligent Growth.**
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+AMANO gives African businesses visibility. This MVP answers five questions for a business owner:
 
-## How can I edit this code?
+- What am I selling?
+- How much stock do I have?
+- What is selling best?
+- Who are my customers?
+- How is my business performing?
 
-There are several ways of editing your application.
+## MVP Modules
 
-**Use Lovable**
+| Module | What it does |
+| --- | --- |
+| **User Management** | Email/password registration, login, password reset, profiles, roles (Business Owner / Staff Member) |
+| **Business Management** | Business registration, profile, settings, locations, staff join codes |
+| **Product Management** | Products & services, categories, cost/selling prices, images, SKU |
+| **Inventory Management** | Add/remove stock, adjustments after stock counts, movement history, low stock alerts |
+| **Sales Management** | Fast sale recording with line items, customer & payment method, sale history |
+| **BI Dashboard** | Revenue, profit, sales counts, best sellers, top customers, inventory value, revenue trend charts, reports with CSV export |
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Tech Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend:** React 18 + TypeScript + Vite
+- **UI:** Tailwind CSS + shadcn/ui + Recharts
+- **Backend:** Supabase (Postgres, Auth, Storage, RLS)
+- **Data fetching:** TanStack Query
 
-**Use your preferred IDE**
+## Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 1. Create a Supabase project
 
-The only requirement is having Bun installed - [install Bun](https://bun.sh/docs/installation)
+Create a project at [supabase.com](https://supabase.com), then apply the schema:
 
-Follow these steps:
+- **Option A (SQL editor):** open the Supabase SQL editor and run the contents of
+  `supabase/migrations/20260804000000_amano_mvp_schema.sql`.
+- **Option B (CLI):** `supabase link --project-ref YOUR_PROJECT_ID && supabase db push`
+
+The migration creates all tables, row-level security policies, the `record_sale` transaction
+function, dashboard metric functions, and a public `product-images` storage bucket.
+
+> Tip: in Supabase **Authentication → Providers → Email**, disable "Confirm email" during
+> development so you can sign in immediately after registering.
+
+### 2. Configure environment
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-bun install
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-bun run dev
+cp .env.example .env
+# Fill in VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY
+# (Supabase dashboard → Project Settings → API)
 ```
 
-**Edit a file directly in GitHub**
+### 3. Run
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+bun install    # or npm install
+bun dev        # or npm run dev
+```
 
-**Use GitHub Codespaces**
+## How roles work
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- Registering and creating a business makes you its **Business Owner**.
+- Owners find a **join code** under Settings → Team. Staff register their own account,
+  choose **Join as Staff**, and enter the code.
+- Owners manage the business profile, locations, team roles; staff can sell and manage
+  stock, products, and customers.
 
-## What technologies are used for this project?
+## Project structure
 
-This project is built with:
-
-- Bun 1.3.4
-- Vite 7.2.7
-- TypeScript
-- React 19.2.1
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```
+supabase/migrations/   Database schema (tables, RLS, functions)
+src/pages/             One file per screen
+src/components/layout/ Sidebar shell + route guards
+src/components/shared/ Logo, stat cards, empty states
+src/contexts/          Business context (current business + role)
+src/hooks/useAuth.tsx  Auth session + profile
+src/integrations/      Supabase client + generated types
+```

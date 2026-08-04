@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,587 +6,118 @@
 
 @layer base {
   :root {
-    /* LMV Brand Colors - Deep Teal Blue from Logo (Default/Health) */
-    --background: 0 0% 100%;
-    --foreground: 200 35% 15%;
+    /* AMANO brand - deep navy + emerald green */
+    --background: 216 33% 97%;
+    --foreground: 215 50% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 200 35% 15%;
+    --card-foreground: 215 50% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 200 35% 15%;
+    --popover-foreground: 215 50% 12%;
 
-    /* LMV Deep Teal Primary - #2A5A6A (Health) */
-    --primary: 195 43% 29%;
+    /* Deep navy primary (#0B1F3A) */
+    --primary: 214 68% 14%;
     --primary-foreground: 0 0% 100%;
 
-    /* Light Grey Secondary */
-    --secondary: 200 14% 96%;
-    --secondary-foreground: 200 35% 15%;
+    --secondary: 216 25% 94%;
+    --secondary-foreground: 215 50% 12%;
 
-    /* Muted Greys */
-    --muted: 200 14% 96%;
-    --muted-foreground: 200 9% 46%;
+    --muted: 216 25% 94%;
+    --muted-foreground: 215 12% 45%;
 
-    /* Teal Accent */
-    --accent: 195 43% 29%;
+    /* Emerald accent (#0BA97D) */
+    --accent: 163 88% 33%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --success: 163 88% 33%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 215 50% 12%;
+
+    --destructive: 0 76% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 200 13% 91%;
-    --input: 200 13% 91%;
-    --ring: 195 43% 29%;
+    --border: 215 20% 89%;
+    --input: 215 20% 89%;
+    --ring: 163 88% 33%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
 
-    /* Custom LMV Colors - Teal Blue Palette (Health) */
-    --lmv-teal-900: 200 35% 15%;
-    --lmv-teal-800: 198 38% 22%;
-    --lmv-teal-700: 195 43% 29%;
-    --lmv-teal-600: 195 40% 35%;
-    --lmv-teal-500: 195 38% 42%;
-    --lmv-teal-400: 195 35% 55%;
-    --lmv-teal-300: 195 35% 70%;
-    --lmv-teal-200: 195 40% 85%;
-    --lmv-teal-100: 195 45% 94%;
-    --lmv-teal-50: 195 50% 97%;
+    /* Sidebar (dark navy panel) */
+    --sidebar: 214 68% 11%;
+    --sidebar-foreground: 216 30% 85%;
+    --sidebar-active: 163 88% 33%;
+    --sidebar-active-foreground: 0 0% 100%;
+    --sidebar-border: 214 45% 20%;
 
-    /* School-specific colors - Law (Corporate Navy) */
-    --school-law-primary: 220 56% 25%;
-    --school-law-primary-light: 220 50% 35%;
-    --school-law-primary-dark: 220 60% 18%;
-    --school-law-accent: 220 45% 45%;
-    
-    /* School-specific colors - Business (Finance Gold/Emerald) */
-    --school-business-primary: 155 45% 28%;
-    --school-business-primary-light: 155 40% 38%;
-    --school-business-primary-dark: 155 50% 20%;
-    --school-business-accent: 45 85% 50%;
-    
-    /* School-specific colors - Health (Medical Teal) */
-    --school-health-primary: 195 43% 29%;
-    --school-health-primary-light: 195 40% 40%;
-    --school-health-primary-dark: 195 48% 20%;
-    --school-health-accent: 170 50% 45%;
-
-    --lmv-grey-900: 200 9% 15%;
-    --lmv-grey-800: 200 9% 25%;
-    --lmv-grey-700: 200 9% 35%;
-    --lmv-grey-600: 200 9% 46%;
-    --lmv-grey-500: 200 9% 56%;
-    --lmv-grey-400: 200 9% 70%;
-    --lmv-grey-300: 200 13% 82%;
-    --lmv-grey-200: 200 13% 91%;
-    --lmv-grey-100: 200 14% 96%;
-    --lmv-grey-50: 0 0% 98%;
-
-    /* Platinum/Silver */
-    --lmv-platinum: 200 10% 94%;
-    --lmv-silver: 200 9% 78%;
-
-    /* Success/Warning */
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(200 9% 15% / 0.03);
-    --shadow-md: 0 4px 6px -1px hsl(200 9% 15% / 0.05), 0 2px 4px -2px hsl(200 9% 15% / 0.03);
-    --shadow-lg: 0 10px 15px -3px hsl(200 9% 15% / 0.05), 0 4px 6px -4px hsl(200 9% 15% / 0.03);
-    --shadow-xl: 0 20px 25px -5px hsl(200 9% 15% / 0.06), 0 8px 10px -6px hsl(200 9% 15% / 0.03);
-    --shadow-glow: 0 0 30px hsl(195 43% 29% / 0.2);
-
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 200 35% 15%;
-    --sidebar-primary: 195 43% 29%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 195 45% 94%;
-    --sidebar-accent-foreground: 195 43% 29%;
-    --sidebar-border: 200 13% 91%;
-    --sidebar-ring: 195 43% 29%;
-  }
-
-  /* School of Law Theme - Corporate Navy */
-  .school-law {
-    --primary: 220 56% 25%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 220 45% 45%;
-    --accent-foreground: 0 0% 100%;
-    --ring: 220 56% 25%;
-    --sidebar-primary: 220 56% 25%;
-    --sidebar-accent: 220 50% 94%;
-    --sidebar-accent-foreground: 220 56% 25%;
-    --sidebar-ring: 220 56% 25%;
-    --shadow-glow: 0 0 30px hsl(220 56% 25% / 0.2);
-  }
-
-  .dark.school-law {
-    --primary: 220 55% 50%;
-    --accent: 220 50% 55%;
-    --ring: 220 55% 50%;
-    --sidebar-primary: 220 55% 50%;
-  }
-
-  /* School of Business Theme - Emerald/Finance */
-  .school-business {
-    --primary: 155 45% 28%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 45 85% 50%;
-    --accent-foreground: 0 0% 15%;
-    --ring: 155 45% 28%;
-    --sidebar-primary: 155 45% 28%;
-    --sidebar-accent: 155 40% 94%;
-    --sidebar-accent-foreground: 155 45% 28%;
-    --sidebar-ring: 155 45% 28%;
-    --shadow-glow: 0 0 30px hsl(155 45% 28% / 0.2);
-  }
-
-  .dark.school-business {
-    --primary: 155 50% 45%;
-    --accent: 45 80% 55%;
-    --ring: 155 50% 45%;
-    --sidebar-primary: 155 50% 45%;
-  }
-
-  /* School of Health Theme - Medical Teal (default) */
-  .school-health {
-    --primary: 195 43% 29%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 170 50% 45%;
-    --accent-foreground: 0 0% 100%;
-    --ring: 195 43% 29%;
-    --sidebar-primary: 195 43% 29%;
-    --sidebar-accent: 195 45% 94%;
-    --sidebar-accent-foreground: 195 43% 29%;
-    --sidebar-ring: 195 43% 29%;
-    --shadow-glow: 0 0 30px hsl(195 43% 29% / 0.2);
-  }
-
-  .dark.school-health {
-    --primary: 195 45% 45%;
-    --accent: 170 45% 50%;
-    --ring: 195 45% 45%;
-    --sidebar-primary: 195 45% 45%;
+    /* Charts */
+    --chart-1: 163 88% 33%;
+    --chart-2: 214 68% 30%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 199 89% 48%;
+    --chart-5: 262 52% 55%;
   }
 
   .dark {
-    --background: 200 35% 6%;
-    --foreground: 200 14% 96%;
+    --background: 215 55% 8%;
+    --foreground: 216 30% 92%;
 
-    --card: 200 35% 8%;
-    --card-foreground: 200 14% 96%;
+    --card: 215 50% 11%;
+    --card-foreground: 216 30% 92%;
 
-    --popover: 200 35% 8%;
-    --popover-foreground: 200 14% 96%;
+    --popover: 215 50% 11%;
+    --popover-foreground: 216 30% 92%;
 
-    --primary: 195 45% 45%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 216 30% 92%;
+    --primary-foreground: 215 55% 10%;
 
-    --secondary: 200 30% 15%;
-    --secondary-foreground: 200 14% 96%;
+    --secondary: 215 40% 16%;
+    --secondary-foreground: 216 30% 92%;
 
-    --muted: 200 30% 15%;
-    --muted-foreground: 200 9% 60%;
+    --muted: 215 40% 16%;
+    --muted-foreground: 215 15% 62%;
 
-    --accent: 195 45% 45%;
+    --accent: 163 75% 40%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62% 45%;
+    --success: 163 75% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 215 50% 12%;
+
+    --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 200 30% 18%;
-    --input: 200 30% 18%;
-    --ring: 195 45% 45%;
+    --border: 215 35% 20%;
+    --input: 215 35% 20%;
+    --ring: 163 75% 40%;
 
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-
-    --sidebar-background: 200 35% 6%;
-    --sidebar-foreground: 200 14% 96%;
-    --sidebar-primary: 195 45% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 200 30% 15%;
-    --sidebar-accent-foreground: 200 14% 96%;
-    --sidebar-border: 200 30% 18%;
-    --sidebar-ring: 195 45% 45%;
-
-    /* Custom dark mode text colors for better visibility */
-    --lmv-grey-100: 200 14% 90%;
-    --lmv-grey-200: 200 13% 80%;
-    --lmv-grey-300: 200 13% 70%;
-    --lmv-grey-400: 200 9% 60%;
-    --lmv-grey-500: 200 9% 50%;
+    --sidebar: 215 55% 7%;
+    --sidebar-foreground: 216 30% 80%;
+    --sidebar-active: 163 75% 40%;
+    --sidebar-active-foreground: 0 0% 100%;
+    --sidebar-border: 215 40% 16%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 }
 
 @layer utilities {
-  .font-display {
-    font-family: 'Playfair Display', Georgia, serif;
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
-  
-  .gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-muted-foreground/30;
   }
-
-  .dark .gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.7) 100%);
-  }
-
-  /* School-specific gradients */
-  .gradient-law {
-    background: linear-gradient(135deg, hsl(220, 56%, 25%) 0%, hsl(220, 60%, 18%) 100%);
-  }
-  
-  .gradient-business {
-    background: linear-gradient(135deg, hsl(155, 45%, 28%) 0%, hsl(155, 50%, 20%) 100%);
-  }
-  
-  .gradient-health {
-    background: linear-gradient(135deg, hsl(195, 43%, 29%) 0%, hsl(195, 48%, 20%) 100%);
-  }
-  
-  .gradient-subtle {
-    background: linear-gradient(180deg, hsl(195, 50%, 97%) 0%, hsl(0, 0%, 100%) 100%);
-  }
-
-  .dark .gradient-subtle {
-    background: linear-gradient(180deg, hsl(200, 35%, 10%) 0%, hsl(200, 35%, 6%) 100%);
-  }
-  
-  .gradient-card {
-    background: linear-gradient(135deg, hsl(0, 0%, 100%) 0%, hsl(200, 14%, 98%) 100%);
-  }
-
-  .dark .gradient-card {
-    background: linear-gradient(135deg, hsl(200, 35%, 10%) 0%, hsl(200, 35%, 8%) 100%);
-  }
-  
-  .shadow-premium {
-    box-shadow: var(--shadow-lg);
-  }
-  
-  .shadow-glow {
-    box-shadow: var(--shadow-glow);
-  }
-  
-  .glass {
-    background: hsl(0 0% 100% / 0.9);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-  }
-
-  .dark .glass {
-    background: hsl(200 35% 8% / 0.9);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-  }
-  
-  .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.7) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .dark .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Hide scrollbar */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  /* App container - full screen */
-  .app-container {
-    width: 100%;
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
-
-  /* Content container with responsive padding */
-  .content-container {
-    width: 100%;
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  @media (min-width: 768px) {
-    .content-container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .content-container {
-      padding-left: 4rem;
-      padding-right: 4rem;
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .content-container {
-      padding-left: 6rem;
-      padding-right: 6rem;
-    }
-  }
-
-  /* Safe area padding */
-  .safe-top {
-    padding-top: max(env(safe-area-inset-top), 1rem);
-  }
-  
-  .safe-bottom {
-    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
-  }
-
-  /* Animation utilities */
-  .animate-fade-in {
-    animation: fadeIn 0.5s ease-out forwards;
-  }
-  
-  .animate-slide-up {
-    animation: slideUp 0.5s ease-out forwards;
-  }
-  
-  .animate-scale-in {
-    animation: scaleIn 0.3s ease-out forwards;
-  }
-
-  .animate-pulse-soft {
-    animation: pulseSoft 2s ease-in-out infinite;
-  }
-
-  /* Premium glassmorphism */
-  .glass-premium {
-    background: hsl(var(--card) / 0.7);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid hsl(var(--border) / 0.3);
-  }
-
-  .dark .glass-premium {
-    background: hsl(var(--card) / 0.6);
-    border: 1px solid hsl(var(--border) / 0.2);
-  }
-
-  /* Hover lift effect */
-  .hover-lift {
-    @apply transition-all duration-300;
-  }
-  .hover-lift:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px -8px hsl(var(--primary) / 0.15);
-  }
-
-  /* Interactive press effect */
-  .press-effect {
-    @apply transition-transform duration-150;
-  }
-  .press-effect:active {
-    transform: scale(0.97);
-  }
-
-  /* Gradient border */
-  .gradient-border {
-    position: relative;
-    background: hsl(var(--card));
-    border-radius: 1rem;
-  }
-  .gradient-border::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(135deg, hsl(var(--primary) / 0.5), hsl(var(--primary) / 0.1));
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-  }
-
-  /* Spotlight effect */
-  .spotlight {
-    position: relative;
-    overflow: hidden;
-  }
-  .spotlight::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, hsl(var(--primary) / 0.1) 0%, transparent 70%);
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-  }
-  .spotlight:hover::after {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { 
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scaleIn {
-  from { 
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to { 
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes pulseSoft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-/* Smooth prose styling for AI chat responses */
-.prose-smooth {
-  @apply transition-none;
-}
-
-.prose-smooth * {
-  @apply transition-none;
-}
-
-/* Streaming text animation for smooth word-by-word appearance */
-.prose-smooth p,
-.prose-smooth li,
-.prose-smooth h1,
-.prose-smooth h2,
-.prose-smooth h3,
-.prose-smooth h4,
-.prose-smooth blockquote,
-.prose-smooth pre,
-.prose-smooth code,
-.prose-smooth strong,
-.prose-smooth em {
-  animation: smoothTextIn 0.1s ease-out forwards;
-}
-
-@keyframes smoothTextIn {
-  from { opacity: 0.7; }
-  to { opacity: 1; }
-}
-
-/* Typing cursor animation */
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
-}
-
-.typing-cursor::after {
-  content: '▋';
-  animation: blink 1s step-end infinite;
-  @apply text-primary ml-0.5;
-}
-
-/* Safe bottom area for input */
-.pb-safe {
-  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
-}
-
-/* Mobile-safe scrolling */
-.mobile-scroll {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-}
-
-/* Ensure smooth touch interactions */
-@layer utilities {
-  .touch-manipulation {
-    touch-action: manipulation;
-  }
-  
-  /* Better touch targets for mobile */
-  .touch-target {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
-
-/* Fix for mobile viewport height */
-.h-dvh {
-  height: 100vh;
-  height: 100dvh;
-}
-
-/* Improved mobile scrolling containers */
-.scroll-container {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-  scroll-behavior: smooth;
-}
-
-/* Mobile button press states */
-@media (hover: none) and (pointer: coarse) {
-  button, a, [role="button"] {
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
-  
-  button:active, a:active, [role="button"]:active {
-    transform: scale(0.98);
-    transition: transform 0.1s ease;
-  }
-}
-
-/* Ensure smooth scrolling on iOS */
-.ios-scroll {
-  -webkit-overflow-scrolling: touch;
-  overflow-y: auto;
-  overflow-x: hidden;
 }

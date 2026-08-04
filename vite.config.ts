@@ -10,29 +10,19 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
-  // Ensure required public backend env vars exist at build-time.
-  // (These are publishable/public values; no private secrets are embedded here.)
-  define: {
-    'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify('ljvegutwzhamkkjrsipf'),
-    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://ljvegutwzhamkkjrsipf.supabase.co'),
-    'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmVndXR3emhhbWtranJzaXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDE0NDAsImV4cCI6MjA4MTExNzQ0MH0.ar7P3EmsxqpaOK238wdnOfk6nF7rt6aUXjrJMhibwW4'
-    ),
-  },
   plugins: [
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "lmv-logo.png"],
+      includeAssets: ["favicon.ico", "favicon.png"],
       manifest: {
-        name: "Luminary Study",
-        short_name: "Luminary",
-        description: "AI-powered study companion for Zambian law students",
-        theme_color: "#0d5c63",
+        name: "AMANO Business Intelligence",
+        short_name: "AMANO",
+        description: "One Platform. Every Operation. Intelligent Growth.",
+        theme_color: "#0b1f3a",
         background_color: "#ffffff",
         display: "standalone",
-        orientation: "portrait",
         scope: "/",
         start_url: "/",
         icons: [
