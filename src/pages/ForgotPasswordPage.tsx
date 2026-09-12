@@ -21,7 +21,7 @@ const ForgotPasswordPage: React.FC = () => {
 
   // Countdown timer for resend button
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
     if (resendCooldown > 0) {
       timer = setInterval(() => {
         setResendCooldown((prev) => prev - 1);
