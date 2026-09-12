@@ -204,15 +204,21 @@ const AuthPage: React.FC = () => {
 
   const resolvePortalPath = async (userId: string) => {
     // Use the backend role-check function (more reliable than selecting user_roles under RLS)
-    const [isAdminRes, isTutorRes] = await Promise.all([
-      supabase.rpc('has_role', { _user_id: userId, _role: 'admin' }),
-      supabase.rpc('has_role', { _user_id: userId, _role: 'moderator' }),
-    ]);
+    try {
+      const [isAdminRes, isTutorRes] = await Promise.all([
+        supabase.rpc('has_role', { _user_id: userId, _role: 'admin' }),
+        supabase.rpc('has_role', { _user_id: userId, _role: 'moderator' }),
+      ]);
 
-    if (isAdminRes.data) return '/admin';
-    if (isTutorRes.data) return '/teach';
+      if (isAdminRes.data) return '/admin';
+      if (isTutorRes.data) return '/teach';
+    } catch (err) {
+      // Never block a successful login because the role lookup hiccuped
+      console.warn('Role lookup failed, defaulting to student portal:', err);
+    }
     return '/home';
   };
+
 
   // Load available courses when reaching the courses step (filtered by school and institution)
   useEffect(() => {
