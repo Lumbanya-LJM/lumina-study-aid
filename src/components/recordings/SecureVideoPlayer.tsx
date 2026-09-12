@@ -43,8 +43,8 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
   const [hasSetInitialProgress, setHasSetInitialProgress] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedProgressRef = useRef<number>(0);
   const blobUrlRef = useRef<string | null>(null);
 

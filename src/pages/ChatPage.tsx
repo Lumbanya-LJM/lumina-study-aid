@@ -120,7 +120,7 @@ const ChatPage: React.FC = () => {
   const [pendingFileId, setPendingFileId] = useState<string | null>(null);
   const [pendingFileLoaded, setPendingFileLoaded] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const typingSoundIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const typingSoundIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Handle file query parameter from StudyLocker
   useEffect(() => {

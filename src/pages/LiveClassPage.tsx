@@ -44,7 +44,7 @@ const LiveClassPage: React.FC = () => {
   const [isAIAssistOpen, setIsAIAssistOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const durationIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Get user display name from profile
   const getUserName = useCallback(() => {
