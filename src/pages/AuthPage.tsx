@@ -307,12 +307,18 @@ const AuthPage: React.FC = () => {
           // Fallback
           navigate('/home', { replace: true });
         }
-      } catch {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Something went wrong. Please try again.',
-        });
+      } catch (err) {
+        // If the sign-in itself succeeded, let the user through anyway
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate('/home', { replace: true });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: "We couldn't reach the server. Please check your connection and try again.",
+          });
+        }
       } finally {
         setLoading(false);
       }
