@@ -55,6 +55,7 @@ import AdminAuthPage from "./pages/AdminAuthPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import TutorManagementPage from "./pages/TutorManagementPage";
 import SavedResearchPage from "./pages/SavedResearchPage";
+import MootCourtPage from "./pages/MootCourtPage";
 import NotFound from "./pages/NotFound";
 import { supabase } from "@/integrations/supabase/client";
 
