@@ -12,6 +12,7 @@ import {
   FileText,
   Target,
   Menu,
+  Gavel,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,14 @@ const navItems = [
     label: 'Focus Mode',
     icon: Target,
     description: 'Deep study sessions',
+  },
+  {
+    id: 'moot-court',
+    path: '/moot-court',
+    label: 'Moot Court',
+    icon: Gavel,
+    description: 'Advocacy training',
+    lawOnly: true,
   },
   {
     id: 'achievements',
