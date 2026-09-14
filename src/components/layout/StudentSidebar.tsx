@@ -22,6 +22,7 @@ import { haptics } from '@/lib/haptics';
 import { SidebarUserHeader } from '@/components/layout/SidebarUserHeader';
 import { useFocusSessionStore } from '@/features/focus/useFocusSession';
 import { FocusModeDialog } from '@/features/focus/FocusModeDialog';
+import { useSchoolContext } from '@/contexts/SchoolContext';
 
 const navItems = [
   {
