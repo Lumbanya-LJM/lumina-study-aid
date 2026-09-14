@@ -12,6 +12,7 @@ import {
   FileText,
   Target,
   Menu,
+  Gavel,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import { haptics } from '@/lib/haptics';
 import { SidebarUserHeader } from '@/components/layout/SidebarUserHeader';
 import { useFocusSessionStore } from '@/features/focus/useFocusSession';
 import { FocusModeDialog } from '@/features/focus/FocusModeDialog';
+import { useSchoolContext } from '@/contexts/SchoolContext';
 
 const navItems = [
   {
@@ -80,6 +82,14 @@ const navItems = [
     description: 'Deep study sessions',
   },
   {
+    id: 'moot-court',
+    path: '/moot-court',
+    label: 'Moot Court',
+    icon: Gavel,
+    description: 'Advocacy training',
+    lawOnly: true,
+  },
+  {
     id: 'achievements',
     path: '/achievements',
     label: 'Achievements',
@@ -105,9 +115,14 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   onClose,
 }) => {
   const navigate = useNavigate();
+  const { school } = useSchoolContext();
   const isActive = useFocusSessionStore((s) => s.isActive);
   const isDialogOpen = useFocusSessionStore((s) => s.isDialogOpen);
   const actions = useFocusSessionStore((s) => s.actions);
+
+  const visibleNavItems = navItems.filter(
+    (item: any) => !item.lawOnly || school === 'law'
+  );
 
   const handleFocusClick = () => {
     actions.openDialog();
@@ -137,7 +152,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         {/* Navigation */}
         <ScrollArea className="flex-1 py-2">
           <nav className="px-2 space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = currentPath === item.path;
 
               if (item.id === 'focus') {

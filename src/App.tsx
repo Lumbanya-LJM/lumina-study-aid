@@ -55,6 +55,7 @@ import AdminAuthPage from "./pages/AdminAuthPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import TutorManagementPage from "./pages/TutorManagementPage";
 import SavedResearchPage from "./pages/SavedResearchPage";
+import MootCourtPage from "./pages/MootCourtPage";
 import NotFound from "./pages/NotFound";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -121,6 +122,7 @@ const App = () => {
               <Route path="/academy/dashboard" element={<ProtectedRoute studentOnly><LuminaAcademyPage /></ProtectedRoute>} />
               <Route path="/marketplace" element={<ProtectedRoute studentOnly><MarketplacePage /></ProtectedRoute>} />
               <Route path="/saved-research" element={<ProtectedRoute studentOnly><SavedResearchPage /></ProtectedRoute>} />
+              <Route path="/moot-court" element={<ProtectedRoute studentOnly><MootCourtPage /></ProtectedRoute>} />
               
               {/* Tutor routes */}
               <Route path="/teach" element={<TutorProtectedRoute><TeachDashboardPage /></TutorProtectedRoute>} />
