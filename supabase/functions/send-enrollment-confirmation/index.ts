@@ -43,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch course details
     const { data: courses, error: coursesError } = await supabase
       .from('academy_courses')
-      .select('id, name, institution')
+      .select('id, name, institution, school')
       .in('id', courseIds);
 
     if (coursesError) {
@@ -128,6 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
       title: '🎓 Enrollment Confirmed!',
       name: studentName,
       content: emailContent,
+      school: ((courses?.[0] as any)?.school as 'law' | 'business' | 'health' | undefined) ?? undefined,
     });
 
     const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
