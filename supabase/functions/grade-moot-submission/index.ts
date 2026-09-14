@@ -159,14 +159,62 @@ ${content}
     const aiJson = await aiResponse.json();
     const raw: string = aiJson.choices?.[0]?.message?.content ?? "";
     const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
-    let parsed: any;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
+
+    // Models sometimes emit literal newlines/tabs inside JSON string values,
+    // which is invalid JSON. Escape control characters that sit inside strings.
+    const escapeControlChars = (text: string): string => {
+      let out = "";
+      let inString = false;
+      let escaped = false;
+      for (const ch of text) {
+        if (escaped) {
+          out += ch;
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          out += ch;
+          escaped = inString;
+          continue;
+        }
+        if (ch === '"') {
+          inString = !inString;
+          out += ch;
+          continue;
+        }
+        if (inString && ch < " ") {
+          if (ch === "\n") out += "\\n";
+          else if (ch === "\r") out += "\\r";
+          else if (ch === "\t") out += "\\t";
+          else out += " ";
+          continue;
+        }
+        out += ch;
+      }
+      return out;
+    };
+
+    const tryParse = (text: string): any => {
+      try {
+        return JSON.parse(text);
+      } catch {
+        try {
+          return JSON.parse(escapeControlChars(text));
+        } catch {
+          return null;
+        }
+      }
+    };
+
+    let parsed: any = tryParse(cleaned);
+    if (!parsed) {
       const match = cleaned.match(/\{[\s\S]*\}/);
-      parsed = match ? JSON.parse(match[0]) : null;
+      parsed = match ? tryParse(match[0]) : null;
     }
-    if (!parsed) throw new Error("Could not read the grading result");
+    if (!parsed) {
+      console.error("Unparseable grading output", cleaned.slice(0, 500));
+      throw new Error("Could not read the grading result");
+    }
 
     const rubric = Array.isArray(parsed.rubric) ? parsed.rubric : [];
     const score = Math.max(
