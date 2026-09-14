@@ -133,6 +133,15 @@ const ChatPage: React.FC = () => {
     }
   }, [searchParams, user, pendingFileLoaded]);
 
+  // Handle prefill query parameter (e.g. from Moot Court practice prompts)
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setMessage(q);
+      setSearchParams({});
+    }
+  }, [searchParams]);
+
   const loadFileForStudy = async (fileId: string) => {
     try {
       const { data: file, error } = await supabase
