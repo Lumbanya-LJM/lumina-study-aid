@@ -15,6 +15,13 @@
       "when": 1789412903192,
       "tag": "0001_create_moot_resources",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789412924248,
+      "tag": "0002_moot_resources_storage_policies",
+      "breakpoints": true
     }
   ]
 }
