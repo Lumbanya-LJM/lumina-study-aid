@@ -114,9 +114,14 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   onClose,
 }) => {
   const navigate = useNavigate();
+  const { school } = useSchoolContext();
   const isActive = useFocusSessionStore((s) => s.isActive);
   const isDialogOpen = useFocusSessionStore((s) => s.isDialogOpen);
   const actions = useFocusSessionStore((s) => s.actions);
+
+  const visibleNavItems = navItems.filter(
+    (item: any) => !item.lawOnly || school === 'law'
+  );
 
   const handleFocusClick = () => {
     actions.openDialog();
@@ -146,7 +151,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         {/* Navigation */}
         <ScrollArea className="flex-1 py-2">
           <nav className="px-2 space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = currentPath === item.path;
 
               if (item.id === 'focus') {
