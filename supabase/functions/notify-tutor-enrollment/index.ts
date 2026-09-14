@@ -143,6 +143,7 @@ const handler = async (req: Request): Promise<Response> => {
         title: '🎓 New Student Enrolled!',
         name: tutor.tutorName,
         content: emailContent,
+        school: (courses[0]?.school as 'law' | 'business' | 'health' | undefined) ?? undefined,
       });
 
       console.log(`[notify-tutor-enrollment] Sending email to tutor: ${tutor.tutorEmail}`);

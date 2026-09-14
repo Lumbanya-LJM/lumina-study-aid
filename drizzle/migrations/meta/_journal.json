@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789412778338,
+      "tag": "0000_create_moot_court_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789412903192,
+      "tag": "0001_create_moot_resources",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789412924248,
+      "tag": "0002_moot_resources_storage_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789413108683,
+      "tag": "0003_tutors_manage_moot_problems",
+      "breakpoints": true
+    }
+  ]
+}

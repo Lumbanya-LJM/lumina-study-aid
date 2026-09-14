@@ -66,7 +66,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get course details
     const { data: course, error: courseError } = await supabase
       .from('academy_courses')
-      .select('name, institution')
+      .select('name, institution, school')
       .eq('id', courseId)
       .single();
 
@@ -153,6 +153,7 @@ const handler = async (req: Request): Promise<Response> => {
           title: getEmailTitle(type),
           name,
           content: emailContent.replace('{APP_URL}', appUrl),
+          school: ((course as any)?.school as 'law' | 'business' | 'health' | undefined) ?? undefined,
         });
 
         const emailResponse = await fetch("https://api.resend.com/emails", {

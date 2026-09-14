@@ -32,6 +32,13 @@ const SCHOOL_EMAIL_COLORS: Record<string, SchoolEmailColors> = {
     accent: '#3d8e8e',
     subtitle: 'Clinical Excellence • Compassionate Care',
   },
+  // Neutral LMV Academy branding, used whenever the faculty is unknown
+  default: {
+    primary: '#1f2937',
+    primaryDark: '#111827',
+    accent: '#6b7280',
+    subtitle: 'Law • Business • Health',
+  },
 };
 
 const getSchoolName = (school?: string): string => {
@@ -47,10 +54,10 @@ export const getEmailTemplate = ({ title, name, content, footerText, school }: E
   const currentYear = new Date().getFullYear();
   const userName = name ? `, ${name}` : '';
   
-  // Use school-specific colors or default to health (teal)
+  // Use faculty-specific colors, or neutral LMV Academy branding when unknown
   const colors = school && SCHOOL_EMAIL_COLORS[school] 
     ? SCHOOL_EMAIL_COLORS[school] 
-    : SCHOOL_EMAIL_COLORS.health;
+    : SCHOOL_EMAIL_COLORS.default;
   
   const schoolName = getSchoolName(school);
   const subtitle = colors.subtitle;

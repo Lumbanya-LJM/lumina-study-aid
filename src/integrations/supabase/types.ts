@@ -824,6 +824,167 @@ export type Database = {
           },
         ]
       }
+      moot_problems: {
+        Row: {
+          appellant_position: string | null
+          area_of_law: string
+          authorities: Json
+          citation: string | null
+          court: string | null
+          created_at: string
+          difficulty: string
+          facts: string
+          id: string
+          is_published: boolean
+          issues: Json
+          respondent_position: string | null
+          ruling_summary: string | null
+          source_url: string | null
+          summary: string | null
+          title: string
+        }
+        Insert: {
+          appellant_position?: string | null
+          area_of_law: string
+          authorities?: Json
+          citation?: string | null
+          court?: string | null
+          created_at?: string
+          difficulty?: string
+          facts: string
+          id?: string
+          is_published?: boolean
+          issues?: Json
+          respondent_position?: string | null
+          ruling_summary?: string | null
+          source_url?: string | null
+          summary?: string | null
+          title: string
+        }
+        Update: {
+          appellant_position?: string | null
+          area_of_law?: string
+          authorities?: Json
+          citation?: string | null
+          court?: string | null
+          created_at?: string
+          difficulty?: string
+          facts?: string
+          id?: string
+          is_published?: boolean
+          issues?: Json
+          respondent_position?: string | null
+          ruling_summary?: string | null
+          source_url?: string | null
+          summary?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      moot_resources: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          file_name: string
+          file_path: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          is_published: boolean
+          title: string
+          uploaded_by: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          is_published?: boolean
+          title: string
+          uploaded_by: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          is_published?: boolean
+          title?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      moot_submissions: {
+        Row: {
+          content: string
+          created_at: string
+          feedback: string | null
+          id: string
+          improvements: Json
+          max_score: number
+          problem_id: string
+          rubric: Json
+          score: number | null
+          side: string
+          status: string
+          strengths: Json
+          submission_type: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          improvements?: Json
+          max_score?: number
+          problem_id: string
+          rubric?: Json
+          score?: number | null
+          side?: string
+          status?: string
+          strengths?: Json
+          submission_type?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          improvements?: Json
+          max_score?: number
+          problem_id?: string
+          rubric?: Json
+          score?: number | null
+          side?: string
+          status?: string
+          strengths?: Json
+          submission_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moot_submissions_problem_id_fkey"
+            columns: ["problem_id"]
+            isOneToOne: false
+            referencedRelation: "moot_problems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       password_reset_tokens: {
         Row: {
           created_at: string
