@@ -89,7 +89,8 @@ const MootCourtPage: React.FC = () => {
   const { school } = useSchoolContext();
 
   const startPractice = (prompt: string) => {
-    navigate('/chat', { state: { initialMessage: prompt } });
+    sessionStorage.setItem('lumina_prefill_prompt', prompt);
+    navigate('/chat');
   };
 
   if (school !== 'law') {
