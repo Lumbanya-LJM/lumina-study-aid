@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import TutorDocumentsReview from '@/components/admin/TutorDocumentsReview';
+import { parseDocuments } from '@/lib/tutorDocuments';
 import { 
   Shield, 
   Check, 
