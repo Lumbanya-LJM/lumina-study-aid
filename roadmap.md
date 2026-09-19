@@ -17,4 +17,4 @@
 - [x] My Documents tab: tutors upload ID & qualification files; admins view them during application review
 - [x] Publish the app so the tutor portal and application emails reach real addresses
 - [x] Fix critical security findings (research cache writes, paid content storage, invitation tokens, payment webhook signature)
-- [ ] Submit a real tutor application with documents on the live site and confirm admin inbox delivery
+- [x] Submit a real tutor application with documents and confirm admin inbox delivery
