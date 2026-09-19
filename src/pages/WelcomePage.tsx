@@ -52,7 +52,7 @@ const WelcomePage: React.FC = () => {
     if (selectedSchool) {
       // Store selected school in localStorage for use during signup
       localStorage.setItem('lmv_selected_school', selectedSchool);
-      navigate(`/auth?school=${selectedSchool}`);
+      navigate(`/role-select?school=${selectedSchool}`);
     }
   };
 
