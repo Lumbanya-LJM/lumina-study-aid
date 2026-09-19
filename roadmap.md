@@ -21,3 +21,10 @@
 
 ## Account access
 - [x] Separate Student and Tutor portals with dedicated Sign In and Sign Up links
+- [ ] Submit a tutor application with identity and qualification documents through the Tutor Sign Up link; verify admin email and document review
+- [ ] Walk the tutor dashboard document upload end to end and confirm files appear in the admin review row
+
+## Student portal
+- [ ] Show enrolled students their class schedule
+- [ ] Show enrolled students their course materials
+- [ ] Let Law students upload moot court submissions for grading
