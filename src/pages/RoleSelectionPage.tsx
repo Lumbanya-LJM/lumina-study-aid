@@ -79,33 +79,33 @@ const RoleSelectionPage: React.FC = () => {
                 )}>
                   <role.icon className="w-6 h-6 text-primary-foreground" />
                 </div>
-                <div className="flex-1">
-                    <h2 className="text-lg font-semibold text-foreground">
-                      {role.title}
-                    </h2>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    {role.title}
+                  </h2>
                   <p className="text-sm text-muted-foreground mt-1">
                     {role.description}
                   </p>
                 </div>
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full gap-2"
-                    onClick={() => navigate(role.signInPath)}
-                  >
-                    <LogIn className="h-4 w-4" />
-                    Sign In
-                  </Button>
-                  <Button
-                    type="button"
-                    className="w-full gap-2"
-                    onClick={() => navigate(role.signUpPath)}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Sign Up
-                  </Button>
-                </div>
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => navigate(role.signInPath)}
+                >
+                  <LogIn className="h-4 w-4 shrink-0" />
+                  Sign In
+                </Button>
+                <Button
+                  type="button"
+                  className="w-full gap-2"
+                  onClick={() => navigate(role.signUpPath)}
+                >
+                  <UserPlus className="h-4 w-4 shrink-0" />
+                  Sign Up
+                </Button>
               </div>
             </section>
           ))}
