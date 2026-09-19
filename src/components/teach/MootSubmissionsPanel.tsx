@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { Gavel, Loader2, Upload, FileText } from 'lucide-react';
+import { Gavel, Loader2, Upload, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface SubmissionRow {
@@ -23,6 +23,8 @@ interface SubmissionRow {
   feedback: string | null;
   status: string;
   created_at: string;
+  file_path: string | null;
+  file_name: string | null;
   problemTitle?: string;
   studentName?: string;
 }
@@ -105,6 +107,16 @@ const MootSubmissionsPanel: React.FC = () => {
     load();
   };
 
+  const openFile = async (s: SubmissionRow) => {
+    if (!s.file_path) return;
+    const { data, error } = await supabase.storage.from('moot-submissions').createSignedUrl(s.file_path, 600);
+    if (error || !data?.signedUrl) {
+      toast({ title: 'Could not open file', description: error?.message ?? 'Please try again.', variant: 'destructive' });
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener');
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -142,6 +154,7 @@ const MootSubmissionsPanel: React.FC = () => {
                       <p className="text-xs text-muted-foreground mt-1">
                         {s.side} · {s.submission_type} · {format(new Date(s.created_at), 'PPp')}
                       </p>
+                      {s.file_name && <p className="text-xs text-primary mt-1 truncate">{s.file_name}</p>}
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant={s.status === 'graded' ? 'default' : 'secondary'}>
@@ -155,6 +168,11 @@ const MootSubmissionsPanel: React.FC = () => {
 
                   {openId === s.id && (
                     <div className="mt-4 space-y-3">
+                      {s.file_path && (
+                        <Button variant="outline" size="sm" onClick={() => openFile(s)}>
+                          <Download className="w-4 h-4 mr-2" /> Open submitted file
+                        </Button>
+                      )}
                       <ScrollArea className="h-48 rounded-md border p-3 bg-muted/30">
                         <p className="text-sm whitespace-pre-wrap">{s.content}</p>
                       </ScrollArea>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -13,8 +14,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Gavel, Loader2, Sparkles, ThumbsUp, TrendingUp } from 'lucide-react';
+import { Gavel, Loader2, Sparkles, ThumbsUp, TrendingUp, Upload, X } from 'lucide-react';
 import type { MootProblem } from './MootCaseLibrary';
+import { extractSubmissionText, MOOT_SUBMISSION_ACCEPT } from '@/lib/extractSubmissionText';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Props {
   problem: MootProblem | null;
@@ -31,10 +34,13 @@ export const MootSubmissionDialog: React.FC<Props> = ({ problem, onClose, onGrad
   const [content, setContent] = useState('');
   const [grading, setGrading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const { user } = useAuth();
 
   const reset = () => {
     setContent('');
     setResult(null);
+    setFile(null);
     setGrading(false);
   };
 
@@ -45,7 +51,7 @@ export const MootSubmissionDialog: React.FC<Props> = ({ problem, onClose, onGrad
 
   const submit = async () => {
     if (!problem) return;
-    if (content.trim().length < 50) {
+    if (content.trim().length < 50 && !file) {
       toast({
         title: 'Submission too short',
         description: 'Write at least a few sentences before submitting for grading.',
@@ -56,11 +62,33 @@ export const MootSubmissionDialog: React.FC<Props> = ({ problem, onClose, onGrad
 
     setGrading(true);
     try {
+      let submissionContent = content.trim();
+      let filePath: string | null = null;
+      if (file) {
+        if (!user) throw new Error('Please sign in again before uploading.');
+        submissionContent = await extractSubmissionText(file);
+        const extension = file.name.split('.').pop()?.toLowerCase() ?? 'txt';
+        filePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await supabase.storage
+          .from('moot-submissions')
+          .upload(filePath, file, { contentType: file.type || undefined });
+        if (uploadError) throw uploadError;
+      }
       const { data, error } = await supabase.functions.invoke('grade-moot-submission', {
-        body: { problemId: problem.id, side, submissionType: kind, content },
+        body: {
+          problemId: problem.id,
+          side,
+          submissionType: kind,
+          content: submissionContent,
+          filePath,
+          fileName: file?.name ?? null,
+          fileType: file?.type ?? null,
+        },
       });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+      if (error || (data as any)?.error) {
+        if (filePath) await supabase.storage.from('moot-submissions').remove([filePath]);
+        throw error ?? new Error((data as any).error);
+      }
       setResult((data as any).submission);
       onGraded?.();
     } catch (e: any) {
@@ -138,6 +166,26 @@ export const MootSubmissionDialog: React.FC<Props> = ({ problem, onClose, onGrad
                 <p className="text-xs text-muted-foreground mt-1">
                   {content.length} / 20,000 characters
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Or upload your memorial</p>
+                {file ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-border/60 p-3">
+                    <Upload className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-sm truncate flex-1">{file.name}</span>
+                    <Button variant="ghost" size="icon" onClick={() => setFile(null)} aria-label="Remove file">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Input
+                    type="file"
+                    accept={MOOT_SUBMISSION_ACCEPT}
+                    onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                  />
+                )}
+                <p className="text-xs text-muted-foreground">PDF, DOCX, or TXT · up to 10MB</p>
               </div>
 
               <Button className="w-full" onClick={submit} disabled={grading}>

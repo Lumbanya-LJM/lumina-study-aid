@@ -931,6 +931,9 @@ export type Database = {
           content: string
           created_at: string
           feedback: string | null
+          file_name: string | null
+          file_path: string | null
+          file_type: string | null
           id: string
           improvements: Json
           max_score: number
@@ -947,6 +950,9 @@ export type Database = {
           content: string
           created_at?: string
           feedback?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_type?: string | null
           id?: string
           improvements?: Json
           max_score?: number
@@ -963,6 +969,9 @@ export type Database = {
           content?: string
           created_at?: string
           feedback?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_type?: string | null
           id?: string
           improvements?: Json
           max_score?: number

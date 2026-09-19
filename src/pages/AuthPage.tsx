@@ -69,7 +69,7 @@ const AuthPage: React.FC = () => {
       : (searchParams.get('role') || 'student');
   const invitationToken = searchParams.get('invitation');
   const schoolParam = (searchParams.get('school') as LMVSchool | null) ?? null;
-  const { signUp, signIn } = useAuth();
+  const { user, signUp, signIn } = useAuth();
   const { toast } = useToast();
 
   const [isLogin, setIsLogin] = useState(
@@ -211,6 +211,43 @@ const AuthPage: React.FC = () => {
     agreePrivacyPolicy: false,
     agreeDataConsent: false,
   });
+
+  // Let an existing signed-in account finish a tutor application from the
+  // dedicated Tutor Sign Up link instead of forcing another account creation.
+  useEffect(() => {
+    if (!isTutorPortal || isLogin || !user || step !== 'credentials') return;
+
+    let active = true;
+    const resumeTutorApplication = async () => {
+      const { data: existing } = await supabase
+        .from('tutor_applications')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!active) return;
+      if (existing) {
+        setShowApplicationSuccess(true);
+        return;
+      }
+
+      setFormData((previous) => ({
+        ...previous,
+        email: user.email ?? previous.email,
+        fullName: user.user_metadata?.full_name ?? previous.fullName,
+      }));
+      setNewUserId(user.id);
+      setSelectedRole('tutor');
+      setStep('tutor-application');
+    };
+
+    resumeTutorApplication();
+    return () => {
+      active = false;
+    };
+  }, [isLogin, isTutorPortal, step, user]);
 
   const resolvePortalPath = async (userId: string) => {
     // Use the backend role-check function (more reliable than selecting user_roles under RLS)

@@ -67,6 +67,14 @@ interface StudyTask {
   completed: boolean | null;
 }
 
+interface EnrolledClass {
+  id: string;
+  title: string;
+  scheduled_at: string | null;
+  status: string;
+  course_name: string;
+}
+
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -75,6 +83,7 @@ const HomePage: React.FC = () => {
   useSoundNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [todaysTasks, setTodaysTasks] = useState<StudyTask[]>([]);
+  const [todaysClasses, setTodaysClasses] = useState<EnrolledClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [statsModalOpen, setStatsModalOpen] = useState(false);
@@ -148,6 +157,50 @@ const HomePage: React.FC = () => {
       } else if (tasksData) {
         setTodaysTasks(tasksData);
       }
+
+      const { data: enrollments, error: enrollmentsError } = await supabase
+        .from('academy_enrollments')
+        .select('course_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+
+      if (enrollmentsError) {
+        console.error('Error fetching enrolments:', enrollmentsError);
+      } else {
+        const courseIds = (enrollments ?? []).map((enrolment) => enrolment.course_id);
+        if (courseIds.length > 0) {
+          const start = new Date();
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(start);
+          end.setDate(end.getDate() + 1);
+
+          const [{ data: classesData, error: classesError }, { data: coursesData }] = await Promise.all([
+            supabase
+              .from('live_classes')
+              .select('id, title, scheduled_at, status, course_id')
+              .in('course_id', courseIds)
+              .in('status', ['scheduled', 'live'])
+              .gte('scheduled_at', start.toISOString())
+              .lt('scheduled_at', end.toISOString())
+              .order('scheduled_at', { ascending: true }),
+            supabase.from('academy_courses').select('id, name').in('id', courseIds),
+          ]);
+
+          if (classesError) {
+            console.error('Error fetching enrolled classes:', classesError);
+          } else {
+            setTodaysClasses((classesData ?? []).map((classItem) => ({
+              id: classItem.id,
+              title: classItem.title,
+              scheduled_at: classItem.scheduled_at,
+              status: classItem.status,
+              course_name: coursesData?.find((course) => course.id === classItem.course_id)?.name ?? 'Academy class',
+            })));
+          }
+        } else {
+          setTodaysClasses([]);
+        }
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -170,6 +223,7 @@ const HomePage: React.FC = () => {
     const commonActions = [
       { icon: MessageCircle, label: 'Chat with Lumina', description: 'Get instant study help', path: '/chat' },
       { icon: GraduationCap, label: 'Lumina Academy', description: 'Live classes & courses', path: '/academy' },
+      { icon: FileText, label: 'Class Materials', description: 'Open your course resources', path: '/academy/dashboard?tab=materials' },
     ];
     
     // School-specific actions
@@ -380,7 +434,7 @@ const HomePage: React.FC = () => {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-foreground">Today's Schedule</h2>
             <button 
-              onClick={() => navigate('/planner')}
+              onClick={() => navigate('/academy/dashboard')}
               className="text-sm text-primary font-medium flex items-center gap-1"
             >
               View All
@@ -388,6 +442,24 @@ const HomePage: React.FC = () => {
             </button>
           </div>
           <div className="space-y-3">
+            {todaysClasses.map((classItem) => (
+              <button
+                key={classItem.id}
+                onClick={() => navigate('/academy/dashboard')}
+                className="w-full bg-card rounded-2xl p-4 border border-primary/30 shadow-card flex items-center gap-4 text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <GraduationCap className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground truncate">{classItem.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {classItem.status === 'live' ? 'Live now' : new Date(classItem.scheduled_at ?? '').toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {classItem.course_name}
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+            ))}
             {todaysTasks.length > 0 ? (
               todaysTasks.map((task) => (
                 <div
@@ -406,10 +478,10 @@ const HomePage: React.FC = () => {
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </div>
               ))
-            ) : (
+            ) : todaysClasses.length === 0 ? (
               <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-card text-center">
                 <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground text-sm">No tasks scheduled for today</p>
+                <p className="text-muted-foreground text-sm">No classes or tasks scheduled for today</p>
                 <button 
                   onClick={() => navigate('/planner')}
                   className="mt-2 text-primary text-sm font-medium"
@@ -417,7 +489,7 @@ const HomePage: React.FC = () => {
                   Add a task
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 

@@ -25,6 +25,6 @@
 - [ ] Walk the tutor dashboard document upload end to end and confirm files appear in the admin review row
 
 ## Student portal
-- [ ] Show enrolled students their class schedule
-- [ ] Show enrolled students their course materials
-- [ ] Let Law students upload moot court submissions for grading
+- [x] Show enrolled students their class schedule
+- [x] Show enrolled students their course materials
+- [x] Let Law students upload moot court submissions for grading
