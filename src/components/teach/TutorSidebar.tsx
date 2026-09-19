@@ -12,6 +12,8 @@ import {
   MessageSquare,
   Calendar,
   GraduationCap,
+  Gavel,
+
   Settings,
   Menu,
   ArrowLeft,
@@ -65,7 +67,14 @@ const mainNavItems = [
     icon: Clock,
     description: 'Past classes & recordings',
   },
+  {
+    id: 'moot',
+    label: 'Moot Court',
+    icon: Gavel,
+    description: 'Upload cases & grade submissions',
+  },
 ];
+
 
 const secondaryNavItems = [
   {
