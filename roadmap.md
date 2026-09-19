@@ -14,3 +14,5 @@
 
 ## Tutor portal
 - [x] Moot Court tab: review student submissions, adjust scores, leave feedback, upload cases/handbook
+- [x] My Documents tab: tutors upload ID & qualification files; admins view them during application review
+- [x] Publish the app so the tutor portal and application emails reach real addresses
