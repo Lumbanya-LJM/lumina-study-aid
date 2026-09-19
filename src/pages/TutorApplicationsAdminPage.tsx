@@ -66,6 +66,7 @@ interface TutorApplication {
   selected_courses: string[] | null;
   date_of_birth: string | null;
   sex: string | null;
+  documents?: unknown;
 }
 
 const TutorApplicationsAdminPage: React.FC = () => {
