@@ -107,10 +107,11 @@ const handler = async (req: Request): Promise<Response> => {
 
             await resend.emails.send({
                 from: `LMV Academy <${fromEmail}>`,
-                to: [adminEmail],
+                to: adminEmails,
                 subject: `New Tutor Application: ${applicantName}${applicationId ? ` (ID: ${applicationId})` : ''}`,
                 html: adminEmailHtml,
             });
+            console.log(`Admin notification sent to ${adminEmails.length} recipient(s)`);
         }
     } else if (type === 'approved') {
         // For approved tutors - they already have an account, just inform them about tutor access
