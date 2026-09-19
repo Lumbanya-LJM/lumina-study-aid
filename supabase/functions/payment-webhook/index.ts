@@ -9,10 +9,8 @@ const corsHeaders = {
 
 // Verify Lenco webhook signature
 function verifyLencoSignature(payload: string, signature: string, secret: string): boolean {
-  if (!secret) {
-    console.log("No webhook secret configured, skipping signature verification");
-    return true; // Allow in development
-  }
+  if (!secret || !signature) return false;
+  
   
   try {
     const hmac = createHmac("sha256", secret);
