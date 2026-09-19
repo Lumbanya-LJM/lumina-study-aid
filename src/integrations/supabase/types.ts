@@ -1891,6 +1891,17 @@ export type Database = {
     Functions: {
       cleanup_expired_reset_tokens: { Args: never; Returns: undefined }
       delete_user_data: { Args: { target_user_id: string }; Returns: undefined }
+      get_invitation_by_token: {
+        Args: { _token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          full_name: string
+          id: string
+          selected_courses: string[]
+          status: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
