@@ -92,7 +92,8 @@ const handler = async (req: Request): Promise<Response> => {
             html: submittedEmailHtml,
         });
 
-        if (adminEmail) {
+        const adminEmails = await getAdminEmails(adminEmail);
+        if (adminEmails.length > 0) {
             const adminContent = `
                 <p>A new tutor application has been submitted:</p>
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
