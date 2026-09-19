@@ -59,13 +59,24 @@ const AuthPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialRole = searchParams.get('role') || 'student';
+  // Dedicated tutor portal routes: /teach/login and /teach/signup
+  const isTutorPortal = location.pathname.startsWith('/teach/');
+  const isStudentPortal = location.pathname.startsWith('/student/');
+  const initialRole = isTutorPortal
+    ? 'tutor'
+    : isStudentPortal
+      ? 'student'
+      : (searchParams.get('role') || 'student');
   const invitationToken = searchParams.get('invitation');
   const schoolParam = (searchParams.get('school') as LMVSchool | null) ?? null;
   const { signUp, signIn } = useAuth();
   const { toast } = useToast();
 
-  const [isLogin, setIsLogin] = useState(!invitationToken);
+  const [isLogin, setIsLogin] = useState(
+    isTutorPortal || isStudentPortal
+      ? !location.pathname.endsWith('/signup')
+      : !invitationToken
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'credentials' | 'school' | 'profile' | 'courses' | 'tutor-application'>('credentials');
@@ -74,7 +85,7 @@ const AuthPage: React.FC = () => {
   const [newUserId, setNewUserId] = useState<string | null>(null);
   const [selectedSchool, setSelectedSchool] = useState<LMVSchool>(() => getStoredSchool());
   const [selectedRole, setSelectedRole] = useState<'student' | 'tutor'>(
-    invitationToken ? 'tutor' : (initialRole as 'student' | 'tutor')
+    invitationToken || isTutorPortal ? 'tutor' : (initialRole as 'student' | 'tutor')
   );
   const [invitation, setInvitation] = useState<{
     id: string;
@@ -982,8 +993,18 @@ const AuthPage: React.FC = () => {
       )}>
         <LMVLogo size="lg" className="justify-center mb-6" />
         
-        {/* Role Toggle - Show on credentials step */}
-        {step === 'credentials' && (
+        {/* Tutor portal badge on the dedicated tutor routes */}
+        {isTutorPortal && step === 'credentials' && (
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 bg-secondary border border-border/50 text-sm font-medium text-foreground">
+              <GraduationCap className="w-4 h-4 text-primary" />
+              Tutor Portal
+            </div>
+          </div>
+        )}
+
+        {/* Role Toggle - Show on credentials step (hidden on dedicated portals) */}
+        {step === 'credentials' && !isTutorPortal && !isStudentPortal && (
           <div className="flex justify-center mb-6">
             <div className="inline-flex rounded-full p-1 bg-secondary border border-border/50">
               <button
@@ -1028,6 +1049,24 @@ const AuthPage: React.FC = () => {
               sign up and apply
             </button>{' '}
             first.
+          </p>
+        )}
+
+        {/* Cross-link between the tutor and student portals */}
+        {step === 'credentials' && isTutorPortal && (
+          <p className="text-xs text-muted-foreground mb-4">
+            Not a tutor?{' '}
+            <Link to="/student/login" className="text-primary hover:underline">
+              Student sign in
+            </Link>
+          </p>
+        )}
+        {step === 'credentials' && isStudentPortal && (
+          <p className="text-xs text-muted-foreground mb-4">
+            Are you a tutor?{' '}
+            <Link to="/teach/login" className="text-primary hover:underline">
+              Tutor sign in
+            </Link>
           </p>
         )}
         

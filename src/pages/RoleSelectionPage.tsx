@@ -29,7 +29,7 @@ const RoleSelectionPage: React.FC = () => {
       description: 'Access courses, study materials, quizzes, and connect with tutors',
       icon: GraduationCap,
       color: 'from-primary to-primary/70',
-      path: withSchool('/auth?role=student'),
+      path: withSchool('/student/login'),
     },
     {
       id: 'tutor',
@@ -37,7 +37,7 @@ const RoleSelectionPage: React.FC = () => {
       description: 'Create courses, post updates, schedule live classes, and teach students',
       icon: BookOpen,
       color: 'from-accent to-accent/70',
-      path: withSchool('/auth?role=tutor'),
+      path: withSchool('/teach/login'),
     },
   ];
 

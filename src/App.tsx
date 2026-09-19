@@ -92,6 +92,13 @@ const App = () => {
               <Route path="/welcome" element={<WelcomePage />} />
               <Route path="/role-select" element={<RoleSelectionPage />} />
               <Route path="/auth" element={<AuthPage />} />
+              {/* Dedicated tutor portal sign in / sign up */}
+              <Route path="/teach/login" element={<AuthPage />} />
+              <Route path="/teach/signup" element={<AuthPage />} />
+              <Route path="/teach/auth" element={<Navigate to="/teach/login" replace />} />
+              {/* Dedicated student sign in / sign up */}
+              <Route path="/student/login" element={<AuthPage />} />
+              <Route path="/student/signup" element={<AuthPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/install" element={<InstallPage />} />
