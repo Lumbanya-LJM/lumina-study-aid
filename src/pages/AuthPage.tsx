@@ -1051,6 +1051,24 @@ const AuthPage: React.FC = () => {
             first.
           </p>
         )}
+
+        {/* Cross-link between the tutor and student portals */}
+        {step === 'credentials' && isTutorPortal && (
+          <p className="text-xs text-muted-foreground mb-4">
+            Not a tutor?{' '}
+            <Link to="/student/login" className="text-primary hover:underline">
+              Student sign in
+            </Link>
+          </p>
+        )}
+        {step === 'credentials' && isStudentPortal && (
+          <p className="text-xs text-muted-foreground mb-4">
+            Are you a tutor?{' '}
+            <Link to="/teach/login" className="text-primary hover:underline">
+              Tutor sign in
+            </Link>
+          </p>
+        )}
         
         <h1 className="text-2xl font-bold text-foreground mb-2">
           {getStepTitle()}
