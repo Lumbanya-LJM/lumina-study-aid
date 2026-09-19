@@ -59,13 +59,24 @@ const AuthPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialRole = searchParams.get('role') || 'student';
+  // Dedicated tutor portal routes: /teach/login and /teach/signup
+  const isTutorPortal = location.pathname.startsWith('/teach/');
+  const isStudentPortal = location.pathname.startsWith('/student/');
+  const initialRole = isTutorPortal
+    ? 'tutor'
+    : isStudentPortal
+      ? 'student'
+      : (searchParams.get('role') || 'student');
   const invitationToken = searchParams.get('invitation');
   const schoolParam = (searchParams.get('school') as LMVSchool | null) ?? null;
   const { signUp, signIn } = useAuth();
   const { toast } = useToast();
 
-  const [isLogin, setIsLogin] = useState(!invitationToken);
+  const [isLogin, setIsLogin] = useState(
+    isTutorPortal || isStudentPortal
+      ? !location.pathname.endsWith('/signup')
+      : !invitationToken
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'credentials' | 'school' | 'profile' | 'courses' | 'tutor-application'>('credentials');
@@ -74,7 +85,7 @@ const AuthPage: React.FC = () => {
   const [newUserId, setNewUserId] = useState<string | null>(null);
   const [selectedSchool, setSelectedSchool] = useState<LMVSchool>(() => getStoredSchool());
   const [selectedRole, setSelectedRole] = useState<'student' | 'tutor'>(
-    invitationToken ? 'tutor' : (initialRole as 'student' | 'tutor')
+    invitationToken || isTutorPortal ? 'tutor' : (initialRole as 'student' | 'tutor')
   );
   const [invitation, setInvitation] = useState<{
     id: string;
