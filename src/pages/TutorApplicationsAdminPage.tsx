@@ -738,7 +738,10 @@ const TutorApplicationsAdminPage: React.FC = () => {
                         ))}
                       </div>
                     </div>
-                  )}
+                   )}
+
+                  <TutorDocumentsReview documents={parseDocuments(app.documents)} />
+
 
                   {app.rejection_reason && (
                     <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
