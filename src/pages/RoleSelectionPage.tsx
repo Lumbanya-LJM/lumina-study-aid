@@ -1,15 +1,17 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LMVLogo } from '@/components/ui/lmv-logo';
-import { GraduationCap, BookOpen, ArrowRight } from 'lucide-react';
+import { GraduationCap, BookOpen, LogIn, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 const RoleSelectionPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const storedSchool = (() => {
     try {
-      return localStorage.getItem('lmv_selected_school');
+      return searchParams.get('school') || localStorage.getItem('lmv_selected_school');
     } catch {
       return null;
     }
@@ -29,7 +31,8 @@ const RoleSelectionPage: React.FC = () => {
       description: 'Access courses, study materials, quizzes, and connect with tutors',
       icon: GraduationCap,
       color: 'from-primary to-primary/70',
-      path: withSchool('/student/login'),
+      signInPath: withSchool('/student/login'),
+      signUpPath: withSchool('/student/signup'),
     },
     {
       id: 'tutor',
@@ -37,7 +40,8 @@ const RoleSelectionPage: React.FC = () => {
       description: 'Create courses, post updates, schedule live classes, and teach students',
       icon: BookOpen,
       color: 'from-accent to-accent/70',
-      path: withSchool('/teach/login'),
+      signInPath: withSchool('/teach/login'),
+      signUpPath: withSchool('/teach/signup'),
     },
   ];
 
@@ -61,13 +65,11 @@ const RoleSelectionPage: React.FC = () => {
 
         <div className="w-full max-w-md space-y-4">
           {roles.map((role) => (
-            <button
+            <section
               key={role.id}
-              onClick={() => navigate(role.path)}
               className={cn(
-                "w-full p-6 rounded-2xl border border-border/50 bg-card",
-                "hover:border-primary/50 hover:bg-card/80 transition-all duration-200",
-                "text-left group"
+                "w-full p-6 rounded-lg border border-border/50 bg-card",
+                "transition-colors duration-200"
               )}
             >
               <div className="flex items-start gap-4">
@@ -77,19 +79,35 @@ const RoleSelectionPage: React.FC = () => {
                 )}>
                   <role.icon className="w-6 h-6 text-primary-foreground" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {role.title}
-                    </h3>
-                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    {role.title}
+                  </h2>
                   <p className="text-sm text-muted-foreground mt-1">
                     {role.description}
                   </p>
                 </div>
               </div>
-            </button>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => navigate(role.signInPath)}
+                >
+                  <LogIn className="h-4 w-4 shrink-0" />
+                  Sign In
+                </Button>
+                <Button
+                  type="button"
+                  className="w-full gap-2"
+                  onClick={() => navigate(role.signUpPath)}
+                >
+                  <UserPlus className="h-4 w-4 shrink-0" />
+                  Sign Up
+                </Button>
+              </div>
+            </section>
           ))}
         </div>
 

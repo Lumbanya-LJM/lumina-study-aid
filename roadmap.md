@@ -18,3 +18,6 @@
 - [x] Publish the app so the tutor portal and application emails reach real addresses
 - [x] Fix critical security findings (research cache writes, paid content storage, invitation tokens, payment webhook signature)
 - [x] Submit a real tutor application with documents and confirm admin inbox delivery
+
+## Account access
+- [x] Separate Student and Tutor portals with dedicated Sign In and Sign Up links
