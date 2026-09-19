@@ -43,6 +43,13 @@
       "when": 1789807604866,
       "tag": "0005_tighten_security_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789823920767,
+      "tag": "0006_add_moot_submission_files",
+      "breakpoints": true
     }
   ]
 }
