@@ -96,6 +96,12 @@ const secondaryNavItems = [
     description: 'Your teaching calendar',
   },
   {
+    id: 'documents',
+    label: 'My Documents',
+    icon: FileText,
+    description: 'ID & qualification uploads',
+  },
+  {
     id: 'profile',
     label: 'Tutor Profile',
     icon: Settings,

@@ -57,6 +57,7 @@ import PostUpdateForm from '@/components/teach/PostUpdateForm';
 import ScheduleClassForm from '@/components/teach/ScheduleClassForm';
 import CourseMaterialsManager from '@/components/teach/CourseMaterialsManager';
 import MootSubmissionsPanel from '@/components/teach/MootSubmissionsPanel';
+import TutorDocumentsPanel from '@/components/teach/TutorDocumentsPanel';
 
 import TutorUpdatesList from '@/components/teach/TutorUpdatesList';
 import { TutorProfileEditor } from '@/components/teach/TutorProfileEditor';
@@ -1288,6 +1289,8 @@ const TeachDashboardPage: React.FC = () => {
         return renderSchedule();
       case 'moot':
         return <MootSubmissionsPanel />;
+      case 'documents':
+        return <TutorDocumentsPanel />;
       case 'profile':
         return <TutorProfileEditor />;
 
@@ -1309,6 +1312,7 @@ const TeachDashboardPage: React.FC = () => {
       case 'schedule': return 'Schedule';
       case 'profile': return 'Tutor Profile';
       case 'moot': return 'Moot Court';
+      case 'documents': return 'My Documents';
 
       default: return 'Dashboard';
     }

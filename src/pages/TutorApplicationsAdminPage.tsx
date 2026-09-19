@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import TutorDocumentsReview from '@/components/admin/TutorDocumentsReview';
+import { parseDocuments } from '@/lib/tutorDocuments';
 import { 
   Shield, 
   Check, 
@@ -66,6 +68,7 @@ interface TutorApplication {
   selected_courses: string[] | null;
   date_of_birth: string | null;
   sex: string | null;
+  documents?: unknown;
 }
 
 const TutorApplicationsAdminPage: React.FC = () => {
@@ -735,7 +738,10 @@ const TutorApplicationsAdminPage: React.FC = () => {
                         ))}
                       </div>
                     </div>
-                  )}
+                   )}
+
+                  <TutorDocumentsReview documents={parseDocuments(app.documents)} />
+
 
                   {app.rejection_reason && (
                     <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
