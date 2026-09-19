@@ -993,8 +993,18 @@ const AuthPage: React.FC = () => {
       )}>
         <LMVLogo size="lg" className="justify-center mb-6" />
         
-        {/* Role Toggle - Show on credentials step */}
-        {step === 'credentials' && (
+        {/* Tutor portal badge on the dedicated tutor routes */}
+        {isTutorPortal && step === 'credentials' && (
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 bg-secondary border border-border/50 text-sm font-medium text-foreground">
+              <GraduationCap className="w-4 h-4 text-primary" />
+              Tutor Portal
+            </div>
+          </div>
+        )}
+
+        {/* Role Toggle - Show on credentials step (hidden on dedicated portals) */}
+        {step === 'credentials' && !isTutorPortal && !isStudentPortal && (
           <div className="flex justify-center mb-6">
             <div className="inline-flex rounded-full p-1 bg-secondary border border-border/50">
               <button
