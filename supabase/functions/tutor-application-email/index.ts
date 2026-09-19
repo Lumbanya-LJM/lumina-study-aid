@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getEmailTemplate } from '../_shared/email-template.ts';
 
 const corsHeaders = {
@@ -17,6 +18,36 @@ interface EmailRequest {
   rejectionReason?: string;
   temporaryPassword?: string;
   applicationId?: string;
+}
+
+// Fetches emails of all admin/owner accounts so they are all notified
+async function getAdminEmails(fallback?: string): Promise<string[]> {
+  const emails = new Set<string>();
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const { data: adminRoles, error } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'admin');
+
+    if (error) throw error;
+
+    if (adminRoles && adminRoles.length > 0) {
+      for (const row of adminRoles) {
+        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(row.user_id);
+        if (!userError && userData?.user?.email) {
+          emails.add(userData.user.email.toLowerCase());
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Failed to fetch admin emails:", e);
+  }
+  if (fallback) emails.add(fallback.toLowerCase());
+  return [...emails];
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -61,7 +92,8 @@ const handler = async (req: Request): Promise<Response> => {
             html: submittedEmailHtml,
         });
 
-        if (adminEmail) {
+        const adminEmails = await getAdminEmails(adminEmail);
+        if (adminEmails.length > 0) {
             const adminContent = `
                 <p>A new tutor application has been submitted:</p>
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
@@ -75,10 +107,11 @@ const handler = async (req: Request): Promise<Response> => {
 
             await resend.emails.send({
                 from: `LMV Academy <${fromEmail}>`,
-                to: [adminEmail],
+                to: adminEmails,
                 subject: `New Tutor Application: ${applicantName}${applicationId ? ` (ID: ${applicationId})` : ''}`,
                 html: adminEmailHtml,
             });
+            console.log(`Admin notification sent to ${adminEmails.length} recipient(s)`);
         }
     } else if (type === 'approved') {
         // For approved tutors - they already have an account, just inform them about tutor access
