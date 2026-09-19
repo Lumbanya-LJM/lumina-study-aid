@@ -10,3 +10,7 @@
 
 ## Emails
 - [x] Pass course faculty into enrolment, class update, and recording emails; neutral LMV branding when unknown
+- [x] Copy the course tutor on class update/schedule/cancel emails
+
+## Tutor portal
+- [x] Moot Court tab: review student submissions, adjust scores, leave feedback, upload cases/handbook

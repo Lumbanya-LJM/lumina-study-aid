@@ -56,6 +56,8 @@ import { useNavigate } from 'react-router-dom';
 import PostUpdateForm from '@/components/teach/PostUpdateForm';
 import ScheduleClassForm from '@/components/teach/ScheduleClassForm';
 import CourseMaterialsManager from '@/components/teach/CourseMaterialsManager';
+import MootSubmissionsPanel from '@/components/teach/MootSubmissionsPanel';
+
 import TutorUpdatesList from '@/components/teach/TutorUpdatesList';
 import { TutorProfileEditor } from '@/components/teach/TutorProfileEditor';
 import { format } from 'date-fns';
@@ -1284,8 +1286,11 @@ const TeachDashboardPage: React.FC = () => {
         return renderMessages();
       case 'schedule':
         return renderSchedule();
+      case 'moot':
+        return <MootSubmissionsPanel />;
       case 'profile':
         return <TutorProfileEditor />;
+
       default:
         return renderOverview();
     }
@@ -1303,6 +1308,8 @@ const TeachDashboardPage: React.FC = () => {
       case 'messages': return 'Messages';
       case 'schedule': return 'Schedule';
       case 'profile': return 'Tutor Profile';
+      case 'moot': return 'Moot Court';
+
       default: return 'Dashboard';
     }
   };
