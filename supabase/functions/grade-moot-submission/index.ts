@@ -40,6 +40,9 @@ serve(async (req) => {
     const side: string = body.side === "respondent" ? "respondent" : "appellant";
     const submissionType: string = body.submissionType === "oral" ? "oral" : "memorial";
     const content: string = (body.content ?? "").toString().trim();
+    const filePath: string | null = typeof body.filePath === "string" ? body.filePath : null;
+    const fileName: string | null = typeof body.fileName === "string" ? body.fileName.slice(0, 255) : null;
+    const fileType: string | null = typeof body.fileType === "string" ? body.fileType.slice(0, 100) : null;
 
     if (!problemId || content.length < 50) {
       return new Response(
@@ -50,6 +53,12 @@ serve(async (req) => {
     if (content.length > 20000) {
       return new Response(JSON.stringify({ error: "Submission is too long (max 20,000 characters)." }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (filePath && !filePath.startsWith(`${userId}/`)) {
+      return new Response(JSON.stringify({ error: "Invalid submission file." }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -251,6 +260,9 @@ ${content}
         strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
         improvements: Array.isArray(parsed.improvements) ? parsed.improvements : [],
         status: "graded",
+        file_path: filePath,
+        file_name: fileName,
+        file_type: fileType,
       })
       .select()
       .single();
