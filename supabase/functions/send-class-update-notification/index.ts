@@ -33,8 +33,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Load the course faculty so every class email uses the correct branding.
     const { data: course, error: courseError } = await supabase
       .from('academy_courses')
-      .select('school')
+      .select('school, tutor_id')
       .eq('id', courseId)
+
       .single();
 
     if (courseError) {
@@ -56,13 +57,8 @@ const handler = async (req: Request): Promise<Response> => {
       throw enrollError;
     }
 
-    if (!enrollments || enrollments.length === 0) {
-      console.log('No enrolled students found');
-      return new Response(
-        JSON.stringify({ success: true, message: 'No students to notify' }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Note: even with no enrolled students, the course tutor is still notified below.
+
 
     // Get student profiles
     const userIds = enrollments.map(e => e.user_id);
@@ -89,6 +85,25 @@ const handler = async (req: Request): Promise<Response> => {
         });
       }
     }
+
+    // Also notify the course tutor so they get the same class update.
+    const tutorId = (course as { tutor_id?: string | null }).tutor_id;
+    if (tutorId && !students.some(s => s.userId === tutorId)) {
+      const { data: tutorUser } = await supabase.auth.admin.getUserById(tutorId);
+      if (tutorUser?.user?.email) {
+        const { data: tutorProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', tutorId)
+          .maybeSingle();
+        students.push({
+          userId: tutorId,
+          email: tutorUser.user.email,
+          fullName: tutorProfile?.full_name || 'Tutor'
+        });
+      }
+    }
+
 
     console.log(`Found ${students.length} students to notify`);
 
