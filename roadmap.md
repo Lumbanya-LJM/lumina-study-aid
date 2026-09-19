@@ -21,8 +21,8 @@
 
 ## Account access
 - [x] Separate Student and Tutor portals with dedicated Sign In and Sign Up links
-- [ ] Submit a tutor application with identity and qualification documents through the Tutor Sign Up link; verify admin email and document review
-- [ ] Walk the tutor dashboard document upload end to end and confirm files appear in the admin review row
+- [x] Submit a tutor application with identity and qualification documents through Tutor Sign Up; leave it pending for admin review
+- [ ] After admin approval, walk the tutor dashboard document upload end to end and confirm files appear in admin review (blocked pending review)
 
 ## Student portal
 - [x] Show enrolled students their class schedule
