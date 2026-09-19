@@ -22,7 +22,7 @@ import {
   RefreshCw,
   X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -94,6 +94,7 @@ interface CourseTutor {
 
 const LuminaAcademyPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -111,6 +112,10 @@ const LuminaAcademyPage: React.FC = () => {
   const [updates, setUpdates] = useState<TutorUpdate[]>([]);
   const [courseTutors, setCourseTutors] = useState<CourseTutor[]>([]);
   const [loadingCourseData, setLoadingCourseData] = useState(false);
+  const requestedTab = searchParams.get('tab');
+  const defaultTab = ['schedule', 'classes', 'recordings', 'materials', 'updates'].includes(requestedTab ?? '')
+    ? requestedTab ?? 'schedule'
+    : 'schedule';
   
   // Dismissed updates (persisted in localStorage)
   const [dismissedUpdates, setDismissedUpdates] = useState<Set<string>>(() => {
@@ -543,7 +548,7 @@ const LuminaAcademyPage: React.FC = () => {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue="schedule" className="flex-1">
+        <Tabs defaultValue={defaultTab} className="flex-1">
           <TabsList className="w-full mb-4 grid grid-cols-5">
             <TabsTrigger value="schedule" className="text-xs gap-1">
               <CalendarDays className="w-3.5 h-3.5" />

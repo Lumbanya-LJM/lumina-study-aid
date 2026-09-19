@@ -489,7 +489,7 @@ const HomePage: React.FC = () => {
                   Add a task
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
