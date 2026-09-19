@@ -20,6 +20,36 @@ interface EmailRequest {
   applicationId?: string;
 }
 
+// Fetches emails of all admin/owner accounts so they are all notified
+async function getAdminEmails(fallback?: string): Promise<string[]> {
+  const emails = new Set<string>();
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const { data: adminRoles, error } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'admin');
+
+    if (error) throw error;
+
+    if (adminRoles && adminRoles.length > 0) {
+      for (const row of adminRoles) {
+        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(row.user_id);
+        if (!userError && userData?.user?.email) {
+          emails.add(userData.user.email.toLowerCase());
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Failed to fetch admin emails:", e);
+  }
+  if (fallback) emails.add(fallback.toLowerCase());
+  return [...emails];
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
