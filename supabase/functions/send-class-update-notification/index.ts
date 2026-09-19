@@ -61,7 +61,7 @@ const handler = async (req: Request): Promise<Response> => {
 
 
     // Get student profiles
-    const userIds = enrollments.map(e => e.user_id);
+    const userIds = (enrollments || []).map(e => e.user_id);
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('user_id, full_name')
