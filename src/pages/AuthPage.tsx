@@ -130,11 +130,10 @@ const AuthPage: React.FC = () => {
   const loadInvitation = async (token: string) => {
     setLoadingInvitation(true);
     try {
-      const { data, error } = await supabase
-        .from('tutor_invitations')
-        .select('id, email, full_name, selected_courses, status, expires_at')
-        .eq('invitation_token', token)
-        .single();
+      const { data: rows, error } = await supabase
+        .rpc('get_invitation_by_token', { _token: token });
+
+      const data = rows?.[0];
 
       if (error || !data) {
         toast({
