@@ -9,4 +9,4 @@
 - [x] Walk the page end to end as a Law student (page, chat, sidebar)
 
 ## Emails
-- [x] Pass course faculty into enrolment and recording emails; neutral LMV branding when unknown
+- [x] Pass course faculty into enrolment, class update, and recording emails; neutral LMV branding when unknown

@@ -30,6 +30,20 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Load the course faculty so every class email uses the correct branding.
+    const { data: course, error: courseError } = await supabase
+      .from('academy_courses')
+      .select('school')
+      .eq('id', courseId)
+      .single();
+
+    if (courseError) {
+      console.error('Error fetching course faculty:', courseError);
+      throw new Error('Course not found');
+    }
+
+    const school = course.school as 'law' | 'business' | 'health' | null;
+
     // Get enrolled students
     const { data: enrollments, error: enrollError } = await supabase
       .from('academy_enrollments')
@@ -154,6 +168,7 @@ const handler = async (req: Request): Promise<Response> => {
           title,
           name: student.fullName,
           content,
+          school: school ?? undefined,
         });
 
         const emailResponse = await fetch('https://api.resend.com/emails', {

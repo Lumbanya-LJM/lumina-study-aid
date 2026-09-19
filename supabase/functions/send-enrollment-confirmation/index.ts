@@ -20,6 +20,7 @@ interface Course {
   id: string;
   name: string;
   institution: string | null;
+  school: 'law' | 'business' | 'health' | null;
 }
 
 interface Tutor {
@@ -128,7 +129,7 @@ const handler = async (req: Request): Promise<Response> => {
       title: '🎓 Enrollment Confirmed!',
       name: studentName,
       content: emailContent,
-      school: ((courses?.[0] as any)?.school as 'law' | 'business' | 'health' | undefined) ?? undefined,
+      school: courses?.[0]?.school ?? undefined,
     });
 
     const fromEmail = Deno.env.get("SMTP_FROM") || "onboarding@resend.dev";
