@@ -234,9 +234,17 @@ serve(async (req) => {
 
     console.log("Lenco webhook received");
 
-    // Verify signature if secret is configured
-    if (webhookSecret && !verifyLencoSignature(rawBody, signature, webhookSecret)) {
-      console.error("Invalid webhook signature");
+    // Fail closed: never trust an unsigned or unverifiable webhook
+    if (!webhookSecret) {
+      console.error("LENCO_WEBHOOK_SECRET is not configured; rejecting webhook");
+      return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!signature || !verifyLencoSignature(rawBody, signature, webhookSecret)) {
+      console.error("Invalid or missing webhook signature");
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
